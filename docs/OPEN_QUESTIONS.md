@@ -1,77 +1,53 @@
 # Open Questions
 
-These are intentionally unresolved. Do not let an AI coding agent silently choose them.
+These questions remain intentionally unresolved. P0 decisions removed from this list are recorded in ADR-011 through ADR-013 and their focused documents. Do not let an implementation silently choose the remaining items.
 
 ## Thesis/research
 
-1. What is the primary contribution?
-   - specification language,
-   - runtime architecture,
-   - empirical comparison,
-   - or a clearly prioritized combination?
-
+1. What is the primary contribution: specification language, runtime architecture, empirical comparison, or a clearly prioritized combination?
 2. What are the final research questions?
-
-3. Which demo domain is most defensible and practical?
-   - banking,
-   - university/course registration,
-   - another transactional system?
-
+3. Which demo domain is most defensible and practical: banking, university/course registration, or another transactional system?
 4. Is a conventional baseline generated from the same schemas or hand-built?
 
 ## Architecture
 
-5. What is the canonical compiled Mashala spec format?
+5. What explicit projection/minimization mechanism governs backend-result data sent to the model?
+   - developer-declared model-visible fields;
+   - explicit projection functions;
+   - schema annotations;
+   - another explicit mechanism.
 
-6. What exactly may be sent from browser API results to the LLM server?
-   - developer-declared model-visible fields?
-   - explicit projection function?
-   - schema metadata?
-   - automatic minimization?
+   ADR-010 fixes the principle. `CANONICAL_SPEC.md` reserves a policy extension point and `RUNTIME_PROTOCOL.md` reserves a selected-context event, but P0 deliberately does not choose the mechanism.
 
-7. Where is conversation state persisted?
-   - server memory initially?
-   - database?
-   - client/server hybrid?
-
-8. How should the client communicate structured runtime events with the server?
-   - ordinary HTTP,
-   - SSE,
-   - WebSocket,
-   - combination?
-
-9. How does Mashala describe target-app auth integration without becoming an auth framework?
-
-10. How much validation is duplicated client-side vs. delegated to the target backend?
+6. What durable conversation persistence, if any, follows the v0.1 in-memory proof? ADR-011 permits only ephemeral single-process state for v0.1.
+7. Which transport carries the v0.1 logical runtime events: ordinary HTTP, SSE, WebSocket, or a combination? ADR-013 defines event semantics independently of this choice.
+8. How does Mashala describe target-app auth integration without becoming an auth framework?
+9. Which validation failures are handled exclusively in the browser, and how are target-backend validation errors normalized for display? JSON Schema is authoritative for pre-execution form validation, while the target backend remains authoritative for business validation.
 
 ## Forms
 
-11. Exact TypeScript DSL API.
-
-12. v0.1 field types.
-
-13. File uploads: core or later?
-
-14. Dependent/cascading dynamic options: currently deferred.
+10. What is the exact developer-facing TypeScript DSL API that compiles to `CANONICAL_SPEC.md`?
+11. Are file uploads part of a later spec version or outside the project?
+12. What exact response mapping is used by the future `reference` field? One browser-executed read source per field is accepted; dependent/cascading sources remain deferred.
 
 ## Technology
 
-15. Next.js vs. another React framework.
-
-16. Node/TypeScript server runtime structure.
-
-17. Custom state machine vs. LangGraph after the workflow requirements are implemented on paper.
-
-18. Initial model/provider API and provider adapter interface.
-
-19. Initial vector/RAG storage approach.
+13. Which browser end-to-end test runner should be adopted once browser interaction tests exist?
+14. What simple documentation/RAG indexing approach is sufficient when Phase 5 begins? No vector database is selected.
+15. After the deterministic state-machine requirements are implemented, does LangGraph materially improve persistence, interrupts, resumability, or branching? ADR-008 remains authoritative.
 
 ## Evaluation
 
-20. Participant count and recruitment practicality.
+16. What participant count and recruitment plan are practical?
+17. What is the final task set?
+18. Which metrics are non-negotiable?
+19. Which safety/adversarial cases are required?
 
-21. Final task set.
+## Resolved in P0
 
-22. Which metrics are non-negotiable?
-
-23. Which safety/adversarial cases are required?
+- Canonical compiled spec format: ADR-012 and `CANONICAL_SPEC.md`.
+- Static v0.1 field types: `text`, `longText`, `number`, `select`, and `boolean`.
+- Browser/server logical event protocol: ADR-013 and `RUNTIME_PROTOCOL.md`; transport remains open.
+- Next.js/React/TypeScript and Node runtime structure: ADR-011 and `TECH_STACK.md`.
+- Package manager, test runner, schema validator, first provider/API, and minimal persistence: ADR-011.
+- Initial workflow implementation: a small custom deterministic state machine; LangGraph evaluation remains a later question under ADR-008.

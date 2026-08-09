@@ -52,7 +52,7 @@ Mashala then provides a full frontend application centered around conversational
 
 1. **Developer specification / DSL**
    - describes application capabilities and forms;
-   - compiles to a canonical machine-readable representation such as JSON Schema plus Mashala metadata.
+   - compiles to the versioned representation in `CANONICAL_SPEC.md`: JSON Schema Draft 2020-12 plus Mashala metadata.
 
 2. **Generated frontend client**
    - chat interface;

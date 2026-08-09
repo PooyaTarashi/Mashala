@@ -225,6 +225,14 @@ Meaning:
 
 The workflow architecture must not depend on LangGraph. LangGraph may later implement this state machine if its persistence/interrupt features prove useful.
 
+## P0 normative contracts
+
+The current machine-readable application contract is `CANONICAL_SPEC.md`, accepted by ADR-012. It fixes the v0.1 split between JSON Schema validation and Mashala presentation/runtime metadata, plus the minimal browser-executed API binding.
+
+The browser/server language-assistance contract is `RUNTIME_PROTOCOL.md`, accepted by ADR-013. Its logical events are independent of transport. In particular, the protocol has no event that asks the Mashala server to execute a target-backend request.
+
+The implementation stack is fixed by ADR-011 and `TECH_STACK.md`. Next.js server code hosts only Mashala protocol/provider responsibilities; choosing Next.js does not alter ADR-003's browser-direct target-backend boundary.
+
 ## Trust boundaries
 
 ### Trusted for control flow

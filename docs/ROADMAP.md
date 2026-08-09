@@ -2,23 +2,23 @@
 
 This roadmap is architecture-first and intentionally keeps the first implementation small.
 
-## Phase 0 — Project control
+## P0 architecture freeze — Complete
 
-- Commit these authoritative docs.
-- Create ChatGPT Project.
-- Set project instructions.
-- Create GitHub repository.
+- ISSUE-001: freeze v0.1 stack — ADR-011 and `TECH_STACK.md`.
+- ISSUE-002: define canonical compiled spec — ADR-012 and `CANONICAL_SPEC.md`.
+- ISSUE-003: define browser/server event protocol — ADR-013 and `RUNTIME_PROTOCOL.md`.
 - Record future architectural changes as ADRs.
-- Decide primary thesis contribution with supervisor.
+
+Thesis contribution wording and final research questions still require supervisor input, but they do not reopen the completed P0 software contracts unless an accepted ADR later supersedes them.
 
 ## Phase 1 — Spec/DSL v0.1
 
-- Decide minimal field types.
+- ISSUE-010: scaffold the single-package Next.js/TypeScript repository with lint, test, and typecheck commands and no LLM integration.
 - Implement `defineCapability`.
 - Implement basic `f.text`, `f.longText`, `f.number`, `f.select`, `f.boolean`.
-- Compile to canonical schema.
-- Add validation tests.
-- Define static API binding metadata.
+- Compile to `CANONICAL_SPEC.md`.
+- Add validation tests with Ajv.
+- Implement static API binding metadata.
 
 ## Phase 2 — Deterministic frontend prototype
 
@@ -30,17 +30,18 @@ This roadmap is architecture-first and intentionally keeps the first implementat
 
 ## Phase 3 — LLM-assisted interaction
 
-- Add server-side provider adapter.
-- Route utterance to one capability.
+- Add the server-side OpenAI provider adapter behind the provider interface.
+- Route utterance to one declared capability.
 - Extract partial field values.
-- Never expose LLM key to client.
-- Never send user backend credentials to model/server.
+- Implement the logical events in `RUNTIME_PROTOCOL.md` over a deliberately selected transport.
+- Never expose the LLM key to the client.
+- Never send target-backend credentials to the Mashala server or model.
 
 ## Phase 4 — Data-backed fields
 
-- Add `f.reference` / data-backed select.
-- Browser resolves options through authenticated target API.
-- Add controlled projection for model-visible result data when disambiguation is required.
+- Finalize and add the `f.reference` / data-backed select union member.
+- Browser resolves options through an authenticated target API.
+- Decide ADR-010's explicit projection/minimization mechanism before enabling backend-result context events.
 
 ## Phase 5 — Documentation/RAG
 
@@ -48,11 +49,12 @@ This roadmap is architecture-first and intentionally keeps the first implementat
 - Chunk/index simply.
 - Answer system questions from docs.
 - Establish untrusted-data boundaries.
+- Do not introduce a vector database without a demonstrated need and decision.
 
 ## Phase 6 — Workflow/state
 
-- Formalize explicit state machine.
-- Persist conversation state as required.
+- Formalize the explicit deterministic state machine.
+- Decide durable conversation persistence only if required.
 - Add declared follow-up capabilities.
 - Evaluate whether LangGraph solves actual complexity better than a custom implementation.
 

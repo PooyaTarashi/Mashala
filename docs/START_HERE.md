@@ -11,8 +11,10 @@ When documents conflict, use this precedence:
 3. `SCOPE.md`
 4. `PROJECT.md`
 5. `PROJECT_STATUS.md`
-6. `ROADMAP.md` / `BACKLOG.md`
-7. Old ideation transcripts
+6. `OPEN_QUESTIONS.md`
+7. `TECH_STACK.md`
+8. `ROADMAP.md` / `BACKLOG.md`
+9. Old ideation transcripts
 
 Old chatbot conversations are historical evidence, not the current specification.
 
@@ -23,8 +25,10 @@ Old chatbot conversations are historical evidence, not the current specification
 - `ARCHITECTURE.md` — where components live and how data flows
 - `PROJECT_STATUS.md` — what is decided now and what to do next
 - `OPEN_QUESTIONS.md` — questions that are intentionally unresolved
-- `TECH_STACK.md` — technology choices and their current status
+- `TECH_STACK.md` — frozen v0.1 technology choices
+- `CANONICAL_SPEC.md` — normative compiled v0.1 artifact and example
+- `RUNTIME_PROTOCOL.md` — normative browser/server v0.1 event contract
 - `ROADMAP.md` — staged project plan
-- `BACKLOG.md` — initial implementation tasks
+- `BACKLOG.md` — implementation tasks and completion status
 - `AI_WORKFLOW.md` — how ChatGPT, Codex, Jules, and GitHub should be used
 - `CHATGPT_PROJECT_INSTRUCTIONS.md` — text to paste into a ChatGPT Project
