@@ -89,16 +89,19 @@ Acceptance:
 - [x] deterministic, isolated compiled output;
 - [x] validation tests using Ajv's 2020-12 entry point.
 
-### ISSUE-013 — Render compiled form — Next
+### ISSUE-013 — Render compiled form — Complete
 
 Acceptance:
 
-- accessible labels;
-- editable values;
-- validation errors;
-- responsive layout.
+- [x] all five static field kinds render deterministically from `FormDefinition`;
+- [x] accessible labels, help text, required indications, field errors, and validation summary;
+- [x] editable local values with correctly typed number and boolean submission values;
+- [x] Ajv 2020-12 validation using the compiled JSON Schema as the sole validation source;
+- [x] valid-only local submit callback with no backend execution;
+- [x] responsive layout;
+- [x] focused component and type-level tests.
 
-### ISSUE-014 — Browser API executor
+### ISSUE-014 — Browser API executor — Next
 
 Acceptance:
 

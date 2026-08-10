@@ -21,11 +21,11 @@ Thesis contribution wording and final research questions still require superviso
 
 ## Phase 2 — Deterministic frontend prototype
 
-- ISSUE-013: render compiled forms in React — Next.
+- ISSUE-013: render compiled forms in React with local editing, Ajv validation, and accessible errors — Complete.
+- ISSUE-014: execute declared target-backend operations directly from the browser — Next.
 - Add theme primitives.
 - Add confirmation state.
 - Create one mock backend capability.
-- Execute target API request directly from browser.
 
 ## Phase 3 — LLM-assisted interaction
 

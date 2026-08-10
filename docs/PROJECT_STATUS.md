@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P1 implementation is in progress. ISSUE-012's form compiler is complete.**
+**P1 implementation is in progress. ISSUE-013's compiled-form renderer is complete.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, and ISSUE-012 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, and deterministic form-to-JSON-Schema compilation alongside the frozen v0.1 contracts.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, and ISSUE-013 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, and a deterministic React renderer for compiled forms alongside the frozen v0.1 contracts.
 
 ## Accepted decisions
 
@@ -46,7 +46,10 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, and ISSUE-012 are complet
 - ISSUE-011 — typed static field builders with canonical field kinds, presentation labels/help text, typed select options, deterministic output, and focused unit/type-level coverage.
 - ISSUE-012 — typed `compileForm` API that emits object-root JSON Schema Draft 2020-12 and same-keyed Mashala field metadata, with deterministic ordering and frozen isolated output.
 - Ajv 2020-12 validation coverage for required/optional fields, primitive types, unknown properties, select enums, string lengths, and numeric limits.
-- Minimal Mashala page and server-render smoke test; no form renderer, capability compiler, runtime protocol implementation, LLM, authentication, or target-backend execution behavior yet.
+- ISSUE-013 — typed client-side `CompiledForm` React component for all five static field kinds, editable isolated local state, deterministic IDs and field order, schema-derived required state and constraints, and valid-only local submission.
+- Ajv 2020-12 submission validation with accessible field errors and a linked alert summary. Labels, help text, required indications, `aria-describedby`, and `aria-invalid` are covered by focused component tests.
+- Static select values come only from schema enums while presentation labels come from `optionLabels`. Malformed schema/metadata correspondence fails as a deterministic developer error.
+- Minimal Mashala page and server-render smoke test; no capability compiler, backend execution, confirmation gate, runtime protocol implementation, LLM, authentication, or reference-field behavior yet.
 
 ## Deliberately unresolved
 
@@ -62,6 +65,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**ISSUE-013 — Render compiled form** is next. It should render the completed canonical `FormDefinition` with accessible labels, editable values, validation errors, and responsive layout.
+**ISSUE-014 — Browser API executor** is next. It must execute only a declared method/path directly from the browser and must not introduce a Mashala-server proxy.
 
-ISSUE-012 did not implement rendering, capability compilation, API execution, or any later runtime behavior. ISSUE-013 and all later implementation issues remain incomplete.
+ISSUE-013 introduced only deterministic local form rendering and a valid-form callback boundary. It did not implement capability compilation, target-backend execution, confirmation, runtime protocol transport/events, LLM behavior, authentication, or reference fields. ISSUE-014 and all later implementation issues remain incomplete.

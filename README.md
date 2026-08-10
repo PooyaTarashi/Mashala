@@ -39,8 +39,11 @@ The default local URL for the development and production servers is `http://loca
 
 The five static field builders compile to JSON Schema Draft 2020-12 plus same-keyed Mashala presentation metadata. Fields are optional unless `required: true` is set.
 
-```ts
+```tsx
+"use client";
+
 import { f } from "./src/fields";
+import { CompiledForm } from "./src/form-renderer";
 import { compileForm } from "./src/forms";
 
 const form = compileForm({
@@ -67,9 +70,23 @@ const form = compileForm({
   }),
   saveRecipient: f.boolean({ label: "Save this recipient" }),
 });
+
+export function TransferForm() {
+  return (
+    <CompiledForm
+      form={form}
+      formId="transfer-form"
+      submitLabel="Review transfer"
+      onSubmit={(validValue) => {
+        // This local valid-value boundary does not call a backend.
+        console.log(validValue);
+      }}
+    />
+  );
+}
 ```
 
-`form.schema` is the sole validation source; `form.fields` contains only rendering metadata. Capability compilation and form rendering remain later tasks.
+`form.schema` is the sole validation source; `form.fields` contains only rendering metadata. `CompiledForm` keeps editable local state, validates with Ajv 2020-12, and calls `onSubmit` only with a valid value. Capability compilation, backend execution, confirmation, runtime protocol behavior, authentication, and reference fields remain later tasks.
 
 ## Project documentation
 
