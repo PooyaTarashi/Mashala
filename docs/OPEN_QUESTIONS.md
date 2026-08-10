@@ -24,9 +24,9 @@ These questions remain intentionally unresolved. P0 decisions removed from this 
 8. How does Mashala describe target-app auth integration without becoming an auth framework?
 9. Which validation failures are handled exclusively in the browser, and how are target-backend validation errors normalized for display? JSON Schema is authoritative for pre-execution form validation, while the target backend remains authoritative for business validation.
 
-## Forms
+## Authoring and forms
 
-10. What is the exact developer-facing TypeScript DSL API that compiles to `CANONICAL_SPEC.md`?
+10. What minimal application-level authoring helper, if any, should assemble app metadata and declared capabilities into `MashalaSpec`? `defineCapability` now fixes static capability authoring; the future `reference` field remains separately unresolved below.
 11. Are file uploads part of a later spec version or outside the project?
 12. What exact response mapping is used by the future `reference` field? One browser-executed read source per field is accepted; dependent/cascading sources remain deferred.
 

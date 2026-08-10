@@ -177,6 +177,89 @@ describe("CompiledForm rendering", () => {
     expect(first).toContain("73-74-61-62-6c-65-2d-66-6f-72-6d-field");
   });
 
+  it("accepts matching schema and metadata keys in different insertion order", () => {
+    const form: FormDefinition<"amount" | "recipient"> = {
+      schema: {
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        type: "object",
+        properties: {
+          amount: { type: "number", minimum: 1 },
+          recipient: { type: "string", minLength: 2 },
+        },
+        required: ["amount", "recipient"],
+        additionalProperties: false,
+      },
+      fields: {
+        recipient: { kind: "text", label: "Recipient" },
+        amount: { kind: "number", label: "Amount" },
+      },
+    };
+    const onSubmit = vi.fn();
+    const { container } = render(
+      <CompiledForm form={form} onSubmit={onSubmit} />,
+    );
+
+    expect(
+      Array.from(container.querySelectorAll("input"), (control) =>
+        control.getAttribute("name"),
+      ),
+    ).toEqual(["recipient", "amount"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getAllByText("Recipient is required.")).toHaveLength(2);
+    expect(screen.getAllByText("Amount is required.")).toHaveLength(2);
+
+    fireEvent.change(screen.getByLabelText(/Recipient/), {
+      target: { value: "Sam" },
+    });
+    fireEvent.change(screen.getByLabelText(/Amount/), {
+      target: { value: "25" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledWith({ recipient: "Sam", amount: 25 });
+  });
+
+  it("rejects a schema property without field metadata", () => {
+    const malformed: FormDefinition = {
+      schema: {
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        type: "object",
+        properties: { amount: { type: "number" } },
+        additionalProperties: false,
+      },
+      fields: {},
+    };
+
+    expect(() =>
+      render(<CompiledForm form={malformed} onSubmit={() => undefined} />),
+    ).toThrow(
+      "Invalid compiled form: schema properties and field metadata must have the same keys.",
+    );
+  });
+
+  it("rejects field metadata without a schema property", () => {
+    const malformed: FormDefinition = {
+      schema: {
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+      fields: {
+        recipient: { kind: "text", label: "Recipient" },
+      },
+    };
+
+    expect(() =>
+      render(<CompiledForm form={malformed} onSubmit={() => undefined} />),
+    ).toThrow(
+      "Invalid compiled form: schema properties and field metadata must have the same keys.",
+    );
+  });
+
   it("throws a deterministic developer error for mismatched select metadata", () => {
     const malformed: FormDefinition<"speed"> = {
       schema: {

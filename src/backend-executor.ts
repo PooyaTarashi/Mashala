@@ -1,11 +1,12 @@
 "use client";
 
-import type { JsonValue } from "./forms";
+import {
+  assertBackendOperation,
+  type BackendOperation,
+  type JsonValue,
+} from "./spec";
 
-export interface BackendOperation {
-  readonly method: "POST" | "PUT" | "PATCH";
-  readonly path: string;
-}
+export type { BackendOperation } from "./spec";
 
 export interface ExecuteBackendOperationInput {
   readonly baseUrl: string | URL;
@@ -26,66 +27,6 @@ export type BackendOperationResult =
   | {
       readonly outcome: "network-error";
     };
-
-const SUPPORTED_METHODS: readonly BackendOperation["method"][] = [
-  "POST",
-  "PUT",
-  "PATCH",
-];
-
-function invalidOperation(message: string): never {
-  throw new TypeError(`Invalid backend operation: ${message}`);
-}
-
-function hasOwn(value: object, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key);
-}
-
-function assertBackendOperation(
-  operation: unknown,
-): asserts operation is BackendOperation {
-  if (
-    typeof operation !== "object" ||
-    operation === null ||
-    Array.isArray(operation)
-  ) {
-    invalidOperation("expected an object containing only method and path.");
-  }
-
-  const keys = Object.keys(operation);
-  if (
-    keys.length !== 2 ||
-    !hasOwn(operation, "method") ||
-    !hasOwn(operation, "path")
-  ) {
-    invalidOperation("expected an object containing only method and path.");
-  }
-
-  const method: unknown = Reflect.get(operation, "method");
-  if (
-    typeof method !== "string" ||
-    !SUPPORTED_METHODS.some((supportedMethod) => supportedMethod === method)
-  ) {
-    invalidOperation("method must be POST, PUT, or PATCH.");
-  }
-
-  const path: unknown = Reflect.get(operation, "path");
-  if (typeof path !== "string") {
-    invalidOperation("path must be a string.");
-  }
-
-  if (!path.startsWith("/") || path.startsWith("//")) {
-    invalidOperation('path must begin with exactly one "/".');
-  }
-
-  if (path.includes("?")) {
-    invalidOperation("path must not contain a query string.");
-  }
-
-  if (path.includes("#")) {
-    invalidOperation("path must not contain a fragment.");
-  }
-}
 
 function targetBaseUrl(value: string | URL): URL {
   let baseUrl: URL;
@@ -117,8 +58,8 @@ function targetUrl(baseUrl: URL, path: string): URL {
   const resolvedUrl = new URL(path, baseUrl);
 
   if (resolvedUrl.origin !== baseUrl.origin) {
-    return invalidOperation(
-      "path must resolve within the supplied target backend origin.",
+    throw new TypeError(
+      "Invalid backend operation: path must resolve within the supplied target backend origin.",
     );
   }
 

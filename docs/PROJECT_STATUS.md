@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P1 implementation is in progress. ISSUE-015's confirmation gate is complete.**
+**P1 implementation is in progress. ISSUE-016's capability DSL and canonical spec assembly are complete.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, and ISSUE-015 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, and a deterministic confirmation boundary alongside the frozen v0.1 contracts.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, and ISSUE-016 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, and a deterministic confirmation boundary alongside the frozen v0.1 contracts.
 
 ## Accepted decisions
 
@@ -55,13 +55,17 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Required operations move from an explicit valid form submission to an accessible review of a frozen same-property snapshot. A separate explicit confirmation executes that exact snapshot once; cancel/back discards it, and pending execution disables and guards repeated confirmation.
 - The `none` policy skips only the second confirmation. It still executes exclusively from an explicit valid form submission, never as a render, mount, hydration, or unrelated state-change effect.
 - Confirmation and target-backend execution remain deterministic browser behavior. Executor success, HTTP failure, and sanitized network failure remain distinct, and the Mashala server remains outside the target request path.
-- Minimal Mashala page and server-render smoke test; no capability compiler, runtime protocol implementation, LLM, authentication integration, workflow engine, theme primitives, or reference-field behavior yet.
+- ISSUE-016 — typed `defineCapability` API compiling the existing static field DSL into one canonical `CapabilitySpec` that binds stable identity and routing description to its form, operation, and deterministic confirmation policy.
+- Executable `MashalaSpec`, `AppMetadata`, `CapabilitySpec`, `BackendOperation`, and `ConfirmationPolicy` types now mirror ADR-012. Form types are reused, and executor/confirmation modules no longer redefine shared canonical concepts.
+- `ConfirmationGate` consumes a complete `CapabilitySpec`, making bound capability execution the normal integration path while `executeBackendOperation` remains a lower-level primitive.
+- The executable `transfer_money` and Mashala Bank Demo spec match the documented canonical example and remain isolated JSON-serializable plain data.
+- Minimal Mashala page and server-render smoke test; no runtime protocol implementation, capability routing, LLM, authentication integration, workflow engine, theme primitives, or reference-field behavior yet.
 
 ## Deliberately unresolved
 
 - ADR-010's exact projection/minimization mechanism for model-visible backend results.
 - The transport carrying runtime protocol events: HTTP, SSE, WebSocket, or a combination.
-- The capability-level developer-facing DSL API beyond the completed field and form compiler.
+- The optional application-level authoring helper beyond the executable `MashalaSpec` type.
 - The exact future `reference` response-mapping shape.
 - Durable conversation persistence beyond the v0.1 single-process proof.
 - The first reference/demo domain.
@@ -71,6 +75,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**Implement `defineCapability`** is the next unfinished roadmap task. It remains deliberately separate from the completed field/form compiler and confirmation boundary.
+**Implement the server-side provider adapter (ISSUE-020)** is the next numbered backlog task. It must remain behind an interface and keep provider secrets server-side.
 
-ISSUE-015 did not implement capability assembly or routing, authentication integration, runtime protocol transport/events, LLM/provider behavior, workflows, theming, mock-backend infrastructure, or reference fields. Those later tasks remain incomplete.
+ISSUE-016 did not implement capability routing, authentication integration, runtime protocol transport/events, LLM/provider behavior, workflows, theming, mock-backend infrastructure, or reference fields. Those later tasks remain incomplete.

@@ -12,6 +12,7 @@ import {
 } from "vitest";
 
 import type { BackendOperationResult } from "./backend-executor";
+import { defineCapability } from "./capabilities";
 import {
   ConfirmationGate,
   type ConfirmationGateProps,
@@ -23,7 +24,11 @@ import { compileForm } from "./forms";
 afterEach(cleanup);
 
 function createForm() {
-  return compileForm({
+  return compileForm(createFields());
+}
+
+function createFields() {
+  return {
     recipient: f.text({ label: "Recipient", required: true }),
     note: f.longText({ label: "Note" }),
     amount: f.number({ label: "Amount", required: true, minimum: 1 }),
@@ -36,6 +41,16 @@ function createForm() {
       ],
     }),
     saveRecipient: f.boolean({ label: "Save this recipient" }),
+  };
+}
+
+function createCapability(confirmation: ConfirmationPolicy) {
+  return defineCapability({
+    id: "transfer_money",
+    description: "Transfer money to a recipient.",
+    fields: createFields(),
+    operation: { method: "POST", path: "/transfers" },
+    confirmation,
   });
 }
 
@@ -61,9 +76,7 @@ function renderGate(
   const fetchImpl = overrides.fetchImpl ?? successfulFetch();
   const view = render(
     <ConfirmationGate
-      form={createForm()}
-      operation={{ method: "POST", path: "/transfers" }}
-      confirmation={confirmation}
+      capability={createCapability(confirmation)}
       baseUrl="https://target.example/application/"
       initialValues={validValues()}
       fetchImpl={fetchImpl}
@@ -262,9 +275,7 @@ describe("ConfirmationGate none policy", () => {
 
     rerender(
       <ConfirmationGate
-        form={createForm()}
-        operation={{ method: "POST", path: "/transfers" }}
-        confirmation="none"
+        capability={createCapability("none")}
         baseUrl="https://target.example"
         initialValues={validValues()}
         fetchImpl={fetchImpl}
@@ -344,7 +355,18 @@ describe("ConfirmationGate results and inputs", () => {
     const operationBefore = JSON.stringify(operation);
     const valuesBefore = JSON.stringify(initialValues);
     const fetchImpl = successfulFetch();
-    renderGate("required", { form, operation, initialValues, fetchImpl });
+    const capability = Object.freeze({
+      id: "transfer_money",
+      description: "Transfer money to a recipient.",
+      form,
+      operation,
+      confirmation: "required" as const,
+    });
+    renderGate("required", {
+      capability,
+      initialValues,
+      fetchImpl,
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm and send" }));
@@ -357,9 +379,13 @@ describe("ConfirmationGate results and inputs", () => {
 
   it("rejects a malformed serialized confirmation policy before execution", () => {
     const fetchImpl = successfulFetch();
+    const capability = {
+      ...createCapability("required"),
+      confirmation: "unexpected" as unknown as ConfirmationPolicy,
+    };
 
     expect(() =>
-      renderGate("unexpected" as unknown as ConfirmationPolicy, { fetchImpl }),
+      renderGate("required", { capability, fetchImpl }),
     ).toThrow(
       'Invalid confirmation policy: expected "required" or "none".',
     );
@@ -369,9 +395,13 @@ describe("ConfirmationGate results and inputs", () => {
   it("renders deterministically without executing", () => {
     const form = createForm();
     const props = {
-      form,
-      operation: { method: "POST", path: "/transfers" } as const,
-      confirmation: "none" as const,
+      capability: {
+        id: "transfer_money",
+        description: "Transfer money to a recipient.",
+        form,
+        operation: { method: "POST", path: "/transfers" } as const,
+        confirmation: "none" as const,
+      },
       baseUrl: "https://target.example",
       initialValues: validValues(),
       formId: "deterministic-confirmation",
@@ -386,18 +416,19 @@ describe("ConfirmationGate results and inputs", () => {
 describe("ConfirmationGate types", () => {
   it("uses the exact canonical confirmation-policy union", () => {
     expectTypeOf<ConfirmationPolicy>().toEqualTypeOf<"required" | "none">();
-    expectTypeOf<ConfirmationGateProps["confirmation"]>().toEqualTypeOf<
-      "required" | "none"
-    >();
+    expectTypeOf<
+      ConfirmationGateProps["capability"]["confirmation"]
+    >().toEqualTypeOf<"required" | "none">();
   });
 });
 
 if (false) {
   <ConfirmationGate
-    form={createForm()}
-    operation={{ method: "POST", path: "/transfers" }}
-    // @ts-expect-error Confirmation policies are exactly "required" or "none".
-    confirmation="automatic"
+    capability={{
+      ...createCapability("required"),
+      // @ts-expect-error Confirmation policies are exactly "required" or "none".
+      confirmation: "automatic",
+    }}
     baseUrl="https://target.example"
   />;
 }

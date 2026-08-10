@@ -125,6 +125,20 @@ Acceptance:
 - [x] direct browser execution has no Mashala server proxy or route handler;
 - [x] focused runtime, component, accessibility, and type-level tests prove the boundary.
 
+### ISSUE-016 — Implement capability DSL and canonical spec assembly — Complete
+
+Acceptance:
+
+- [x] typed `defineCapability` authoring API accepts a stable capability ID, routing description, static fields, one declared operation, and one deterministic confirmation policy;
+- [x] fields compile through the existing `compileForm` implementation;
+- [x] one authoritative executable canonical contract provides `MashalaSpec`, `AppMetadata`, `CapabilitySpec`, `BackendOperation`, and `ConfirmationPolicy` while reusing `FormDefinition`;
+- [x] `BackendOperation` and `ConfirmationPolicy` are imported or re-exported by executor and confirmation modules rather than independently redefined;
+- [x] the normal confirmation/execution integration consumes one `CapabilitySpec` so its form, operation, and policy remain bound;
+- [x] canonical capabilities contain only isolated plain serializable data with no headers, credentials, functions, or arbitrary executable code;
+- [x] the executable `transfer_money` example agrees with `CANONICAL_SPEC.md`;
+- [x] focused runtime and type-level tests cover assembly, binding, allowed methods/policies, malformed fields, and top-level conformance;
+- [x] all prior tests, lint, typecheck, and production build pass.
+
 ## P2 — LLM
 
 ### ISSUE-020 — Server-side provider adapter

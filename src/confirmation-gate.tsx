@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 
 import {
-  type BackendOperation,
   type BackendOperationResult,
   executeBackendOperation,
 } from "./backend-executor";
@@ -11,15 +10,17 @@ import {
   CompiledForm,
   type FormValue,
 } from "./form-renderer";
-import type { FieldMetadata, FormDefinition, JsonValue } from "./forms";
+import type { FieldMetadata, JsonValue } from "./forms";
+import {
+  assertConfirmationPolicy,
+  type CapabilitySpec,
+} from "./spec";
 import styles from "./confirmation-gate.module.css";
 
-export type ConfirmationPolicy = "required" | "none";
+export type { ConfirmationPolicy } from "./spec";
 
 export interface ConfirmationGateProps<FieldName extends string = string> {
-  readonly form: FormDefinition<FieldName>;
-  readonly operation: BackendOperation;
-  readonly confirmation: ConfirmationPolicy;
+  readonly capability: CapabilitySpec<FieldName>;
   readonly baseUrl: string | URL;
   readonly initialValues?: FormValue<FieldName>;
   readonly fetchImpl?: typeof fetch;
@@ -41,20 +42,6 @@ type ConfirmationState =
     };
 
 const DEFAULT_FORM_ID = "mashala-confirmation";
-
-function invalidConfirmationPolicy(): never {
-  throw new TypeError(
-    'Invalid confirmation policy: expected "required" or "none".',
-  );
-}
-
-function assertConfirmationPolicy(
-  policy: unknown,
-): asserts policy is ConfirmationPolicy {
-  if (policy !== "required" && policy !== "none") {
-    invalidConfirmationPolicy();
-  }
-}
 
 function assertNever(value: never): never {
   throw new Error(`Unsupported confirmation value: ${String(value)}`);
@@ -106,9 +93,7 @@ function fieldEntries<FieldName extends string>(
 }
 
 export function ConfirmationGate<FieldName extends string>({
-  form,
-  operation,
-  confirmation,
+  capability,
   baseUrl,
   initialValues,
   fetchImpl,
@@ -116,6 +101,7 @@ export function ConfirmationGate<FieldName extends string>({
   formId = DEFAULT_FORM_ID,
   submitLabel = "Submit",
 }: ConfirmationGateProps<FieldName>) {
+  const { form, operation, confirmation } = capability;
   assertConfirmationPolicy(confirmation);
 
   const [state, setState] = useState<ConfirmationState>({ phase: "editing" });

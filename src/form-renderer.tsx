@@ -136,10 +136,11 @@ function renderableFields(form: FormDefinition): readonly RenderableField[] {
 
   if (
     propertyNames.length !== metadataNames.length ||
-    propertyNames.some((name, index) => metadataNames[index] !== name)
+    propertyNames.some((name) => !hasOwn(form.fields, name)) ||
+    metadataNames.some((name) => !hasOwn(form.schema.properties, name))
   ) {
     developerError(
-      "schema properties and field metadata must have the same keys in the same order.",
+      "schema properties and field metadata must have the same keys.",
     );
   }
 

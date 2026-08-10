@@ -2,9 +2,9 @@
 
 ## Purpose and authority
 
-This document is the normative shape of the JSON-serializable artifact produced by the future developer-facing DSL. It defines the smallest contract needed by a capability router, JSON Schema validator, deterministic form renderer, and browser-side target-backend executor.
+This document is the normative shape of the JSON-serializable artifact produced by the developer-facing DSL. It defines the smallest contract needed by a capability router, JSON Schema validator, deterministic form renderer, and browser-side target-backend executor.
 
-ADR-012 records the decision. The authoring DSL is not defined here and remains a later task.
+ADR-012 records the decision. The executable contract lives in `src/spec.ts`; `src/capabilities.ts` implements static capability authoring, and `src/examples/transfer-money.ts` is the executable counterpart of the complete example below.
 
 ## TypeScript contract
 
@@ -182,7 +182,6 @@ This example uses every v0.1 static field kind. It is a compiled JSON artifact, 
       "form": {
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "$id": "mashala://forms/transfer_money",
           "type": "object",
           "properties": {
             "recipient": {
@@ -192,7 +191,7 @@ This example uses every v0.1 static field kind. It is a compiled JSON artifact, 
             },
             "amount": {
               "type": "number",
-              "exclusiveMinimum": 0
+              "minimum": 0.01
             },
             "note": {
               "type": "string",
