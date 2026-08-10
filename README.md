@@ -86,7 +86,58 @@ export function TransferForm() {
 }
 ```
 
-`form.schema` is the sole validation source; `form.fields` contains only rendering metadata. `CompiledForm` keeps editable local state, validates with Ajv 2020-12, and calls `onSubmit` only with a valid value. Capability compilation, backend execution, confirmation, runtime protocol behavior, authentication, and reference fields remain later tasks.
+`form.schema` is the sole validation source; `form.fields` contains only rendering metadata. `CompiledForm` keeps editable local state, validates with Ajv 2020-12, and calls `onSubmit` only with a valid value. It does not execute a backend operation by itself.
+
+## Browser backend executor
+
+`executeBackendOperation` consumes an already validated value and makes one direct browser request to the supplied target-backend origin. The Mashala server is not a proxy and is not part of this request path.
+
+```ts
+import { executeBackendOperation } from "./src/backend-executor";
+
+const result = await executeBackendOperation({
+  baseUrl: "https://backend.example",
+  operation: { method: "POST", path: "/transfers" },
+  value: {
+    recipient: "Sam",
+    amount: 250,
+    immediate: true,
+  },
+});
+
+if (result.outcome === "success") {
+  // The native target-backend Response is preserved.
+  console.log(result.response.status);
+}
+```
+
+The executor sends the declared `POST`, `PUT`, or `PATCH` method, `Content-Type: application/json`, and `JSON.stringify(value)` without renaming or adding business properties. It does not validate the form again, add authorization headers, or define authentication storage. HTTP failures preserve the target `Response`; rejected fetches return a sanitized `network-error` result.
+
+The executor remains a low-level primitive: it does not decide whether confirmation is required.
+
+## Validated form, confirmation, and direct execution
+
+`ConfirmationGate` composes the two boundaries. For `confirmation="required"`, a valid `CompiledForm` submission becomes an immutable review snapshot and cannot execute until the user separately selects **Confirm and send**. The confirmed request still goes directly from the browser to the target backend; the Mashala server is not a proxy.
+
+```tsx
+"use client";
+
+import { ConfirmationGate } from "./src/confirmation-gate";
+
+export function Transfer() {
+  return (
+    <ConfirmationGate
+      form={form}
+      operation={{ method: "POST", path: "/transfers" }}
+      confirmation="required"
+      baseUrl="https://backend.example"
+      submitLabel="Review transfer"
+    />
+  );
+}
+```
+
+The review uses the exact value already validated by `CompiledForm`; cancel/back discards that review, and pending confirmation cannot create duplicate requests. `confirmation="none"` skips the second confirmation but still executes only from an explicit valid form submission—never from render, mount, or hydration. Capability compilation, runtime protocol behavior, authentication integration, LLM behavior, workflows, theming, and reference fields remain later tasks.
 
 ## Project documentation
 

@@ -1,0 +1,95 @@
+.gate {
+  display: grid;
+  width: min(100%, 42rem);
+  gap: 1.25rem;
+}
+
+.panel {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid #aaa9a1;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  text-align: left;
+}
+
+.panel h2,
+.panel p,
+.reviewList {
+  margin: 0;
+}
+
+.reviewList {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.reviewField {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr);
+  gap: 1rem;
+}
+
+.reviewField dt {
+  font-weight: 650;
+}
+
+.reviewField dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.status:empty {
+  display: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.confirm,
+.back {
+  border: 0;
+  border-radius: 0.45rem;
+  font: inherit;
+  font-weight: 650;
+  padding: 0.75rem 1.1rem;
+  cursor: pointer;
+}
+
+.confirm {
+  background: #1e5e3f;
+  color: #fff;
+}
+
+.back {
+  background: #e5e5df;
+  color: #20201e;
+}
+
+.confirm:disabled,
+.back:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.confirm:focus-visible,
+.back:focus-visible {
+  outline: 3px solid #8cb8ff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 36rem) {
+  .reviewField {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .actions,
+  .confirm,
+  .back {
+    width: 100%;
+  }
+}

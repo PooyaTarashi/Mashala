@@ -16,15 +16,15 @@ Thesis contribution wording and final research questions still require superviso
 - ISSUE-010: scaffold the single-package Next.js/TypeScript repository with lint, test, and typecheck commands and no LLM integration — Complete.
 - ISSUE-011: implement deterministic typed `f.text`, `f.longText`, `f.number`, `f.select`, and `f.boolean` field primitives — Complete.
 - ISSUE-012: compile forms to the JSON Schema and metadata split in `CANONICAL_SPEC.md`, with Ajv 2020-12 validation tests — Complete.
-- Implement `defineCapability`.
+- Implement `defineCapability` — Next.
 - Implement static API binding metadata.
 
 ## Phase 2 — Deterministic frontend prototype
 
 - ISSUE-013: render compiled forms in React with local editing, Ajv validation, and accessible errors — Complete.
-- ISSUE-014: execute declared target-backend operations directly from the browser — Next.
+- ISSUE-014: execute declared target-backend operations directly from the browser — Complete.
+- ISSUE-015: add the confirmation gate before wiring consequential writes into user-facing flows — Complete.
 - Add theme primitives.
-- Add confirmation state.
 - Create one mock backend capability.
 
 ## Phase 3 — LLM-assisted interaction

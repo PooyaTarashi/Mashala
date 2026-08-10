@@ -101,21 +101,29 @@ Acceptance:
 - [x] responsive layout;
 - [x] focused component and type-level tests.
 
-### ISSUE-014 — Browser API executor — Next
+### ISSUE-014 — Browser API executor — Complete
 
 Acceptance:
 
-- declared method/path only;
-- browser calls mock target backend;
-- handles success/error;
-- no Mashala server proxy.
+- [x] declared `POST`, `PUT`, or `PATCH` method and root-relative path only;
+- [x] browser calls the supplied target backend directly with the validated JSON value;
+- [x] native target responses distinguish 2xx success from non-2xx HTTP failure;
+- [x] rejected fetches produce a sanitized network-failure result;
+- [x] no Mashala server proxy or route handler exists.
 
-### ISSUE-015 — Confirmation gate
+### ISSUE-015 — Confirmation gate — Complete
 
 Acceptance:
 
-- write cannot execute before required user interaction;
-- test proves it.
+- [x] `CompiledForm` remains the sole validation boundary;
+- [x] a required operation enters deterministic review without executing;
+- [x] a separate explicit confirmation executes the exact reviewed snapshot;
+- [x] cancel/back does not execute and stale review cannot authorize a replacement value;
+- [x] pending confirmation cannot create duplicate target requests;
+- [x] `none` executes only from an explicit valid submission, never render or mount;
+- [x] executor success, HTTP-failure, and network-failure results remain distinct;
+- [x] direct browser execution has no Mashala server proxy or route handler;
+- [x] focused runtime, component, accessibility, and type-level tests prove the boundary.
 
 ## P2 — LLM
 

@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P1 implementation is in progress. ISSUE-013's compiled-form renderer is complete.**
+**P1 implementation is in progress. ISSUE-015's confirmation gate is complete.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, and ISSUE-013 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, and a deterministic React renderer for compiled forms alongside the frozen v0.1 contracts.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, and ISSUE-015 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, and a deterministic confirmation boundary alongside the frozen v0.1 contracts.
 
 ## Accepted decisions
 
@@ -49,7 +49,13 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, and ISSUE-013 
 - ISSUE-013 — typed client-side `CompiledForm` React component for all five static field kinds, editable isolated local state, deterministic IDs and field order, schema-derived required state and constraints, and valid-only local submission.
 - Ajv 2020-12 submission validation with accessible field errors and a linked alert summary. Labels, help text, required indications, `aria-describedby`, and `aria-invalid` are covered by focused component tests.
 - Static select values come only from schema enums while presentation labels come from `optionLabels`. Malformed schema/metadata correspondence fails as a deterministic developer error.
-- Minimal Mashala page and server-render smoke test; no capability compiler, backend execution, confirmation gate, runtime protocol implementation, LLM, authentication, or reference-field behavior yet.
+- ISSUE-014 — typed client-side `executeBackendOperation` API for canonical `POST`, `PUT`, and `PATCH` operations. It validates serialized operation shape and path constraints, resolves only within the supplied target-backend origin, sends one direct JSON request, preserves native responses for 2xx/non-2xx outcomes, and sanitizes rejected-fetch failures.
+- The executor consumes an already validated value without renaming or adding properties. It accepts no custom headers or credentials and creates no Mashala API route or proxy.
+- ISSUE-015 — typed client-side `ConfirmationGate` composition of `CompiledForm` and `executeBackendOperation`, with runtime-checked `ConfirmationPolicy = "required" | "none"`.
+- Required operations move from an explicit valid form submission to an accessible review of a frozen same-property snapshot. A separate explicit confirmation executes that exact snapshot once; cancel/back discards it, and pending execution disables and guards repeated confirmation.
+- The `none` policy skips only the second confirmation. It still executes exclusively from an explicit valid form submission, never as a render, mount, hydration, or unrelated state-change effect.
+- Confirmation and target-backend execution remain deterministic browser behavior. Executor success, HTTP failure, and sanitized network failure remain distinct, and the Mashala server remains outside the target request path.
+- Minimal Mashala page and server-render smoke test; no capability compiler, runtime protocol implementation, LLM, authentication integration, workflow engine, theme primitives, or reference-field behavior yet.
 
 ## Deliberately unresolved
 
@@ -65,6 +71,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**ISSUE-014 — Browser API executor** is next. It must execute only a declared method/path directly from the browser and must not introduce a Mashala-server proxy.
+**Implement `defineCapability`** is the next unfinished roadmap task. It remains deliberately separate from the completed field/form compiler and confirmation boundary.
 
-ISSUE-013 introduced only deterministic local form rendering and a valid-form callback boundary. It did not implement capability compilation, target-backend execution, confirmation, runtime protocol transport/events, LLM behavior, authentication, or reference fields. ISSUE-014 and all later implementation issues remain incomplete.
+ISSUE-015 did not implement capability assembly or routing, authentication integration, runtime protocol transport/events, LLM/provider behavior, workflows, theming, mock-backend infrastructure, or reference fields. Those later tasks remain incomplete.
