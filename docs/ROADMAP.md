@@ -11,18 +11,17 @@ This roadmap is architecture-first and intentionally keeps the first implementat
 
 Thesis contribution wording and final research questions still require supervisor input, but they do not reopen the completed P0 software contracts unless an accepted ADR later supersedes them.
 
-## Phase 1 — Spec/DSL v0.1
+## Phase 1 — Spec/DSL v0.1 — In progress
 
-- ISSUE-010: scaffold the single-package Next.js/TypeScript repository with lint, test, and typecheck commands and no LLM integration.
+- ISSUE-010: scaffold the single-package Next.js/TypeScript repository with lint, test, and typecheck commands and no LLM integration — Complete.
+- ISSUE-011: implement deterministic typed `f.text`, `f.longText`, `f.number`, `f.select`, and `f.boolean` field primitives — Complete.
+- ISSUE-012: compile forms to the JSON Schema and metadata split in `CANONICAL_SPEC.md`, with Ajv 2020-12 validation tests — Complete.
 - Implement `defineCapability`.
-- Implement basic `f.text`, `f.longText`, `f.number`, `f.select`, `f.boolean`.
-- Compile to `CANONICAL_SPEC.md`.
-- Add validation tests with Ajv.
 - Implement static API binding metadata.
 
 ## Phase 2 — Deterministic frontend prototype
 
-- Render compiled forms in React.
+- ISSUE-013: render compiled forms in React — Next.
 - Add theme primitives.
 - Add confirmation state.
 - Create one mock backend capability.

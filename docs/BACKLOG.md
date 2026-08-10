@@ -53,41 +53,43 @@ Acceptance:
 
 ## P1 — first implementation
 
-### ISSUE-010 — Scaffold repository — Next
+### ISSUE-010 — Scaffold repository — Complete
 
 Acceptance:
 
-- app runs locally;
-- lint/test/typecheck commands;
-- Node and dependency versions pinned according to ADR-011;
-- no LLM integration.
+- [x] app runs locally;
+- [x] lint/test/typecheck commands;
+- [x] Node and dependency versions pinned according to ADR-011;
+- [x] no LLM integration.
 
-### ISSUE-011 — Implement basic field DSL
+### ISSUE-011 — Implement basic field DSL — Complete
 
 Fields:
 
-- text
-- longText
-- number
-- select
-- boolean
+- [x] text
+- [x] longText
+- [x] number
+- [x] select
+- [x] boolean
 
 Acceptance:
 
-- typed API;
-- compiles deterministically;
-- unit tests.
+- [x] typed API;
+- [x] deterministic, JSON-serializable field-level definitions;
+- [x] unit and type-level tests.
 
-### ISSUE-012 — Compile forms to JSON Schema
+### ISSUE-012 — Compile forms to JSON Schema — Complete
 
 Acceptance:
 
-- required/optional;
-- enum;
-- min/max or length constraints;
-- validation tests.
+- [x] required/optional with an optional-by-default authoring API;
+- [x] select enum values and corresponding presentation labels;
+- [x] string length and numeric minimum/maximum constraints;
+- [x] canonical JSON Schema Draft 2020-12 and field-metadata split;
+- [x] deterministic, isolated compiled output;
+- [x] validation tests using Ajv's 2020-12 entry point.
 
-### ISSUE-013 — Render compiled form
+### ISSUE-013 — Render compiled form — Next
 
 Acceptance:
 
