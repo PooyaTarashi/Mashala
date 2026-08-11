@@ -70,7 +70,7 @@ describe("resolveReferenceOptions", () => {
     const result = await resolveReferenceOptions({
       baseUrl: "https://target.example/application/",
       field: accountField,
-      fetchImpl,
+      request: fetchImpl,
     });
 
     expect(result).toEqual({
@@ -112,7 +112,7 @@ describe("resolveReferenceOptions", () => {
       resolveReferenceOptions({
         baseUrl: "https://target.example",
         field: accountField,
-        fetchImpl,
+        request: fetchImpl,
       }),
     ).resolves.toEqual({ outcome });
   });
@@ -132,7 +132,7 @@ describe("resolveReferenceOptions", () => {
       resolveReferenceOptions({
         baseUrl: "https://target.example",
         field: malformedField,
-        fetchImpl,
+        request: fetchImpl,
       }),
     ).rejects.toThrow(/^Invalid reference source:/);
     expect(fetchImpl).not.toHaveBeenCalled();

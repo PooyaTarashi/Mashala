@@ -21,6 +21,7 @@ import {
   type ReferenceOption,
   resolveReferenceOptions,
 } from "./reference-resolver";
+import type { TargetBackendRequest } from "./target-backend-request";
 import styles from "./form-renderer.module.css";
 
 export type FormFieldValue = string | number | boolean;
@@ -38,8 +39,8 @@ export interface CompiledFormProps<FieldName extends string = string> {
   readonly formId?: string;
   /** Required when the compiled form contains a reference field. */
   readonly baseUrl?: string | URL;
-  /** Injectable browser request boundary; defaults to browser fetch. */
-  readonly fetchImpl?: typeof fetch;
+  /** Target-app browser request behavior; defaults to browser fetch. */
+  readonly request?: TargetBackendRequest;
 }
 
 interface RenderableField {
@@ -453,7 +454,7 @@ export function CompiledForm<FieldName extends string>({
   submitLabel = "Submit",
   formId = DEFAULT_FORM_ID,
   baseUrl,
-  fetchImpl,
+  request,
 }: CompiledFormProps<FieldName>) {
   const fields = useMemo(() => renderableFields(form), [form]);
   const validator = useMemo(() => compileValidator(form), [form]);
@@ -486,7 +487,7 @@ export function CompiledForm<FieldName extends string>({
       void resolveReferenceOptions({
         baseUrl,
         field: field.metadata,
-        ...(fetchImpl === undefined ? {} : { fetchImpl }),
+        ...(request === undefined ? {} : { request }),
       }).then((result) => {
         if (!active) {
           return;
@@ -506,7 +507,7 @@ export function CompiledForm<FieldName extends string>({
     return () => {
       active = false;
     };
-  }, [baseUrl, fetchImpl, fields]);
+  }, [baseUrl, fields, request]);
 
   function updateValue(name: string, value: FormFieldValue | undefined): void {
     const nextValues = { ...values, [name]: value };

@@ -15,6 +15,7 @@ import {
   assertConfirmationPolicy,
   type CapabilitySpec,
 } from "./spec";
+import type { TargetBackendRequest } from "./target-backend-request";
 import styles from "./confirmation-gate.module.css";
 
 export type { ConfirmationPolicy } from "./spec";
@@ -23,7 +24,7 @@ export interface ConfirmationGateProps<FieldName extends string = string> {
   readonly capability: CapabilitySpec<FieldName>;
   readonly baseUrl: string | URL;
   readonly initialValues?: FormValue<FieldName>;
-  readonly fetchImpl?: typeof fetch;
+  readonly request?: TargetBackendRequest;
   readonly onResult?: (result: BackendOperationResult) => void;
   readonly formId?: string;
   readonly submitLabel?: string;
@@ -96,7 +97,7 @@ export function ConfirmationGate<FieldName extends string>({
   capability,
   baseUrl,
   initialValues,
-  fetchImpl,
+  request,
   onResult,
   formId = DEFAULT_FORM_ID,
   submitLabel = "Submit",
@@ -122,7 +123,7 @@ export function ConfirmationGate<FieldName extends string>({
         baseUrl,
         operation,
         value,
-        ...(fetchImpl === undefined ? {} : { fetchImpl }),
+        ...(request === undefined ? {} : { request }),
       });
 
       setState({ phase: "complete", value, result });
@@ -173,7 +174,7 @@ export function ConfirmationGate<FieldName extends string>({
           submitLabel={submitLabel}
           formId={formId}
           baseUrl={baseUrl}
-          fetchImpl={fetchImpl}
+          request={request}
         />
       </div>
 

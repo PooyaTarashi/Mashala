@@ -29,7 +29,7 @@ describe("executeBackendOperation", () => {
         baseUrl: "https://target.example/base/",
         operation,
         value,
-        fetchImpl,
+        request: fetchImpl,
       });
 
       expect(result).toEqual({
@@ -60,7 +60,7 @@ describe("executeBackendOperation", () => {
       baseUrl: new URL("https://api.example"),
       operation: { method: "POST", path: "/items" },
       value,
-      fetchImpl,
+      request: fetchImpl,
     });
 
     const request = fetchImpl.mock.calls[0];
@@ -93,7 +93,7 @@ describe("executeBackendOperation", () => {
       baseUrl,
       operation,
       value,
-      fetchImpl,
+      request: fetchImpl,
     });
 
     expect(JSON.stringify(operation)).toBe(operationBefore);
@@ -109,7 +109,7 @@ describe("executeBackendOperation", () => {
         baseUrl: "https://target.example",
         operation: { method: "PUT", path: "/resource" },
         value: {},
-        fetchImpl: mockFetch(response),
+        request: mockFetch(response),
       });
 
       expect(result).toEqual({ outcome: "success", response });
@@ -124,7 +124,7 @@ describe("executeBackendOperation", () => {
         baseUrl: "https://target.example",
         operation: { method: "POST", path: "/resource" },
         value: {},
-        fetchImpl: mockFetch(response),
+        request: mockFetch(response),
       });
 
       expect(result).toEqual({ outcome: "http-error", response });
@@ -140,7 +140,7 @@ describe("executeBackendOperation", () => {
       baseUrl: "https://target.example",
       operation: { method: "POST", path: "/resource" },
       value: {},
-      fetchImpl,
+      request: fetchImpl,
     });
 
     expect(result).toEqual({ outcome: "network-error" });
@@ -165,7 +165,7 @@ describe("executeBackendOperation", () => {
         baseUrl: "https://target.example",
         operation: operation as unknown as BackendOperation,
         value: {},
-        fetchImpl,
+        request: fetchImpl,
       }),
     ).rejects.toThrow(/^Invalid backend operation:/);
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -186,7 +186,7 @@ describe("executeBackendOperation", () => {
         baseUrl: "https://target.example",
         operation: { method: "POST", path },
         value: {},
-        fetchImpl,
+        request: fetchImpl,
       }),
     ).rejects.toThrow(/^Invalid backend operation:/);
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -200,7 +200,7 @@ describe("executeBackendOperation", () => {
         baseUrl: "https://target.example",
         operation: { method: "POST", path: "/\\attacker.example/resource" },
         value: {},
-        fetchImpl,
+        request: fetchImpl,
       }),
     ).rejects.toThrow(
       "Invalid backend operation: path must resolve within the supplied target backend origin.",
@@ -220,7 +220,7 @@ describe("executeBackendOperation", () => {
         baseUrl,
         operation: { method: "POST", path: "/resource" },
         value: {},
-        fetchImpl,
+        request: fetchImpl,
       }),
     ).rejects.toThrow(/^Invalid target backend base URL:/);
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -235,8 +235,8 @@ describe("executeBackendOperation", () => {
       value: { product: "book", quantity: 1 },
     };
 
-    await executeBackendOperation({ ...input, fetchImpl: firstFetch });
-    await executeBackendOperation({ ...input, fetchImpl: secondFetch });
+    await executeBackendOperation({ ...input, request: firstFetch });
+    await executeBackendOperation({ ...input, request: secondFetch });
 
     expect(firstFetch.mock.calls).toEqual(secondFetch.mock.calls);
     expect(firstFetch).toHaveBeenCalledWith(

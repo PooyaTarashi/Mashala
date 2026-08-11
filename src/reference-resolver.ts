@@ -2,6 +2,10 @@
 
 import type { ReferenceFieldMetadata } from "./forms";
 import { resolveTargetBackendUrl } from "./target-backend-url";
+import {
+  requestTargetBackend,
+  type TargetBackendRequest,
+} from "./target-backend-request";
 
 export interface ReferenceOption {
   readonly value: string;
@@ -11,8 +15,8 @@ export interface ReferenceOption {
 export interface ResolveReferenceOptionsInput {
   readonly baseUrl: string | URL;
   readonly field: ReferenceFieldMetadata;
-  /** Injectable browser request boundary for target-app auth integration. */
-  readonly fetchImpl?: typeof fetch;
+  /** Target-app browser request behavior, including its existing auth context. */
+  readonly request?: TargetBackendRequest;
 }
 
 export type ReferenceResolutionResult =
@@ -133,7 +137,7 @@ export function projectReferenceOptions(
 export async function resolveReferenceOptions({
   baseUrl,
   field,
-  fetchImpl = fetch,
+  request,
 }: ResolveReferenceOptionsInput): Promise<ReferenceResolutionResult> {
   assertReferenceSource(field.source);
 
@@ -145,7 +149,7 @@ export async function resolveReferenceOptions({
 
   let response: Response;
   try {
-    response = await fetchImpl(url.href, { method: "GET" });
+    response = await requestTargetBackend(request, url.href, { method: "GET" });
   } catch {
     return { outcome: "network-error" };
   }

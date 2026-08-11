@@ -69,6 +69,22 @@ The target application may use, for example:
 
 Mashala provides an integration surface for login/session state and authenticated requests.
 
+The v0.1 request surface is one browser-side callable:
+
+```ts
+interface TargetBackendRequest {
+  (input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+}
+```
+
+The target application supplies this behavior when its normal `fetch` behavior
+is not sufficient. The same callable is used for confirmed writes and
+`f.reference` reads. Its implementation may use the target application's
+existing cookies, token manager, refresh logic, or another browser-compatible
+session mechanism; Mashala does not receive a serialized credential or define
+how one is stored. Without an injected callable, the browser runtime uses the
+browser's ordinary `fetch` directly.
+
 ### Credential rule
 
 ```text
@@ -79,6 +95,9 @@ User credential ─X─► LLM
 The Mashala server should not require the target-backend credential under the default architecture.
 
 Mashala must not prescribe insecure persistence such as “always store access tokens in localStorage.”
+
+Bearer tokens are therefore one possible target-app implementation detail, not
+the canonical Mashala integration model.
 
 ## LLM provider secret
 

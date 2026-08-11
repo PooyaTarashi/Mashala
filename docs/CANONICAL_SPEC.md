@@ -276,7 +276,7 @@ A renderer reads `fields`; a validator reads `schema`; a router reads capability
 
 The associated JSON Schema property validates the selected primitive as a string. Before submission, the browser additionally requires the value to be present in that field's successfully resolved option set, then runs the unchanged full-form JSON Schema validation. Loading or failed resolution cannot authorize an unresolved value.
 
-The browser request boundary accepts an injected fetch-compatible function so ISSUE-031 can later supply the target application's authentication behavior without putting headers or credentials in canonical data. Cascading/dependent references and model-visible backend projection remain deferred.
+The browser request boundary accepts an injected `TargetBackendRequest` function supplied by the target application. Confirmed writes and reference reads use this same browser-side behavior, which may apply the target application's existing session mechanism without putting headers, credentials, or functions in canonical data. Ordinary browser `fetch` remains the default. Cascading/dependent references and model-visible backend projection remain deferred.
 
 ## Model-visible backend data extension point
 

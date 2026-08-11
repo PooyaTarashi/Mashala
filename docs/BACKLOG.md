@@ -255,22 +255,22 @@ The executable shared contracts and validators live in `src/runtime-protocol.ts`
 
 ---
 
-### ISSUE-031 — Auth-context integration interface
+### ISSUE-031 — Auth-context integration interface — Complete
 
 **Goal:** Allow browser-executed Mashala operations to use the target application's existing authentication mechanism without Mashala owning authentication.
 
 **Acceptance:**
 
-* [ ] framework exposes a minimal browser request/auth integration boundary;
-* [ ] Mashala does not prescribe token storage;
-* [ ] Mashala does not implement its own authentication system;
-* [ ] integration supports the existing browser executor;
-* [ ] integration supports `f.reference` reads;
-* [ ] user target-backend credentials remain browser-side;
-* [ ] credentials never enter canonical capability data;
-* [ ] credentials never enter browser/server LLM protocol;
-* [ ] sample/demo backend proves authenticated integration;
-* [ ] tests prove the boundary without coupling Mashala to a specific auth technology.
+* [x] framework exposes a minimal browser request/auth integration boundary;
+* [x] Mashala does not prescribe token storage;
+* [x] Mashala does not implement its own authentication system;
+* [x] integration supports the existing browser executor;
+* [x] integration supports `f.reference` reads;
+* [x] user target-backend credentials remain browser-side;
+* [x] credentials never enter canonical capability data;
+* [x] credentials never enter browser/server LLM protocol;
+* [x] sample/demo backend proves authenticated integration;
+* [x] tests prove the boundary without coupling Mashala to a specific auth technology.
 
 ---
 

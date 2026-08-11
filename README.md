@@ -111,7 +111,9 @@ if (result.outcome === "success") {
 }
 ```
 
-The executor sends the declared `POST`, `PUT`, or `PATCH` method, `Content-Type: application/json`, and `JSON.stringify(value)` without renaming or adding business properties. It does not validate the form again, add authorization headers, or define authentication storage. HTTP failures preserve the target `Response`; rejected fetches return a sanitized `network-error` result.
+The executor sends the declared `POST`, `PUT`, or `PATCH` method, `Content-Type: application/json`, and `JSON.stringify(value)` without renaming or adding business properties. It does not validate the form again or define authentication storage. HTTP failures preserve the target `Response`; rejected fetches return a sanitized `network-error` result.
+
+When the target application needs custom authenticated request behavior, it supplies one browser-side `TargetBackendRequest` function. `ConfirmationGate` passes that same function to writes and `f.reference` reads. The function may use the target application's existing cookie or token/session integration, while Mashala receives no serialized credential. `src/examples/demo-cookie-session-request.ts` shows a minimal cookie-session example using `credentials: "include"`; it is sample policy, not a framework default.
 
 The executor remains a low-level primitive: it does not decide whether confirmation is required.
 
@@ -137,7 +139,7 @@ export function Transfer() {
 }
 ```
 
-The review uses the exact value already validated by `CompiledForm`; cancel/back discards that review, and pending confirmation cannot create duplicate requests. `confirmation="none"` skips the second confirmation but still executes only from an explicit valid form submission—never from render, mount, or hydration. Capability compilation, runtime protocol behavior, authentication integration, LLM behavior, workflows, theming, and reference fields remain later tasks.
+The review uses the exact value already validated by `CompiledForm`; cancel/back discards that review, and pending confirmation cannot create duplicate requests. `confirmation="none"` skips the second confirmation but still executes only from an explicit valid form submission—never from render, mount, or hydration. Authentication remains owned by the target application; Mashala adds no login system, token-storage policy, server credential store, or target-backend proxy.
 
 ## Project documentation
 

@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P3 data-backed fields are complete through the first browser-resolved reference field. ISSUE-030's `f.reference` authoring, canonical representation, direct browser GET resolution, deterministic projection, rendering, and allowed-value validation are complete.**
+**P3 data-backed fields are complete through browser auth-context integration. ISSUE-031's minimal fetch-like target-app request boundary now serves both confirmed writes and `f.reference` reads without making Mashala an authentication framework.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, and ISSUE-030 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution, a deterministic confirmation boundary, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, and transport-independent runtime events with deterministic validation of untrusted data.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, and ISSUE-031 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, and transport-independent runtime events with deterministic validation of untrusted data.
 
 ## Accepted decisions
 
@@ -25,7 +25,7 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Target-backend API calls execute entirely in the user's browser. The Mashala server is not a general proxy/BFF.
 - Target-backend credentials are not part of the runtime protocol and must not be sent to the Mashala server or LLM.
 - The LLM provider secret lives on the Mashala server.
-- Target-app authentication belongs to the target app; Mashala integrates with it but does not define it.
+- Target-app authentication belongs to the target app. Mashala's `TargetBackendRequest` callable carries browser request behavior shared by reads and writes; it does not carry serialized credentials or define login, refresh, or persistence.
 - Deterministic code owns workflow transitions, form validation, confirmation, and side effects.
 - LangGraph remains an implementation candidate, not an architectural dependency.
 - Mashala defines build commands/output; developers choose CI/CD/deployment workflow.
@@ -91,8 +91,12 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - `compileForm` emits a string JSON Schema property plus plain serializable `reference` runtime metadata. It copies only method/path source data and contains no headers or credentials.
 - `resolveReferenceOptions` performs the declared GET directly through the browser fetch boundary, requires a root response array, and rejects the complete result for malformed items or duplicate projected values.
 - `CompiledForm` renders loading, failure, and resolved select states. A selected value must belong to the successfully resolved options in addition to passing the unchanged full-form JSON Schema validation.
-- Reference resolution does not execute a write. `ConfirmationGate` passes the same injectable browser request boundary through to reads so ISSUE-031 can later supply auth integration without changing canonical data.
+- Reference resolution does not execute a write. `ConfirmationGate` passes the same `TargetBackendRequest` callable through to reads and confirmed writes without changing canonical data.
 - Reference fields are omitted from model slot-extraction contracts; ISSUE-032 remains responsible for any explicit model-visible backend projection.
+- ISSUE-031 — a callable `TargetBackendRequest` interface lets the target app inject its existing authenticated browser request behavior. Ordinary browser `fetch` remains the default.
+- The integration is behavior-only and exists outside `MashalaSpec`, `CapabilitySpec`, field metadata, runtime protocol events, and server/LLM state. Mashala defines no credential or token-storage property.
+- `createDemoCookieSessionRequest` is a minimal sample that applies the target app's cookie-session behavior with `credentials: "include"`; focused tests exercise it against a mock target backend for both GET and POST requests.
+- Target HTTP failures, including unauthenticated `401` responses, retain the existing executor/reference failure behavior. Mashala does not add login, refresh, retry, or authorization policy.
 
 ## Deliberately unresolved
 
@@ -107,6 +111,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**Implement the auth-context integration interface (ISSUE-031)** is the recommended next backlog task.
+**Resolve ADR-010's projection mechanism before implementing ISSUE-032** is the recommended next backlog task.
 
-ISSUE-030 did not implement authentication integration, model-visible backend projection, cascading references, runtime protocol transport, workflows, theming, mock-backend infrastructure, or RAG. Those later tasks remain incomplete.
+ISSUE-031 did not implement model-visible backend projection, cascading references, runtime protocol transport, workflows, theming, general mock-backend infrastructure, or RAG. Those later tasks remain incomplete.

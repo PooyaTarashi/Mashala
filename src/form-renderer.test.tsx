@@ -415,7 +415,7 @@ describe("CompiledForm reference resolution", () => {
       <CompiledForm
         form={createReferenceForm()}
         baseUrl="https://target.example/application/"
-        fetchImpl={fetchImpl}
+        request={fetchImpl}
         onSubmit={onSubmit}
       />,
     );
@@ -470,7 +470,7 @@ describe("CompiledForm reference resolution", () => {
       <CompiledForm
         form={createReferenceForm()}
         baseUrl="https://target.example"
-        fetchImpl={fetchImpl}
+        request={fetchImpl}
         onSubmit={() => undefined}
       />,
     );
@@ -490,7 +490,7 @@ describe("CompiledForm reference resolution", () => {
       <CompiledForm
         form={createReferenceForm()}
         baseUrl="https://target.example"
-        fetchImpl={vi.fn<typeof fetch>().mockResolvedValue(accountResponse())}
+        request={vi.fn<typeof fetch>().mockResolvedValue(accountResponse())}
         initialValues={{ account: "invented_account" }}
         onSubmit={onSubmit}
       />,
@@ -519,7 +519,7 @@ describe("CompiledForm reference resolution", () => {
       <CompiledForm
         form={createReferenceForm()}
         baseUrl="https://target.example"
-        fetchImpl={fetchImpl}
+        request={fetchImpl}
         initialValues={{ account: "acct_1" }}
         onSubmit={onSubmit}
       />,

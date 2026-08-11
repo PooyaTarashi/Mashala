@@ -80,13 +80,13 @@ function renderGate(
   confirmation: ConfirmationPolicy,
   overrides: Partial<ConfirmationGateProps> = {},
 ) {
-  const fetchImpl = overrides.fetchImpl ?? successfulFetch();
+  const fetchImpl = overrides.request ?? successfulFetch();
   const view = render(
     <ConfirmationGate
       capability={createCapability(confirmation)}
       baseUrl="https://target.example/application/"
       initialValues={validValues()}
-      fetchImpl={fetchImpl}
+      request={fetchImpl}
       submitLabel="Review transfer"
       {...overrides}
     />,
@@ -98,7 +98,7 @@ function renderGate(
 describe("ConfirmationGate required policy", () => {
   it("keeps invalid submissions outside review and execution", () => {
     const fetchImpl = successfulFetch();
-    renderGate("required", { initialValues: {}, fetchImpl });
+    renderGate("required", { initialValues: {}, request: fetchImpl });
 
     fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
 
@@ -111,7 +111,7 @@ describe("ConfirmationGate required policy", () => {
 
   it("enters an accessible ordered review without executing", () => {
     const fetchImpl = successfulFetch();
-    renderGate("required", { fetchImpl });
+    renderGate("required", { request: fetchImpl });
 
     fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
 
@@ -157,7 +157,7 @@ describe("ConfirmationGate required policy", () => {
       saveRecipient: false,
     };
     const fetchImpl = successfulFetch();
-    renderGate("required", { initialValues, fetchImpl });
+    renderGate("required", { initialValues, request: fetchImpl });
 
     fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
     const hiddenRecipient = screen.getByLabelText(
@@ -182,7 +182,7 @@ describe("ConfirmationGate required policy", () => {
 
   it("returns to the same editable form without executing", () => {
     const fetchImpl = successfulFetch();
-    renderGate("required", { fetchImpl });
+    renderGate("required", { request: fetchImpl });
 
     fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
     fireEvent.click(screen.getByRole("button", { name: "Back to form" }));
@@ -205,7 +205,7 @@ describe("ConfirmationGate required policy", () => {
           resolveRequest = resolve;
         }),
     );
-    renderGate("required", { fetchImpl });
+    renderGate("required", { request: fetchImpl });
     fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
 
     const confirm = screen.getByRole("button", { name: "Confirm and send" });
@@ -232,7 +232,7 @@ describe("ConfirmationGate required policy", () => {
 
   it("does not let a cancelled review authorize a replacement value", async () => {
     const fetchImpl = successfulFetch();
-    renderGate("required", { fetchImpl });
+    renderGate("required", { request: fetchImpl });
     fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
     fireEvent.click(screen.getByRole("button", { name: "Back to form" }));
 
@@ -287,7 +287,7 @@ describe("ConfirmationGate with a reference field", () => {
       <ConfirmationGate
         capability={capability}
         baseUrl="https://target.example"
-        fetchImpl={fetchImpl}
+        request={fetchImpl}
         submitLabel="Review payment"
       />,
     );
@@ -327,7 +327,7 @@ describe("ConfirmationGate with a reference field", () => {
 describe("ConfirmationGate none policy", () => {
   it("does not execute an explicit invalid submission", () => {
     const fetchImpl = successfulFetch();
-    renderGate("none", { initialValues: {}, fetchImpl });
+    renderGate("none", { initialValues: {}, request: fetchImpl });
 
     fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
 
@@ -337,7 +337,7 @@ describe("ConfirmationGate none policy", () => {
 
   it("executes only from an explicit valid submission, never render or rerender", async () => {
     const fetchImpl = successfulFetch();
-    const { rerender } = renderGate("none", { fetchImpl });
+    const { rerender } = renderGate("none", { request: fetchImpl });
 
     expect(fetchImpl).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText(/Recipient/), {
@@ -350,7 +350,7 @@ describe("ConfirmationGate none policy", () => {
         capability={createCapability("none")}
         baseUrl="https://target.example"
         initialValues={validValues()}
-        fetchImpl={fetchImpl}
+        request={fetchImpl}
         submitLabel="Review transfer"
       />,
     );
@@ -384,7 +384,7 @@ describe("ConfirmationGate results and inputs", () => {
     async ({ fetchResult, expectedOutcome, expectedMessage }) => {
       const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(fetchResult);
       const onResult = vi.fn<(result: BackendOperationResult) => void>();
-      renderGate("none", { fetchImpl, onResult });
+      renderGate("none", { request: fetchImpl, onResult });
 
       fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
 
@@ -404,7 +404,7 @@ describe("ConfirmationGate results and inputs", () => {
       .fn<typeof fetch>()
       .mockRejectedValue(new Error("private network detail"));
     const onResult = vi.fn<(result: BackendOperationResult) => void>();
-    renderGate("none", { fetchImpl, onResult });
+    renderGate("none", { request: fetchImpl, onResult });
 
     fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
 
@@ -437,7 +437,7 @@ describe("ConfirmationGate results and inputs", () => {
     renderGate("required", {
       capability,
       initialValues,
-      fetchImpl,
+      request: fetchImpl,
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Review transfer" }));
@@ -457,7 +457,7 @@ describe("ConfirmationGate results and inputs", () => {
     };
 
     expect(() =>
-      renderGate("required", { capability, fetchImpl }),
+      renderGate("required", { capability, request: fetchImpl }),
     ).toThrow(
       'Invalid confirmation policy: expected "required" or "none".',
     );

@@ -6,14 +6,19 @@ import {
   type JsonValue,
 } from "./spec";
 import { resolveTargetBackendUrl } from "./target-backend-url";
+import {
+  requestTargetBackend,
+  type TargetBackendRequest,
+} from "./target-backend-request";
 
 export type { BackendOperation } from "./spec";
+export type { TargetBackendRequest } from "./target-backend-request";
 
 export interface ExecuteBackendOperationInput {
   readonly baseUrl: string | URL;
   readonly operation: BackendOperation;
   readonly value: Readonly<Record<string, JsonValue>>;
-  readonly fetchImpl?: typeof fetch;
+  readonly request?: TargetBackendRequest;
 }
 
 export type BackendOperationResult =
@@ -31,14 +36,14 @@ export type BackendOperationResult =
 
 /**
  * Executes one already validated JSON form value directly against a declared
- * target-backend operation. Confirmation, authentication integration, and
- * form validation are intentionally outside this executor.
+ * target-backend operation. Confirmation and form validation are outside this
+ * executor; authenticated behavior comes from the target-app request hook.
  */
 export async function executeBackendOperation({
   baseUrl: baseUrlInput,
   operation: operationInput,
   value,
-  fetchImpl = fetch,
+  request,
 }: ExecuteBackendOperationInput): Promise<BackendOperationResult> {
   assertBackendOperation(operationInput);
 
@@ -49,7 +54,7 @@ export async function executeBackendOperation({
   );
 
   try {
-    const response = await fetchImpl(url.href, {
+    const response = await requestTargetBackend(request, url.href, {
       method: operationInput.method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(value),
