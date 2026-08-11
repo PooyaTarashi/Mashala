@@ -171,21 +171,21 @@ Acceptance:
 
 ---
 
-### ISSUE-021 — Capability routing
+### ISSUE-021 — Capability routing — Complete
 
 **Goal:** Use the LLM to interpret a user utterance and propose one of the capabilities already declared by the developer.
 
 **Acceptance:**
 
-* [ ] router receives a user utterance and declared `CapabilitySpec[]`;
-* [ ] model is exposed only to declared capability IDs/descriptions needed for routing;
-* [ ] structured result contains a proposed declared capability ID or explicit out-of-scope result;
-* [ ] returned capability ID is deterministically checked against the declared capability set;
-* [ ] invented/unknown capability IDs are rejected;
-* [ ] routing never modifies operation or confirmation policy;
-* [ ] routing never executes a capability;
-* [ ] out-of-scope requests are represented explicitly;
-* [ ] mock-provider tests cover valid routing, invented IDs, malformed output, and out-of-scope behavior.
+* [x] router receives a user utterance and declared `CapabilitySpec[]`;
+* [x] model is exposed only to declared capability IDs/descriptions needed for routing;
+* [x] structured result contains a proposed declared capability ID or explicit out-of-scope result;
+* [x] returned capability ID is deterministically checked against the declared capability set;
+* [x] invented/unknown capability IDs are rejected;
+* [x] routing never modifies operation or confirmation policy;
+* [x] routing never executes a capability;
+* [x] out-of-scope requests are represented explicitly;
+* [x] mock-provider tests cover valid routing, invented IDs, malformed output, and out-of-scope behavior.
 
 ---
 
@@ -228,7 +228,7 @@ Acceptance:
 * [ ] protocol remains transport-independent;
 * [ ] routing and extraction use these contracts instead of parallel ad-hoc DTOs.
 
-I would implement **020 → 023 → 021 → 022**, even though the issue numbers don't perfectly express that ordering.
+With ISSUE-021 complete without introducing transport types, implement **023 → 022** next.
 
 ---
 

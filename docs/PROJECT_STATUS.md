@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P2 LLM integration is in progress. ISSUE-020's provider-neutral boundary and Gemini adapter are complete.**
+**P2 LLM integration is in progress. ISSUE-020's provider boundary and ISSUE-021's capability router are complete.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, and ISSUE-020 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, a deterministic confirmation boundary, and a server-only provider-neutral LLM boundary with a Google Gemini implementation.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, and ISSUE-021 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, a deterministic confirmation boundary, a server-only provider-neutral LLM boundary with a Google Gemini implementation, and deterministic allow-listed capability routing over developer-declared IDs and descriptions.
 
 ## Accepted decisions
 
@@ -71,6 +71,10 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Injected `fetch` and provider-interface fakes cover the boundary without a real Gemini key or network call.
 - Provider failures are normalized as `invalid_configuration`, `provider_failure`, or `invalid_response`, with a deterministic retryable flag.
 - No routing, slot extraction, browser/server transport, streaming, persistent provider session, or target-backend behavior is part of ISSUE-020.
+- ISSUE-021 — the server-only `routeCapability` API supplies the provider with only the user's utterance plus each declared capability's stable ID and routing description.
+- The provider proposes either `matched` with a capability ID or explicit `out_of_scope`. Mashala validates the exact output shape, rejects undeclared IDs, and returns the original declared `CapabilitySpec` object for a valid match.
+- Routing errors distinguish malformed model output, unknown capability IDs, and normalized provider failures. Routing does not inspect or execute backend operations and does not alter forms or confirmation policy.
+- ISSUE-021 adds no runtime transport/events, slot extraction, workflow, backend execution, or Gemini-specific routing contract.
 
 ## Deliberately unresolved
 
@@ -86,6 +90,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**Implement executable runtime protocol contracts (ISSUE-023)** is the recommended next backlog task before capability routing and slot extraction.
+**Implement executable runtime protocol contracts (ISSUE-023)** is the recommended next backlog task before slot extraction.
 
-ISSUE-020 did not implement capability routing, slot extraction, authentication integration, runtime protocol transport/events, workflows, theming, mock-backend infrastructure, or reference fields. Those later tasks remain incomplete.
+ISSUE-021 did not implement slot extraction, authentication integration, runtime protocol transport/events, workflows, theming, mock-backend infrastructure, or reference fields. Those later tasks remain incomplete.
