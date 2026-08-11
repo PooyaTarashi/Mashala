@@ -26,7 +26,7 @@ Old chatbot conversations are historical evidence, not the current specification
 - `PROJECT_STATUS.md` — what is decided now and what to do next
 - `OPEN_QUESTIONS.md` — questions that are intentionally unresolved
 - `TECH_STACK.md` — frozen v0.1 technology choices
-- `CANONICAL_SPEC.md` — normative compiled v0.1 artifact and example
+- `CANONICAL_SPEC.md` — normative compiled v0.2 artifact and example
 - `RUNTIME_PROTOCOL.md` — normative browser/server v0.1 event contract
 - `ROADMAP.md` — staged project plan
 - `BACKLOG.md` — implementation tasks and completion status

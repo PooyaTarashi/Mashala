@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReferenceFieldMetadata } from "./forms";
+import { copyModelVisibleBackendProjection } from "./model-visible-backend-projection-policy";
+import { projectModelVisibleBackendData } from "./model-visible-backend-projection";
 import { resolveTargetBackendUrl } from "./target-backend-url";
 import {
   requestTargetBackend,
@@ -23,6 +25,11 @@ export type ReferenceResolutionResult =
   | {
       readonly outcome: "success";
       readonly options: readonly ReferenceOption[];
+      /** Already-minimized browser data; absent unless explicitly declared. */
+      readonly modelContext?: {
+        readonly purpose: "reference_resolution" | "result_interpretation";
+        readonly data: import("./forms").JsonValue;
+      };
     }
   | { readonly outcome: "http-error" }
   | { readonly outcome: "network-error" }
@@ -49,14 +56,17 @@ export function assertReferenceSource(
   source: unknown,
 ): asserts source is ReferenceFieldMetadata["source"] {
   if (typeof source !== "object" || source === null || Array.isArray(source)) {
-    invalidSource("expected an object containing only method and path.");
+    invalidSource(
+      "expected an object containing method, path, and optional modelContext.",
+    );
   }
 
   const keys = Object.keys(source);
   if (
-    keys.length !== 2 ||
+    (keys.length !== 2 && keys.length !== 3) ||
     !hasOwn(source, "method") ||
-    !hasOwn(source, "path")
+    !hasOwn(source, "path") ||
+    (keys.length === 3 && !hasOwn(source, "modelContext"))
   ) {
     invalidSource("expected an object containing only method and path.");
   }
@@ -84,6 +94,15 @@ export function assertReferenceSource(
 
   if (path.includes("#")) {
     invalidSource("path must not contain a fragment.");
+  }
+
+  if (hasOwn(source, "modelContext")) {
+    try {
+      copyModelVisibleBackendProjection(Reflect.get(source, "modelContext"));
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      invalidSource(detail);
+    }
   }
 }
 
@@ -160,13 +179,31 @@ export async function resolveReferenceOptions({
 
   try {
     const collection: unknown = await response.json();
+    const options = projectReferenceOptions(
+      collection,
+      field.value,
+      field.labelFrom,
+    );
+    const modelContextProjection = projectModelVisibleBackendData(
+      collection,
+      field.source.modelContext,
+    );
+
+    if (modelContextProjection.outcome === "failure") {
+      return { outcome: "invalid-response" };
+    }
+
     return {
       outcome: "success",
-      options: projectReferenceOptions(
-        collection,
-        field.value,
-        field.labelFrom,
-      ),
+      options,
+      ...(modelContextProjection.outcome === "projected"
+        ? {
+            modelContext: Object.freeze({
+              purpose: modelContextProjection.purpose,
+              data: modelContextProjection.data,
+            }),
+          }
+        : {}),
     };
   } catch {
     return { outcome: "invalid-response" };

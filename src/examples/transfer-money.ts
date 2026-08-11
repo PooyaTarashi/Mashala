@@ -2,7 +2,7 @@ import { defineCapability } from "../capabilities";
 import { f } from "../fields";
 import type { MashalaSpec } from "../spec";
 
-/** Executable counterpart of docs/CANONICAL_SPEC.md's v0.1 example. */
+/** Executable counterpart of docs/CANONICAL_SPEC.md's current example. */
 export const transferMoney = defineCapability({
   id: "transfer_money",
   description: "Transfer money to a recipient from the user's account.",
@@ -42,7 +42,7 @@ export const transferMoney = defineCapability({
 });
 
 export const mashalaBankDemo: MashalaSpec = Object.freeze({
-  specVersion: "0.1",
+  specVersion: "0.2",
   app: Object.freeze({
     id: "mashala_bank_demo",
     name: "Mashala Bank Demo",

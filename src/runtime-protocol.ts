@@ -2,6 +2,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import type { ValidateFunction } from "ajv";
 
 import type { JsonSchema202012, JsonValue } from "./spec";
+import { containsCredentialLikeKey } from "./model-visible-backend-projection-policy";
 
 export const RUNTIME_PROTOCOL_VERSION = "0.1" as const;
 
@@ -344,58 +345,6 @@ function isJsonCompatible(
 
   ancestors.delete(value);
   return valid;
-}
-
-const CREDENTIAL_LIKE_KEYS = new Set([
-  "accesstoken",
-  "apikey",
-  "authentication",
-  "authorization",
-  "authtoken",
-  "bearertoken",
-  "clientsecret",
-  "cookie",
-  "credential",
-  "credentials",
-  "headers",
-  "idtoken",
-  "llmapikey",
-  "password",
-  "passwd",
-  "privatekey",
-  "proxyauthorization",
-  "refreshtoken",
-  "requestheaders",
-  "responseheaders",
-  "secret",
-  "sessionid",
-  "sessionsecret",
-  "sessiontoken",
-  "setcookie",
-  "targetbackendcredential",
-  "targetbackendcredentials",
-  "token",
-]);
-
-function isCredentialLikeKey(key: string): boolean {
-  return CREDENTIAL_LIKE_KEYS.has(
-    key.toLowerCase().replace(/[^a-z0-9]/gu, ""),
-  );
-}
-
-function containsCredentialLikeKey(value: JsonValue): boolean {
-  if (Array.isArray(value)) {
-    return value.some(containsCredentialLikeKey);
-  }
-
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  return Object.entries(value).some(
-    ([key, nestedValue]) =>
-      isCredentialLikeKey(key) || containsCredentialLikeKey(nestedValue),
-  );
 }
 
 function containsCredentialLikeProtocolData(

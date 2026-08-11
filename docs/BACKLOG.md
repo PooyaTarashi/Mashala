@@ -274,22 +274,22 @@ The executable shared contracts and validators live in `src/runtime-protocol.ts`
 
 ---
 
-### ISSUE-032 — Implement explicit model-visible backend projection
+### ISSUE-032 — Implement explicit model-visible backend projection — Complete
 
 **Goal:** Implement the mechanism by which selected/minimized target-backend result data may explicitly be sent to the Mashala server/LLM for interpretation.
 
-**Before implementation:** resolve the remaining ADR-010 open question and record the selected mechanism.
+**Architecture:** ADR-016 resolves ADR-010 with declarative browser-side direct-property projection descriptors on read sources.
 
 **Acceptance:**
 
-* [ ] model-visible data must be explicitly selected;
-* [ ] arbitrary backend responses are never automatically forwarded;
-* [ ] projection/minimization happens before data enters the model-facing protocol;
-* [ ] target-backend credentials cannot be included;
-* [ ] projected data is treated as untrusted model context;
-* [ ] absence of an explicit projection means no backend-result data is sent to the model;
-* [ ] deterministic tests prove allowed and excluded data;
-* [ ] implementation matches the new ADR resolving ADR-010's open mechanism.
+* [x] model-visible data must be explicitly selected;
+* [x] arbitrary backend responses are never automatically forwarded;
+* [x] projection/minimization happens before data enters the model-facing protocol;
+* [x] target-backend credentials cannot be included;
+* [x] projected data is treated as untrusted model context;
+* [x] absence of an explicit projection means no backend-result data is sent to the model;
+* [x] deterministic tests prove allowed and excluded data;
+* [x] implementation matches ADR-016's mechanism resolving ADR-010.
 
 ---
 

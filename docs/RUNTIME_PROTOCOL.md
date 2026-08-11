@@ -151,9 +151,9 @@ Missing-field state therefore needs no separate P0 event. The deterministic brow
 
 ### `backend.context.selected`
 
-This event represents the ADR-010 extension point for a language task that genuinely requires part of a browser-fetched backend result. `data` must already be explicitly minimized before the event is constructed. It must not contain authorization headers, cookies, bearer tokens, session identifiers used as credentials, or any other target-backend credential.
+This event carries data produced by ADR-016's explicit declarative projection for a language task that genuinely requires part of a browser-fetched backend result. `data` is minimized in the browser before the event is constructed. It must not contain authorization headers, cookies, bearer tokens, session identifiers used as credentials, or any other target-backend credential.
 
-P0 does not decide how that minimization is declared or enforced. Consequently, this event is defined for protocol compatibility but must not be enabled for arbitrary application data until the projection-policy issue is completed. Absence of a policy always means do not send.
+The descriptor is attached to the browser-executed read source and maps output properties to direct backend-result properties. Absence of that descriptor always means do not send. Malformed input and credential-like selected data fail closed, and the full response never reaches the server for server-side redaction.
 
 ### `assistant.message`
 
@@ -225,7 +225,7 @@ Given the `transfer_money` capability from `CANONICAL_SPEC.md`:
 6. The browser constructs the direct JSON body `{ "recipient": "Sam", "amount": 250, "speed": "instant" }` and calls `POST /transfers` on the target backend with the target app's browser-side authentication context.
 7. The target backend authorizes and processes the operation. The Mashala server is not in this request path, and no protocol event asks it to proxy the call.
 
-If the backend result can be displayed deterministically, it remains in the browser. Only a later language-interpretation need, governed by an explicit ADR-010 projection policy, may produce `backend.context.selected`.
+If the backend result can be displayed deterministically, it remains in the browser. Only a language-interpretation need governed by an explicit ADR-016 projection descriptor may produce `backend.context.selected`.
 
 ## Deliberately absent from v0.1
 

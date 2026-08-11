@@ -198,9 +198,7 @@ Mashala server
 LLM as untrusted contextual data
 ```
 
-Do not automatically forward every backend response to the LLM.
-
-This creates a future design question around data minimization and model-visible fields; see `OPEN_QUESTIONS.md`.
+Do not automatically forward every backend response to the LLM. ADR-016 resolves the minimization mechanism: an optional declarative descriptor on the browser read source maps explicitly allowed direct source properties to plain JSON output properties. No descriptor means no backend-result event. Projection and credential checks run in the browser before `backend.context.selected` is constructed; the server receives only the minimized result and treats it as untrusted contextual input.
 
 ## Form execution model
 

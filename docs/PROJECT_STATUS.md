@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P3 data-backed fields are complete through browser auth-context integration. ISSUE-031's minimal fetch-like target-app request boundary now serves both confirmed writes and `f.reference` reads without making Mashala an authentication framework.**
+**P3 data-backed fields are complete through explicit model-visible backend projection. ISSUE-032 implements ADR-016's fail-closed browser-side minimization and sends only selected plain JSON through `backend.context.selected` as untrusted language context.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, and ISSUE-031 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, and transport-independent runtime events with deterministic validation of untrusted data.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, and ISSUE-032 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, and transport-independent runtime events with deterministic validation of untrusted data.
 
 ## Accepted decisions
 
@@ -13,13 +13,13 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - The typed field DSL exposes `f.text`, `f.longText`, `f.number`, `f.select`, `f.boolean`, and browser-resolved `f.reference` with deterministic JSON-serializable field-level output.
 - `compileForm` compiles those primitives into the canonical `FormDefinition` schema/metadata split. Fields are optional by default and opt into required status with `required: true`.
 - String length constraints, numeric limits, required names, primitive types, and select enum values exist only in JSON Schema; compiled field metadata retains presentation information only.
-- The canonical compiled artifact is the versioned JSON-serializable `MashalaSpec` in `CANONICAL_SPEC.md`.
+- The canonical compiled artifact is the versioned JSON-serializable `MashalaSpec` v0.2 in `CANONICAL_SPEC.md`.
 - JSON Schema Draft 2020-12 is the sole canonical form-validation representation; Mashala field metadata carries presentation/runtime information.
 - v0.1 static fields are `text`, `longText`, `number`, `select`, and `boolean`.
 - v0.1 capability writes declare `POST`, `PUT`, or `PATCH` plus a relative path. Form names map directly to same-named JSON body properties.
 - Confirmation policy is declared per capability.
 - The canonical field metadata union includes a browser-resolved `reference` field with one GET source and direct string value/label property projections, without changing the top-level structure.
-- Model-visible backend data has a named, non-serialized placeholder type, but ADR-010's projection/minimization mechanism and its eventual spec location remain deliberately unresolved. Automatic forwarding is forbidden.
+- ADR-016 resolves ADR-010 with an optional declarative `modelContext` descriptor on browser read sources. Its output-to-source direct-property map is the only authorization for model-visible backend data; automatic forwarding remains forbidden.
 - ADR-013 and `RUNTIME_PROTOCOL.md` define the protocol design; `src/runtime-protocol.ts` now provides the corresponding executable versioned discriminated unions and strict runtime validators, independent of transport.
 - LLM-produced routes and form values are untrusted proposals validated against declared capability IDs and JSON Schemas.
 - Target-backend API calls execute entirely in the user's browser. The Mashala server is not a general proxy/BFF.
@@ -37,7 +37,7 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 ## P0 artifacts
 
 - ADR-011, ADR-015, and `TECH_STACK.md` — frozen v0.1 implementation choices and the superseding first-provider decision.
-- ADR-012 and `CANONICAL_SPEC.md` — compiled spec types, invariants, limitations, and complete example.
+- ADR-012, ADR-016, and `CANONICAL_SPEC.md` — compiled spec types, explicit projection policy, invariants, limitations, and complete example.
 - ADR-013 and `RUNTIME_PROTOCOL.md` — normative browser/server protocol design, trust rules, and end-to-end flow. Its executable contracts live in `src/runtime-protocol.ts`.
 
 ## P1 implementation
@@ -76,7 +76,7 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Routing errors distinguish malformed model output, unknown capability IDs, and normalized provider failures. Routing does not inspect or execute backend operations and does not alter forms or confirmation policy.
 - ISSUE-021 adds no runtime transport/events, slot extraction, workflow, backend execution, or Gemini-specific routing contract.
 - ISSUE-022 — the server-only `extractSlotCandidates` API receives the selected `CapabilitySpec`, utterance, and provider-neutral LLM dependency, then returns partial validated candidate values or a structured extraction error.
-- The model sees field names, labels/help text, select value labels, and property-level JSON Schema constraints. It does not receive capability identity/description, operation, confirmation policy, authentication state, credentials, or backend results.
+- The model sees field names, labels/help text, select value labels, and property-level JSON Schema constraints. When ISSUE-032 supplies a validated matching `backend.context.selected` event, it may additionally receive only that projected data as explicitly labeled untrusted input. It does not receive operation, confirmation policy, authentication state, credentials, or full backend results.
 - Mashala rejects malformed output and every undeclared key, then validates the proposal with the selected form schema while omitting only the root `required` list so unrelated missing fields remain allowed. Full `CompiledForm` validation is unchanged.
 - Extracted values are frozen proposals compatible with `CompiledForm.initialValues`; they remain editable and cause no submission, confirmation, target-backend request, or workflow transition.
 - ISSUE-022 adds no runtime transport/events, backend execution, confirmation, RAG, reference fields, or provider-specific extraction contract.
@@ -92,15 +92,19 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - `resolveReferenceOptions` performs the declared GET directly through the browser fetch boundary, requires a root response array, and rejects the complete result for malformed items or duplicate projected values.
 - `CompiledForm` renders loading, failure, and resolved select states. A selected value must belong to the successfully resolved options in addition to passing the unchanged full-form JSON Schema validation.
 - Reference resolution does not execute a write. `ConfirmationGate` passes the same `TargetBackendRequest` callable through to reads and confirmed writes without changing canonical data.
-- Reference fields are omitted from model slot-extraction contracts; ISSUE-032 remains responsible for any explicit model-visible backend projection.
+- Reference fields remain omitted from model-inventable slot-extraction contracts. Projected context may inform language interpretation but does not itself authorize a reference value or operation.
 - ISSUE-031 — a callable `TargetBackendRequest` interface lets the target app inject its existing authenticated browser request behavior. Ordinary browser `fetch` remains the default.
 - The integration is behavior-only and exists outside `MashalaSpec`, `CapabilitySpec`, field metadata, runtime protocol events, and server/LLM state. Mashala defines no credential or token-storage property.
 - `createDemoCookieSessionRequest` is a minimal sample that applies the target app's cookie-session behavior with `credentials: "include"`; focused tests exercise it against a mock target backend for both GET and POST requests.
 - Target HTTP failures, including unauthenticated `401` responses, retain the existing executor/reference failure behavior. Mashala does not add login, refresh, retry, or authorization policy.
+- ISSUE-032 — `source.modelContext` declares ADR-016's purpose and output-to-source direct-property allowlist. The field DSL/compiler isolate it as frozen JSON and reject empty, malformed, credential-like, or authentication-like declarations.
+- The client-only projector accepts only root objects or arrays of objects, copies only own direct selected properties, clones selected values as plain JSON, rejects missing/non-serializable/credential-bearing results, and returns no event when the descriptor is absent or projection fails.
+- `resolveReferenceOptions` applies option projection and optional model-context projection to the same browser response. It returns only the minimized context alongside deterministic options and never performs a second request.
+- `createSelectedBackendContextEvent` and its already-projected-data variant construct only the accepted `backend.context.selected` shape. Full backend results do not enter the event, and the runtime protocol independently rejects credential-like context keys.
+- `extractSlotCandidates` validates the incoming context event and capability binding before provider use. It places only purpose/data in the provider input under `trust: "untrusted"`; context never enters system instructions, output schema, operation, confirmation, authorization, workflow, or execution state.
 
 ## Deliberately unresolved
 
-- ADR-010's exact projection/minimization mechanism for model-visible backend results.
 - The transport carrying runtime protocol events: HTTP, SSE, WebSocket, or a combination.
 - The optional application-level authoring helper beyond the executable `MashalaSpec` type.
 - Durable conversation persistence beyond the v0.1 single-process proof.
@@ -111,6 +115,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**Resolve ADR-010's projection mechanism before implementing ISSUE-032** is the recommended next backlog task.
+**Select the next focused backlog issue after the completed P3 data-backed-field slice** is the recommended planning task.
 
-ISSUE-031 did not implement model-visible backend projection, cascading references, runtime protocol transport, workflows, theming, general mock-backend infrastructure, or RAG. Those later tasks remain incomplete.
+ISSUE-032 did not implement cascading references, runtime protocol transport, workflows, theming, general mock-backend infrastructure, or RAG. Those later tasks remain incomplete.

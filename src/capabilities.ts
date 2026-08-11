@@ -40,8 +40,8 @@ function assertCapabilityDescription(
 }
 
 /**
- * Compiles one static developer declaration into the canonical v0.1
- * capability contract.
+ * Compiles one developer declaration into the current canonical capability
+ * contract.
  */
 export function defineCapability<const Fields extends FormFields>(
   declaration: CapabilityDeclaration<Fields>,

@@ -104,6 +104,63 @@ describe("field DSL", () => {
     expect(Object.isFrozen(field.source)).toBe(true);
   });
 
+  it("builds and isolates an explicit model-visible source projection", () => {
+    const fields = { id: "id", label: "display_name" };
+    const field = f.reference({
+      label: "Account",
+      source: {
+        method: "GET",
+        path: "/accounts",
+        modelContext: {
+          purpose: "reference_resolution",
+          fields,
+        },
+      },
+      value: "id",
+      labelFrom: "display_name",
+    });
+
+    fields.label = "changed_after_authoring";
+
+    expect(field.source.modelContext).toEqual({
+      purpose: "reference_resolution",
+      fields: { id: "id", label: "display_name" },
+    });
+    expect(Object.isFrozen(field.source.modelContext)).toBe(true);
+    expect(Object.isFrozen(field.source.modelContext?.fields)).toBe(true);
+  });
+
+  it.each([
+    ["empty fields", { purpose: "reference_resolution", fields: {} }],
+    [
+      "credential source",
+      {
+        purpose: "reference_resolution",
+        fields: { id: "access_token" },
+      },
+    ],
+    [
+      "credential output",
+      {
+        purpose: "reference_resolution",
+        fields: { sessionId: "id" },
+      },
+    ],
+  ])("rejects an invalid model-context projection with %s", (_case, modelContext) => {
+    expect(() =>
+      f.reference({
+        label: "Account",
+        source: {
+          method: "GET",
+          path: "/accounts",
+          modelContext: modelContext as never,
+        },
+        value: "id",
+        labelFrom: "display_name",
+      }),
+    ).toThrow(/^Invalid model-visible backend projection:/);
+  });
+
   it("copies only canonical reference-source data", () => {
     const source = {
       method: "GET" as const,

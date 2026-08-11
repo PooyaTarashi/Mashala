@@ -147,6 +147,36 @@ describe("form compiler", () => {
     }
   });
 
+  it("compiles an explicit model-context projection on the read source", () => {
+    const form = compileForm({
+      card: f.reference({
+        label: "Card",
+        source: {
+          method: "GET",
+          path: "/cards",
+          modelContext: {
+            purpose: "reference_resolution",
+            fields: { id: "id", label: "masked" },
+          },
+        },
+        value: "id",
+        labelFrom: "masked",
+      }),
+    });
+
+    expect(form.fields.card).toMatchObject({
+      source: {
+        method: "GET",
+        path: "/cards",
+        modelContext: {
+          purpose: "reference_resolution",
+          fields: { id: "id", label: "masked" },
+        },
+      },
+    });
+    expect(JSON.parse(JSON.stringify(form))).toEqual(form);
+  });
+
   it("is deterministic and isolates deeply frozen output from authoring input", () => {
     const options = [
       { value: "standard", label: "Standard" },

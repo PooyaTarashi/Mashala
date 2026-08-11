@@ -7,6 +7,7 @@ import type {
   SelectFieldDefinition,
   TextFieldDefinition,
 } from "./fields";
+import type { ModelVisibleBackendProjection } from "./model-visible-backend-projection-policy";
 
 export type JsonPrimitive = string | number | boolean | null;
 
@@ -59,6 +60,7 @@ export interface ReferenceFieldMetadata extends FieldPresentationBase {
   readonly source: {
     readonly method: "GET";
     readonly path: string;
+    readonly modelContext?: ModelVisibleBackendProjection;
   };
   readonly value: string;
   readonly labelFrom: string;
@@ -136,6 +138,9 @@ function compileReferenceMetadata(
     source: Object.freeze({
       method: field.source.method,
       path: field.source.path,
+      ...(field.source.modelContext === undefined
+        ? {}
+        : { modelContext: field.source.modelContext }),
     }),
     value: field.value,
     labelFrom: field.labelFrom,

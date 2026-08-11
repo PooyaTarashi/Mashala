@@ -11,37 +11,29 @@ These questions remain intentionally unresolved. P0 decisions removed from this 
 
 ## Architecture
 
-5. What explicit projection/minimization mechanism governs backend-result data sent to the model?
-   - developer-declared model-visible fields;
-   - explicit projection functions;
-   - schema annotations;
-   - another explicit mechanism.
-
-   ADR-010 fixes the principle. `CANONICAL_SPEC.md` reserves a policy extension point and `RUNTIME_PROTOCOL.md` reserves a selected-context event, but P0 deliberately does not choose the mechanism.
-
-6. What durable conversation persistence, if any, follows the v0.1 in-memory proof? ADR-011 permits only ephemeral single-process state for v0.1.
-7. Which transport carries the v0.1 logical runtime events: ordinary HTTP, SSE, WebSocket, or a combination? ADR-013 defines event semantics independently of this choice.
-8. Which validation failures are handled exclusively in the browser, and how are target-backend validation errors normalized for display? JSON Schema is authoritative for pre-execution form validation, while the target backend remains authoritative for business validation.
+5. What durable conversation persistence, if any, follows the v0.1 in-memory proof? ADR-011 permits only ephemeral single-process state for v0.1.
+6. Which transport carries the v0.1 logical runtime events: ordinary HTTP, SSE, WebSocket, or a combination? ADR-013 defines event semantics independently of this choice.
+7. Which validation failures are handled exclusively in the browser, and how are target-backend validation errors normalized for display? JSON Schema is authoritative for pre-execution form validation, while the target backend remains authoritative for business validation.
 
 ## Authoring and forms
 
-9. What minimal application-level authoring helper, if any, should assemble app metadata and declared capabilities into `MashalaSpec`? `defineCapability` now fixes capability authoring, including reference fields.
-10. Are file uploads part of a later spec version or outside the project?
+8. What minimal application-level authoring helper, if any, should assemble app metadata and declared capabilities into `MashalaSpec`? `defineCapability` now fixes capability authoring, including reference fields.
+9. Are file uploads part of a later spec version or outside the project?
 
 ## Technology
 
-11. Which browser end-to-end test runner should be adopted once browser interaction tests exist?
-12. What simple documentation/RAG indexing approach is sufficient when Phase 5 begins? No vector database is selected.
-13. After the deterministic state-machine requirements are implemented, does LangGraph materially improve persistence, interrupts, resumability, or branching? ADR-008 remains authoritative.
+10. Which browser end-to-end test runner should be adopted once browser interaction tests exist?
+11. What simple documentation/RAG indexing approach is sufficient when Phase 5 begins? No vector database is selected.
+12. After the deterministic state-machine requirements are implemented, does LangGraph materially improve persistence, interrupts, resumability, or branching? ADR-008 remains authoritative.
 
 ## Evaluation
 
-14. What participant count and recruitment plan are practical?
-15. What is the final task set?
-16. Which metrics are non-negotiable?
-17. Which safety/adversarial cases are required?
+13. What participant count and recruitment plan are practical?
+14. What is the final task set?
+15. Which metrics are non-negotiable?
+16. Which safety/adversarial cases are required?
 
-## Resolved in P0
+## Resolved decisions
 
 - Canonical compiled spec format: ADR-012 and `CANONICAL_SPEC.md`.
 - Static v0.1 field types: `text`, `longText`, `number`, `select`, and `boolean`.
@@ -51,3 +43,4 @@ These questions remain intentionally unresolved. P0 decisions removed from this 
 - Initial workflow implementation: a small custom deterministic state machine; LangGraph evaluation remains a later question under ADR-008.
 - Reference response mapping: one root response array is projected through developer-declared direct `value` and `labelFrom` string properties; malformed items reject the complete option result, and cascading fields remain deferred.
 - Target-app auth integration: ISSUE-031 defines one fetch-like `TargetBackendRequest` browser behavior shared by writes and reference reads. The target app owns login, session lifecycle, refresh, and persistence; no credential is serialized into Mashala data or protocol events.
+- Model-visible backend projection: ADR-016 and ISSUE-032 define optional declarative output-to-source direct-property mappings on browser read sources. Projection fails closed in the browser, uses `backend.context.selected`, excludes credential-like data, and reaches the model only as untrusted context.

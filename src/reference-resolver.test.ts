@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import type { ReferenceFieldMetadata } from "./forms";
+import { createSelectedBackendContextEventFromProjection } from "./model-visible-backend-projection";
 import {
   projectReferenceOptions,
   resolveReferenceOptions,
@@ -89,6 +90,95 @@ describe("resolveReferenceOptions", () => {
     expect(fetchImpl.mock.calls[0]?.[1]).not.toHaveProperty("body");
     expect(fetchImpl.mock.calls[0]?.[1]).not.toHaveProperty("headers");
     expect(fetchImpl.mock.calls[0]?.[1]).not.toHaveProperty("credentials");
+  });
+
+  it("minimizes declared model context from the same browser response", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json([
+        {
+          id: "acct_1",
+          display_name: "Checking",
+          balance: 42_000,
+          access_token: "target-secret",
+        },
+      ]),
+    );
+    const field: ReferenceFieldMetadata = {
+      ...accountField,
+      source: {
+        ...accountField.source,
+        modelContext: {
+          purpose: "reference_resolution",
+          fields: { id: "id", label: "display_name" },
+        },
+      },
+    };
+
+    const result = await resolveReferenceOptions({
+      baseUrl: "https://target.example",
+      field,
+      request: fetchImpl,
+    });
+
+    expect(result).toEqual({
+      outcome: "success",
+      options: [{ value: "acct_1", label: "Checking" }],
+      modelContext: {
+        purpose: "reference_resolution",
+        data: [{ id: "acct_1", label: "Checking" }],
+      },
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(result)).not.toContain("balance");
+    expect(JSON.stringify(result)).not.toContain("access_token");
+    expect(JSON.stringify(result)).not.toContain("target-secret");
+
+    if (result.outcome !== "success" || result.modelContext === undefined) {
+      throw new Error("Expected minimized model context.");
+    }
+    expect(
+      createSelectedBackendContextEventFromProjection({
+        source: field.source,
+        context: result.modelContext,
+        capabilityId: "transfer_money",
+        eventId: "evt_context_1",
+        conversationId: "conv_1",
+      }),
+    ).toMatchObject({
+      outcome: "projected",
+      event: {
+        type: "backend.context.selected",
+        payload: {
+          capabilityId: "transfer_money",
+          data: [{ id: "acct_1", label: "Checking" }],
+        },
+      },
+    });
+  });
+
+  it("fails closed when a declared model projection cannot be satisfied", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json([{ id: "acct_1", display_name: "Checking" }]),
+    );
+    const field: ReferenceFieldMetadata = {
+      ...accountField,
+      source: {
+        ...accountField.source,
+        modelContext: {
+          purpose: "result_interpretation",
+          fields: { unavailable: "missing_property" },
+        },
+      },
+    };
+
+    await expect(
+      resolveReferenceOptions({
+        baseUrl: "https://target.example",
+        field,
+        request: fetchImpl,
+      }),
+    ).resolves.toEqual({ outcome: "invalid-response" });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it.each([

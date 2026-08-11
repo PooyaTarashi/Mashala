@@ -1,3 +1,8 @@
+import {
+  copyModelVisibleBackendProjection,
+  type ModelVisibleBackendProjection,
+} from "./model-visible-backend-projection-policy";
+
 export interface FieldPresentationConfig {
   readonly label: string;
   readonly helpText?: string;
@@ -39,6 +44,8 @@ export interface ReferenceSourceConfig {
   readonly method: "GET";
   /** Root-relative target-backend path. */
   readonly path: string;
+  /** Optional ADR-016 allowlist for model-visible backend context. */
+  readonly modelContext?: ModelVisibleBackendProjection;
 }
 
 export interface ReferenceFieldConfig extends FieldConfigBase {
@@ -162,12 +169,21 @@ function reference(config: ReferenceFieldConfig): ReferenceFieldDefinition {
     invalidReference("labelFrom must name a direct response-item property.");
   }
 
+  const modelContext =
+    config.source.modelContext === undefined
+      ? undefined
+      : copyModelVisibleBackendProjection(config.source.modelContext);
+
   return Object.freeze({
     kind: "reference",
     label: config.label,
     ...(config.helpText === undefined ? {} : { helpText: config.helpText }),
     ...(config.required === true ? { required: true as const } : {}),
-    source: Object.freeze({ method: "GET" as const, path: config.source.path }),
+    source: Object.freeze({
+      method: "GET" as const,
+      path: config.source.path,
+      ...(modelContext === undefined ? {} : { modelContext }),
+    }),
     value: config.value,
     labelFrom: config.labelFrom,
   });

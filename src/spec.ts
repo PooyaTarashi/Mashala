@@ -16,9 +16,14 @@ export type {
   SelectFieldMetadata,
   TextFieldMetadata,
 } from "./forms";
+export type {
+  ModelContextPurpose,
+  ModelVisibleBackendProjection,
+} from "./model-visible-backend-projection-policy";
+import type { ModelVisibleBackendProjection as ModelVisibleBackendProjectionContract } from "./model-visible-backend-projection-policy";
 
 export interface MashalaSpec {
-  readonly specVersion: "0.1";
+  readonly specVersion: "0.2";
   readonly app: AppMetadata;
   readonly capabilities: readonly CapabilitySpec[];
 }
@@ -51,11 +56,8 @@ export interface BackendOperation {
 
 export type ConfirmationPolicy = "required" | "none";
 
-/**
- * Named placeholder for the future ADR-010 projection/minimization mechanism.
- * It is not referenced by any serialized v0.1 property, and no value is valid.
- */
-export type ModelVisibleDataPolicy = never;
+/** ADR-016's declarative direct-property projection policy. */
+export type ModelVisibleDataPolicy = ModelVisibleBackendProjectionContract;
 
 const SUPPORTED_METHODS: readonly BackendOperation["method"][] = [
   "POST",
