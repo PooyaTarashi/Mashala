@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P1 implementation is in progress. ISSUE-016's capability DSL and canonical spec assembly are complete.**
+**P2 LLM integration is in progress. ISSUE-020's provider-neutral boundary and Gemini adapter are complete.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, and ISSUE-016 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, and a deterministic confirmation boundary alongside the frozen v0.1 contracts.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, and ISSUE-020 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, a deterministic confirmation boundary, and a server-only provider-neutral LLM boundary with a Google Gemini implementation.
 
 ## Accepted decisions
 
@@ -30,12 +30,13 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - LangGraph remains an implementation candidate, not an architectural dependency.
 - Mashala defines build commands/output; developers choose CI/CD/deployment workflow.
 - The v0.1 implementation stack is TypeScript, Node.js 24.x LTS, npm, React, Next.js App Router, Vitest, and Ajv.
-- OpenAI through the Responses API is the first provider adapter; the exact model is server configuration.
-- v0.1 uses ephemeral in-memory conversation state only and disables OpenAI Response storage. No database, ORM, or vector store is selected.
+- Google Gemini through the native non-streaming `generateContent` REST API is the first provider adapter under ADR-015; the exact model is server configuration.
+- Gemini-specific request/response shapes remain inside its adapter. Mashala code sees only provider-neutral structured request/result/error types, and callers remain responsible for deterministic output validation.
+- v0.1 uses ephemeral in-memory conversation state only and no persistent provider session. No database, ORM, or vector store is selected.
 
 ## P0 artifacts
 
-- ADR-011 and `TECH_STACK.md` — frozen v0.1 implementation choices.
+- ADR-011, ADR-015, and `TECH_STACK.md` — frozen v0.1 implementation choices and the superseding first-provider decision.
 - ADR-012 and `CANONICAL_SPEC.md` — compiled spec types, invariants, limitations, and complete example.
 - ADR-013 and `RUNTIME_PROTOCOL.md` — browser/server event types, trust rules, and end-to-end flow.
 
@@ -59,7 +60,17 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Executable `MashalaSpec`, `AppMetadata`, `CapabilitySpec`, `BackendOperation`, and `ConfirmationPolicy` types now mirror ADR-012. Form types are reused, and executor/confirmation modules no longer redefine shared canonical concepts.
 - `ConfirmationGate` consumes a complete `CapabilitySpec`, making bound capability execution the normal integration path while `executeBackendOperation` remains a lower-level primitive.
 - The executable `transfer_money` and Mashala Bank Demo spec match the documented canonical example and remain isolated JSON-serializable plain data.
-- Minimal Mashala page and server-render smoke test; no runtime protocol implementation, capability routing, LLM, authentication integration, workflow engine, theme primitives, or reference-field behavior yet.
+- Minimal Mashala page and server-render smoke test. At ISSUE-016 completion there was no runtime protocol implementation, capability routing, LLM, authentication integration, workflow engine, theme primitives, or reference-field behavior.
+
+## P2 implementation
+
+- ISSUE-020 — a small `LlmProvider.generateStructured` interface accepts model instructions, user input, and a Mashala-owned JSON output schema, then returns either parsed untrusted JSON or a deterministic sanitized failure.
+- The first adapter calls `POST /v1beta/models/{model}:generateContent` using Gemini-native `systemInstruction`, `contents`/`parts`, and `generationConfig.responseJsonSchema` internally.
+- `GEMINI_API_KEY` is read only by a `server-only` module and sent only in `X-goog-api-key`; `GEMINI_MODEL` is also server configuration. `.env.example` contains names/default guidance but no credential.
+- The provider request contract has no target-backend operation, header, or credential field. No provider result exposes the key, raw provider error, candidate metadata, or provider-native response object.
+- Injected `fetch` and provider-interface fakes cover the boundary without a real Gemini key or network call.
+- Provider failures are normalized as `invalid_configuration`, `provider_failure`, or `invalid_response`, with a deterministic retryable flag.
+- No routing, slot extraction, browser/server transport, streaming, persistent provider session, or target-backend behavior is part of ISSUE-020.
 
 ## Deliberately unresolved
 
@@ -75,6 +86,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**Implement the server-side provider adapter (ISSUE-020)** is the next numbered backlog task. It must remain behind an interface and keep provider secrets server-side.
+**Implement executable runtime protocol contracts (ISSUE-023)** is the recommended next backlog task before capability routing and slot extraction.
 
-ISSUE-016 did not implement capability routing, authentication integration, runtime protocol transport/events, LLM/provider behavior, workflows, theming, mock-backend infrastructure, or reference fields. Those later tasks remain incomplete.
+ISSUE-020 did not implement capability routing, slot extraction, authentication integration, runtime protocol transport/events, workflows, theming, mock-backend infrastructure, or reference fields. Those later tasks remain incomplete.

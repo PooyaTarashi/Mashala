@@ -15,7 +15,7 @@ Acceptance:
 - [x] Node/runtime policy chosen: Node.js 24.x LTS, latest patch, `>=24 <25`;
 - [x] test runner chosen: Vitest;
 - [x] schema validator chosen: Ajv for JSON Schema Draft 2020-12;
-- [x] first LLM provider chosen: OpenAI Responses API behind a provider interface;
+- [x] current first LLM provider chosen: Google Gemini native `generateContent` REST behind a provider-neutral interface (ADR-015 supersedes ADR-011's original provider choice);
 - [x] minimal persistence chosen: ephemeral in-memory state, no database;
 - [x] decision recorded.
 
@@ -141,7 +141,7 @@ Acceptance:
 
 ## P2 — LLM integration
 
-### ISSUE-020 — Server-side LLM provider adapter
+### ISSUE-020 — Server-side LLM provider adapter — Complete
 
 **Goal:** Establish a provider-neutral server-side LLM boundary, using Google Gemini as the first implementation.
 
@@ -153,19 +153,19 @@ Acceptance:
 
 **Acceptance:**
 
-* [ ] provider-neutral TypeScript interface exists;
-* [ ] Gemini `generateContent` REST adapter implemented;
-* [ ] Gemini-specific request/response structures remain inside the adapter;
-* [ ] `GEMINI_API_KEY` is read only server-side and never exposed to browser code, it is provided in .env file;
-* [ ] structured model output supported;
-* [ ] model output remains untrusted and caller-validated;
-* [ ] provider/network/malformed-response failures are normalized;
-* [ ] provider can be replaced with a fake/mock in tests;
-* [ ] tests require no real Gemini credentials or network access;
-* [ ] no capability-routing or slot-extraction policy implemented;
-* [ ] no target-backend credentials or API execution enter the provider boundary;
-* [ ] no SSE, WebSocket, Live API, or streaming implementation;
-* [ ] lint, typecheck, tests, and production build pass.
+* [x] provider-neutral TypeScript interface exists;
+* [x] Gemini `generateContent` REST adapter implemented;
+* [x] Gemini-specific request/response structures remain inside the adapter;
+* [x] `GEMINI_API_KEY` is read only server-side and never exposed to browser code; `.env.example` documents server environment setup without a secret;
+* [x] structured model output supported;
+* [x] model output remains untrusted and caller-validated;
+* [x] provider/network/malformed-response failures are normalized;
+* [x] provider can be replaced with a fake/mock in tests;
+* [x] tests require no real Gemini credentials or network access;
+* [x] no capability-routing or slot-extraction policy implemented;
+* [x] no target-backend credentials or API execution enter the provider boundary;
+* [x] no SSE, WebSocket, Live API, or streaming implementation;
+* [x] lint, typecheck, tests, and production build pass.
 
 **Out of scope:** capability routing, slot extraction, RAG, streaming, browser/server transport, and target-backend execution.
 

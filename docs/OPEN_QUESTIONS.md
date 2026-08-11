@@ -49,5 +49,5 @@ These questions remain intentionally unresolved. P0 decisions removed from this 
 - Static v0.1 field types: `text`, `longText`, `number`, `select`, and `boolean`.
 - Browser/server logical event protocol: ADR-013 and `RUNTIME_PROTOCOL.md`; transport remains open.
 - Next.js/React/TypeScript and Node runtime structure: ADR-011 and `TECH_STACK.md`.
-- Package manager, test runner, schema validator, first provider/API, and minimal persistence: ADR-011.
+- Package manager, test runner, schema validator, and minimal persistence: ADR-011. First provider/API: ADR-015, which supersedes ADR-011's provider-specific clauses.
 - Initial workflow implementation: a small custom deterministic state machine; LangGraph evaluation remains a later question under ADR-008.

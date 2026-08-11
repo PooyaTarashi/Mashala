@@ -28,7 +28,7 @@ Thesis contribution wording and final research questions still require superviso
 
 ## Phase 3 — LLM-assisted interaction
 
-- Add the server-side OpenAI provider adapter behind the provider interface.
+- ISSUE-020: add the server-side Google Gemini native `generateContent` REST adapter behind the provider-neutral interface — Complete.
 - Route utterance to one declared capability.
 - Extract partial field values.
 - Implement the logical events in `RUNTIME_PROTOCOL.md` over a deliberately selected transport.

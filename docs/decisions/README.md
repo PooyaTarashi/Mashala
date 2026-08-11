@@ -15,6 +15,7 @@ Accepted decisions are authoritative.
 - ADR-011 — Freeze the v0.1 technology stack
 - ADR-012 — Canonical compiled spec v0.1
 - ADR-013 — Transport-independent browser/server protocol v0.1
+- ADR-015 — Google Gemini is the first LLM provider (supersedes ADR-011's provider-specific clauses)
 
 When a major architectural choice changes:
 

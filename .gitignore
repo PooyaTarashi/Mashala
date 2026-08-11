@@ -11,6 +11,7 @@ coverage/
 
 # Local environment files
 .env*
+!.env.example
 
 # Logs
 *.log
@@ -18,4 +19,3 @@ coverage/
 # Editor and operating-system files
 .DS_Store
 Thumbs.db
-
