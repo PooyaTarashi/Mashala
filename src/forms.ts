@@ -2,8 +2,9 @@ import type {
   BooleanFieldDefinition,
   LongTextFieldDefinition,
   NumberFieldDefinition,
+  FieldDefinition,
+  ReferenceFieldDefinition,
   SelectFieldDefinition,
-  StaticFieldDefinition,
   TextFieldDefinition,
 } from "./fields";
 
@@ -53,12 +54,23 @@ export interface BooleanFieldMetadata extends FieldPresentationBase {
   readonly kind: "boolean";
 }
 
+export interface ReferenceFieldMetadata extends FieldPresentationBase {
+  readonly kind: "reference";
+  readonly source: {
+    readonly method: "GET";
+    readonly path: string;
+  };
+  readonly value: string;
+  readonly labelFrom: string;
+}
+
 export type FieldMetadata =
   | TextFieldMetadata
   | LongTextFieldMetadata
   | NumberFieldMetadata
   | SelectFieldMetadata
-  | BooleanFieldMetadata;
+  | BooleanFieldMetadata
+  | ReferenceFieldMetadata;
 
 export interface FormDefinition<FieldName extends string = string> {
   /** The sole canonical source of deterministic input validation. */
@@ -68,7 +80,7 @@ export interface FormDefinition<FieldName extends string = string> {
   readonly fields: Readonly<Record<FieldName, FieldMetadata>>;
 }
 
-export type FormFields = Readonly<Record<string, StaticFieldDefinition>>;
+export type FormFields = Readonly<Record<string, FieldDefinition>>;
 
 export type FormFieldName<Fields extends FormFields> = Extract<
   keyof Fields,
@@ -114,7 +126,23 @@ function compileSelectMetadata(
   });
 }
 
-function compileField(field: StaticFieldDefinition): {
+function compileReferenceMetadata(
+  field: ReferenceFieldDefinition,
+): ReferenceFieldMetadata {
+  return Object.freeze({
+    kind: field.kind,
+    label: field.label,
+    ...(field.helpText === undefined ? {} : { helpText: field.helpText }),
+    source: Object.freeze({
+      method: field.source.method,
+      path: field.source.path,
+    }),
+    value: field.value,
+    labelFrom: field.labelFrom,
+  });
+}
+
+function compileField(field: FieldDefinition): {
   readonly schema: JsonSchema202012;
   readonly metadata: FieldMetadata;
 } {
@@ -153,6 +181,12 @@ function compileField(field: StaticFieldDefinition): {
       };
     }
 
+    case "reference":
+      return {
+        schema: Object.freeze({ type: "string" }),
+        metadata: compileReferenceMetadata(field),
+      };
+
     case "boolean":
       return {
         schema: Object.freeze({ type: "boolean" }),
@@ -162,7 +196,7 @@ function compileField(field: StaticFieldDefinition): {
 }
 
 /**
- * Compiles static field definitions into the canonical form/schema split.
+ * Compiles field definitions into the canonical form/schema split.
  * Fields are optional by default and preserve declaration order.
  */
 export function compileForm<const Fields extends FormFields>(

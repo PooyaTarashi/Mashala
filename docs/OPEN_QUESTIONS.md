@@ -26,22 +26,21 @@ These questions remain intentionally unresolved. P0 decisions removed from this 
 
 ## Authoring and forms
 
-10. What minimal application-level authoring helper, if any, should assemble app metadata and declared capabilities into `MashalaSpec`? `defineCapability` now fixes static capability authoring; the future `reference` field remains separately unresolved below.
+10. What minimal application-level authoring helper, if any, should assemble app metadata and declared capabilities into `MashalaSpec`? `defineCapability` now fixes capability authoring, including reference fields.
 11. Are file uploads part of a later spec version or outside the project?
-12. What exact response mapping is used by the future `reference` field? One browser-executed read source per field is accepted; dependent/cascading sources remain deferred.
 
 ## Technology
 
-13. Which browser end-to-end test runner should be adopted once browser interaction tests exist?
-14. What simple documentation/RAG indexing approach is sufficient when Phase 5 begins? No vector database is selected.
-15. After the deterministic state-machine requirements are implemented, does LangGraph materially improve persistence, interrupts, resumability, or branching? ADR-008 remains authoritative.
+12. Which browser end-to-end test runner should be adopted once browser interaction tests exist?
+13. What simple documentation/RAG indexing approach is sufficient when Phase 5 begins? No vector database is selected.
+14. After the deterministic state-machine requirements are implemented, does LangGraph materially improve persistence, interrupts, resumability, or branching? ADR-008 remains authoritative.
 
 ## Evaluation
 
-16. What participant count and recruitment plan are practical?
-17. What is the final task set?
-18. Which metrics are non-negotiable?
-19. Which safety/adversarial cases are required?
+15. What participant count and recruitment plan are practical?
+16. What is the final task set?
+17. Which metrics are non-negotiable?
+18. Which safety/adversarial cases are required?
 
 ## Resolved in P0
 
@@ -51,3 +50,4 @@ These questions remain intentionally unresolved. P0 decisions removed from this 
 - Next.js/React/TypeScript and Node runtime structure: ADR-011 and `TECH_STACK.md`.
 - Package manager, test runner, schema validator, and minimal persistence: ADR-011. First provider/API: ADR-015, which supersedes ADR-011's provider-specific clauses.
 - Initial workflow implementation: a small custom deterministic state machine; LangGraph evaluation remains a later question under ADR-008.
+- Reference response mapping: one root response array is projected through developer-declared direct `value` and `labelFrom` string properties; malformed items reject the complete option result, and cascading fields remain deferred.

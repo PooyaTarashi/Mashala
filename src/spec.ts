@@ -12,6 +12,7 @@ export type {
   JsonValue,
   LongTextFieldMetadata,
   NumberFieldMetadata,
+  ReferenceFieldMetadata,
   SelectFieldMetadata,
   TextFieldMetadata,
 } from "./forms";

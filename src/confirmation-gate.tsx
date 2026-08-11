@@ -172,6 +172,8 @@ export function ConfirmationGate<FieldName extends string>({
           onSubmit={handleValidatedSubmit}
           submitLabel={submitLabel}
           formId={formId}
+          baseUrl={baseUrl}
+          fetchImpl={fetchImpl}
         />
       </div>
 

@@ -88,20 +88,34 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 function fieldInformation(
   fields: FormDefinition["fields"],
 ): readonly ModelFieldInformation[] {
-  return Object.entries(fields).map(([name, metadata]) => ({
-    name,
-    label: metadata.label,
-    ...(metadata.helpText === undefined
-      ? {}
-      : { helpText: metadata.helpText }),
-    ...(metadata.kind === "select"
-      ? {
-          options: Object.entries(metadata.optionLabels).map(
-            ([value, label]) => ({ value, label }),
-          ),
-        }
-      : {}),
-  }));
+  return Object.entries(fields)
+    .filter(([, metadata]) => metadata.kind !== "reference")
+    .map(([name, metadata]) => ({
+      name,
+      label: metadata.label,
+      ...(metadata.helpText === undefined
+        ? {}
+        : { helpText: metadata.helpText }),
+      ...(metadata.kind === "select"
+        ? {
+            options: Object.entries(metadata.optionLabels).map(
+              ([value, label]) => ({ value, label }),
+            ),
+          }
+        : {}),
+    }));
+}
+
+function modelEligibleProperties(
+  form: FormDefinition,
+): Readonly<Record<string, JsonSchema202012>> {
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(form.schema.properties).filter(
+        ([name]) => form.fields[name]?.kind !== "reference",
+      ),
+    ),
+  );
 }
 
 function partialObjectSchema(
@@ -111,7 +125,7 @@ function partialObjectSchema(
     $schema: form.schema.$schema,
     ...(form.schema.$id === undefined ? {} : { $id: form.schema.$id }),
     type: "object",
-    properties: form.schema.properties,
+    properties: modelEligibleProperties(form),
     additionalProperties: false,
   };
 }
@@ -119,7 +133,7 @@ function partialObjectSchema(
 function providerOutputSchema(form: FormDefinition): JsonSchema202012 {
   return {
     type: "object",
-    properties: form.schema.properties,
+    properties: modelEligibleProperties(form),
     additionalProperties: false,
   };
 }
@@ -160,7 +174,9 @@ export async function extractSlotCandidates<
 > {
   const form = capability.form;
   const validate = compilePartialValidator(form);
-  const declaredFieldNames = new Set(Object.keys(form.schema.properties));
+  const declaredFieldNames = new Set(
+    Object.keys(modelEligibleProperties(form)),
+  );
 
   const providerResult = await provider.generateStructured({
     instructions: EXTRACTION_INSTRUCTIONS,

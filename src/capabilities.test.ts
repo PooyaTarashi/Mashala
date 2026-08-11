@@ -76,6 +76,42 @@ describe("defineCapability", () => {
     expect(Object.isFrozen(capability.operation)).toBe(true);
   });
 
+  it("keeps canonical reference data serializable and credential-free", () => {
+    const source = {
+      method: "GET" as const,
+      path: "/accounts",
+      headers: { authorization: "Bearer target-secret" },
+      accessToken: "target-secret",
+    };
+    const capability = defineCapability({
+      id: "pay_bill",
+      description: "Pay a bill from one of the user's accounts",
+      fields: {
+        account: f.reference({
+          label: "Account",
+          source,
+          value: "id",
+          labelFrom: "display_name",
+        }),
+      },
+      operation: { method: "POST", path: "/bill-payments" },
+      confirmation: "required",
+    });
+    const serialized = JSON.stringify(capability);
+
+    expect(capability.form.fields.account).toEqual({
+      kind: "reference",
+      label: "Account",
+      source: { method: "GET", path: "/accounts" },
+      value: "id",
+      labelFrom: "display_name",
+    });
+    expect(serialized).not.toContain("target-secret");
+    expect(serialized).not.toContain("headers");
+    expect(serialized).not.toContain("accessToken");
+    expect(JSON.parse(serialized)).toEqual(capability);
+  });
+
   it("rejects invalid stable IDs and malformed serialized policies or operations", () => {
     expect(() =>
       defineCapability({

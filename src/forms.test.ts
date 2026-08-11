@@ -110,6 +110,43 @@ describe("form compiler", () => {
     expect(form.schema).not.toHaveProperty("required");
   });
 
+  it("compiles a reference into string validation and canonical runtime metadata", () => {
+    const form = compileForm({
+      account: f.reference({
+        label: "From account",
+        helpText: "Choose the source account.",
+        required: true,
+        source: { method: "GET", path: "/accounts" },
+        value: "id",
+        labelFrom: "display_name",
+      }),
+    });
+
+    expect(form).toEqual({
+      schema: {
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        type: "object",
+        properties: { account: { type: "string" } },
+        required: ["account"],
+        additionalProperties: false,
+      },
+      fields: {
+        account: {
+          kind: "reference",
+          label: "From account",
+          helpText: "Choose the source account.",
+          source: { method: "GET", path: "/accounts" },
+          value: "id",
+          labelFrom: "display_name",
+        },
+      },
+    });
+    expect(Object.isFrozen(form.fields.account)).toBe(true);
+    if (form.fields.account.kind === "reference") {
+      expect(Object.isFrozen(form.fields.account.source)).toBe(true);
+    }
+  });
+
   it("is deterministic and isolates deeply frozen output from authoring input", () => {
     const options = [
       { value: "standard", label: "Standard" },
@@ -263,7 +300,7 @@ if (false) {
   void typedForm.fields.name.required;
 
   compileForm({
-    // @ts-expect-error Reference fields are outside ISSUE-012.
+    // @ts-expect-error Reference fields require a declared source and projection.
     account: { kind: "reference", label: "Account" },
   });
 }

@@ -95,12 +95,30 @@ export interface BooleanFieldMetadata extends FieldPresentationBase {
   readonly kind: "boolean";
 }
 
+export interface ReferenceFieldMetadata extends FieldPresentationBase {
+  readonly kind: "reference";
+
+  readonly source: {
+    readonly method: "GET";
+
+    /** Root-relative target-backend path; no origin, headers, or credentials. */
+    readonly path: string;
+  };
+
+  /** Direct response-item property projected as the submitted string value. */
+  readonly value: string;
+
+  /** Direct response-item property projected as the user-visible label. */
+  readonly labelFrom: string;
+}
+
 export type FieldMetadata =
   | TextFieldMetadata
   | LongTextFieldMetadata
   | NumberFieldMetadata
   | SelectFieldMetadata
-  | BooleanFieldMetadata;
+  | BooleanFieldMetadata
+  | ReferenceFieldMetadata;
 
 export interface BackendOperation {
   readonly method: "POST" | "PUT" | "PATCH";
@@ -132,13 +150,16 @@ A compiled v0.1 spec is valid only when all of the following hold:
    - `text` and `longText` use a string schema;
    - `number` uses a number or integer schema;
    - `select` uses a string schema with `enum`;
-   - `boolean` uses a boolean schema.
+   - `boolean` uses a boolean schema;
+   - `reference` uses a string schema. Its dynamically resolved allowed-value set is enforced in addition to full-form JSON Schema validation.
 6. A select's `optionLabels` keys exactly match its schema enum values. This mapping exists only to attach presentation labels; the schema enum is authoritative for validation.
-7. The form root uses `additionalProperties: false`.
-8. `operation.path` begins with `/` and is relative to the developer-configured target-backend base URL. It contains no origin, query mapping, header, or credential.
-9. A capability's request body is JSON. Each validated form property is copied to the same-named request-body property. No implicit renaming or transformation occurs.
-10. A capability that can cause a consequential side effect uses `confirmation: "required"`.
-11. No model-visible-data policy property is present. `ModelVisibleDataPolicy` is only a named `never` placeholder, and absence never authorizes forwarding backend data.
+7. A reference has exactly one source containing only `method: "GET"` and a root-relative target-backend path. It contains no headers, credentials, functions, or model instructions. `value` and `labelFrom` name direct response-item properties; cascading/dependent sources are absent.
+8. A successful reference response is a root array. Every item must be an object whose declared value and label properties are non-empty strings, and projected values must be unique. Any malformed item rejects the response rather than producing a partial or invented option set.
+9. The form root uses `additionalProperties: false`.
+10. `operation.path` begins with `/` and is relative to the developer-configured target-backend base URL. It contains no origin, query mapping, header, or credential.
+11. A capability's request body is JSON. Each validated form property is copied to the same-named request-body property. No implicit renaming or transformation occurs.
+12. A capability that can cause a consequential side effect uses `confirmation: "required"`.
+13. No model-visible-data policy property is present. `ModelVisibleDataPolicy` is only a named `never` placeholder, and absence never authorizes forwarding backend data.
 
 The future compiler and runtime must validate the compiled spec before use. LLM output never changes these declarations.
 
@@ -249,11 +270,13 @@ This example uses every v0.1 static field kind. It is a compiled JSON artifact, 
 
 A renderer reads `fields`; a validator reads `schema`; a router reads capability IDs and descriptions; and the browser executor reads `operation` only after schema validation and confirmation.
 
-## Future data-backed/reference fields
+## Data-backed/reference fields
 
-ADR-004 requires a data-backed field whose read operation executes in the browser. The current representation can add this as one new `FieldMetadata` union member, for example a future `kind: "reference"` with a declared `GET` source. The associated field still has a JSON Schema property that validates the selected canonical value, while the new metadata supplies browser-only option-resolution information.
+`f.reference` compiles into the `ReferenceFieldMetadata` union member shown above. Its single declared GET runs directly from the browser against the target backend. A successful root-array response is projected deterministically through the named `value` and `labelFrom` properties into `{ value, label }` options. The model does not generate these options, and the response is not sent to the Mashala server.
 
-That extension does not require changing `MashalaSpec`, `CapabilitySpec`, or the `FormDefinition` split. The exact reference response mapping and cascading behavior are not defined in P0; cascading fields remain deferred.
+The associated JSON Schema property validates the selected primitive as a string. Before submission, the browser additionally requires the value to be present in that field's successfully resolved option set, then runs the unchanged full-form JSON Schema validation. Loading or failed resolution cannot authorize an unresolved value.
+
+The browser request boundary accepts an injected fetch-compatible function so ISSUE-031 can later supply the target application's authentication behavior without putting headers or credentials in canonical data. Cascading/dependent references and model-visible backend projection remain deferred.
 
 ## Model-visible backend data extension point
 

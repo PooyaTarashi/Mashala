@@ -6,6 +6,7 @@ import {
   type ChangeEvent,
   type FormEvent,
   type ReactNode,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -15,6 +16,11 @@ import type {
   FormDefinition,
   JsonSchema202012,
 } from "./forms";
+import {
+  assertReferenceSource,
+  type ReferenceOption,
+  resolveReferenceOptions,
+} from "./reference-resolver";
 import styles from "./form-renderer.module.css";
 
 export type FormFieldValue = string | number | boolean;
@@ -30,6 +36,10 @@ export interface CompiledFormProps<FieldName extends string = string> {
   readonly submitLabel?: string;
   /** Supply a unique value when multiple compiled forms share one document. */
   readonly formId?: string;
+  /** Required when the compiled form contains a reference field. */
+  readonly baseUrl?: string | URL;
+  /** Injectable browser request boundary; defaults to browser fetch. */
+  readonly fetchImpl?: typeof fetch;
 }
 
 interface RenderableField {
@@ -42,6 +52,13 @@ interface ValidationIssue {
   readonly fieldName?: string;
   readonly message: string;
 }
+
+type ReferenceFieldState =
+  | { readonly phase: "loading" }
+  | { readonly phase: "resolved"; readonly options: readonly ReferenceOption[] }
+  | { readonly phase: "failed" };
+
+type ReferenceStates = Readonly<Record<string, ReferenceFieldState>>;
 
 type EditableState = Readonly<
   Record<string, FormFieldValue | undefined>
@@ -112,6 +129,32 @@ function assertCompatibleSchema(
       }
       return;
     }
+
+    case "reference":
+      if (schemaType !== "string") {
+        developerError(
+          `field "${fieldName}" with kind "reference" must use a string schema.`,
+        );
+      }
+
+      try {
+        assertReferenceSource(metadata.source);
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        developerError(`field "${fieldName}" has ${detail}`);
+      }
+
+      if (
+        typeof metadata.value !== "string" ||
+        metadata.value.length === 0 ||
+        typeof metadata.labelFrom !== "string" ||
+        metadata.labelFrom.length === 0
+      ) {
+        developerError(
+          `field "${fieldName}" must declare non-empty value and labelFrom properties.`,
+        );
+      }
+      return;
 
     case "boolean":
       if (schemaType !== "boolean") {
@@ -189,6 +232,24 @@ function initialState(
   }
 
   return state;
+}
+
+function initialReferenceStates(
+  fields: readonly RenderableField[],
+  canResolve: boolean,
+): ReferenceStates {
+  return Object.freeze(
+    Object.fromEntries(
+      fields
+        .filter((field) => field.metadata.kind === "reference")
+        .map((field) => [
+          field.name,
+          canResolve
+            ? ({ phase: "loading" } as const)
+            : ({ phase: "failed" } as const),
+        ]),
+    ),
+  );
 }
 
 function candidateValue(
@@ -310,12 +371,49 @@ function validateCandidate(
   validator: ValidateFunction,
   form: FormDefinition,
   candidate: Record<string, FormFieldValue>,
+  fields: readonly RenderableField[],
+  referenceStates: ReferenceStates,
 ): readonly ValidationIssue[] {
-  if (validator(candidate)) {
-    return [];
+  const referenceIssues: ValidationIssue[] = [];
+
+  for (const field of fields) {
+    if (field.metadata.kind !== "reference" || !hasOwn(candidate, field.name)) {
+      continue;
+    }
+
+    const state = referenceStates[field.name];
+    const value = candidate[field.name];
+
+    if (state?.phase === "loading") {
+      referenceIssues.push({
+        fieldName: field.name,
+        message: `${field.metadata.label} options are still loading.`,
+      });
+      continue;
+    }
+
+    if (state?.phase !== "resolved") {
+      referenceIssues.push({
+        fieldName: field.name,
+        message: `${field.metadata.label} options could not be loaded.`,
+      });
+      continue;
+    }
+
+    if (!state.options.some((option) => option.value === value)) {
+      referenceIssues.push({
+        fieldName: field.name,
+        message: `${field.metadata.label} must be one of the resolved options.`,
+      });
+    }
   }
 
-  return (validator.errors ?? []).map((error) => validationIssue(error, form));
+  const schemaIsValid = validator(candidate);
+  const schemaIssues = schemaIsValid
+    ? []
+    : (validator.errors ?? []).map((error) => validationIssue(error, form));
+
+  return [...referenceIssues, ...schemaIssues];
 }
 
 function idPart(value: string): string {
@@ -354,6 +452,8 @@ export function CompiledForm<FieldName extends string>({
   onSubmit,
   submitLabel = "Submit",
   formId = DEFAULT_FORM_ID,
+  baseUrl,
+  fetchImpl,
 }: CompiledFormProps<FieldName>) {
   const fields = useMemo(() => renderableFields(form), [form]);
   const validator = useMemo(() => compileValidator(form), [form]);
@@ -362,11 +462,51 @@ export function CompiledForm<FieldName extends string>({
   );
   const [issues, setIssues] = useState<readonly ValidationIssue[]>([]);
   const [hasValidated, setHasValidated] = useState(false);
+  const [referenceStates, setReferenceStates] = useState<ReferenceStates>(() =>
+    initialReferenceStates(fields, baseUrl !== undefined),
+  );
   const requiredNames = useMemo(
     () => new Set<string>(form.schema.required ?? []),
     [form.schema.required],
   );
   const idPrefix = idPart(formId);
+
+  useEffect(() => {
+    if (baseUrl === undefined) {
+      return;
+    }
+
+    let active = true;
+
+    for (const field of fields) {
+      if (field.metadata.kind !== "reference") {
+        continue;
+      }
+
+      void resolveReferenceOptions({
+        baseUrl,
+        field: field.metadata,
+        ...(fetchImpl === undefined ? {} : { fetchImpl }),
+      }).then((result) => {
+        if (!active) {
+          return;
+        }
+
+        const nextState: ReferenceFieldState =
+          result.outcome === "success"
+            ? { phase: "resolved", options: result.options }
+            : { phase: "failed" };
+
+        setReferenceStates((current) =>
+          Object.freeze({ ...current, [field.name]: nextState }),
+        );
+      });
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [baseUrl, fetchImpl, fields]);
 
   function updateValue(name: string, value: FormFieldValue | undefined): void {
     const nextValues = { ...values, [name]: value };
@@ -378,6 +518,8 @@ export function CompiledForm<FieldName extends string>({
           validator,
           form,
           candidateValue(fields, nextValues),
+          fields,
+          referenceStates,
         ),
       );
     }
@@ -387,7 +529,13 @@ export function CompiledForm<FieldName extends string>({
     event.preventDefault();
 
     const candidate = candidateValue(fields, values);
-    const nextIssues = validateCandidate(validator, form, candidate);
+    const nextIssues = validateCandidate(
+      validator,
+      form,
+      candidate,
+      fields,
+      referenceStates,
+    );
     setHasValidated(true);
     setIssues(nextIssues);
 
@@ -496,6 +644,38 @@ export function CompiledForm<FieldName extends string>({
         );
       }
 
+      case "reference": {
+        const state = referenceStates[field.name];
+        const options = state?.phase === "resolved" ? state.options : [];
+        const placeholder =
+          state?.phase === "loading"
+            ? "Loading options…"
+            : state?.phase === "failed"
+              ? "Options unavailable"
+              : "Select an option";
+
+        return (
+          <select
+            {...common}
+            className={styles.control}
+            value={controlValue(value)}
+            required={required}
+            disabled={state?.phase !== "resolved"}
+            aria-busy={state?.phase === "loading" || undefined}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+              updateValue(field.name, event.currentTarget.value)
+            }
+          >
+            <option value="">{placeholder}</option>
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        );
+      }
+
       case "boolean":
         return (
           <input
@@ -561,7 +741,17 @@ export function CompiledForm<FieldName extends string>({
         const errorIds = fieldIssues.map(
           (_issue, index) => `${controlId}-error-${index}`,
         );
-        const describedBy = [helpId, ...errorIds].filter(Boolean).join(" ");
+        const referenceState =
+          field.metadata.kind === "reference"
+            ? referenceStates[field.name]
+            : undefined;
+        const referenceStatusId =
+          referenceState === undefined || referenceState.phase === "resolved"
+            ? undefined
+            : `${controlId}-status`;
+        const describedBy = [helpId, referenceStatusId, ...errorIds]
+          .filter(Boolean)
+          .join(" ");
         const required = requiredNames.has(field.name);
         const isBoolean = field.metadata.kind === "boolean";
 
@@ -606,6 +796,26 @@ export function CompiledForm<FieldName extends string>({
                 {field.metadata.helpText}
               </p>
             )}
+
+            {referenceState?.phase === "loading" ? (
+              <p
+                className={styles.referenceStatus}
+                id={referenceStatusId}
+                role="status"
+              >
+                Loading options.
+              </p>
+            ) : null}
+
+            {referenceState?.phase === "failed" ? (
+              <p
+                className={styles.referenceFailure}
+                id={referenceStatusId}
+                role="alert"
+              >
+                Options could not be loaded.
+              </p>
+            ) : null}
 
             {fieldIssues.length > 0 ? (
               <ul className={styles.errors}>

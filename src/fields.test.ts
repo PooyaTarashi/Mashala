@@ -3,8 +3,10 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   f,
   type BooleanFieldDefinition,
+  type FieldDefinition,
   type LongTextFieldDefinition,
   type NumberFieldDefinition,
+  type ReferenceFieldDefinition,
   type SelectFieldDefinition,
   type StaticFieldDefinition,
   type TextFieldDefinition,
@@ -75,6 +77,67 @@ describe("field DSL", () => {
     });
     expectTypeOf(field).toEqualTypeOf<BooleanFieldDefinition>();
     expectTypeOf(field.kind).toEqualTypeOf<"boolean">();
+  });
+
+  it("builds a reference field with one declared GET source and projection", () => {
+    const field = f.reference({
+      label: "From account",
+      helpText: "Choose an account.",
+      required: true,
+      source: { method: "GET", path: "/accounts" },
+      value: "id",
+      labelFrom: "display_name",
+    });
+
+    expect(field).toEqual({
+      kind: "reference",
+      label: "From account",
+      helpText: "Choose an account.",
+      required: true,
+      source: { method: "GET", path: "/accounts" },
+      value: "id",
+      labelFrom: "display_name",
+    });
+    expectTypeOf(field).toEqualTypeOf<ReferenceFieldDefinition>();
+    expectTypeOf(field.kind).toEqualTypeOf<"reference">();
+    expect(Object.isFrozen(field)).toBe(true);
+    expect(Object.isFrozen(field.source)).toBe(true);
+  });
+
+  it("copies only canonical reference-source data", () => {
+    const source = {
+      method: "GET" as const,
+      path: "/accounts",
+      headers: { authorization: "Bearer target-secret" },
+      credential: "target-secret",
+    };
+
+    const field = f.reference({
+      label: "Account",
+      source,
+      value: "id",
+      labelFrom: "name",
+    });
+
+    expect(field.source).toEqual({ method: "GET", path: "/accounts" });
+    expect(JSON.stringify(field)).not.toContain("target-secret");
+    expect(JSON.stringify(field)).not.toContain("headers");
+    expect(JSON.stringify(field)).not.toContain("credential");
+  });
+
+  it.each([
+    ["non-GET method", { method: "POST", path: "/accounts" }],
+    ["absolute path", { method: "GET", path: "https://other.example/accounts" }],
+    ["query string", { method: "GET", path: "/accounts?active=true" }],
+  ])("rejects a reference source with a %s", (_case, source) => {
+    expect(() =>
+      f.reference({
+        label: "Account",
+        source: source as { method: "GET"; path: string },
+        value: "id",
+        labelFrom: "name",
+      }),
+    ).toThrow(/^Invalid reference field:/);
   });
 
   it("retains form-compilation settings only when authored", () => {
@@ -148,6 +211,20 @@ describe("field DSL", () => {
       "boolean",
     ]);
   });
+
+  it("includes reference in the complete field union", () => {
+    const fields = [
+      f.text({ label: "Name" }),
+      f.reference({
+        label: "Account",
+        source: { method: "GET", path: "/accounts" },
+        value: "id",
+        labelFrom: "name",
+      }),
+    ] satisfies readonly FieldDefinition[];
+
+    expect(fields.map((field) => field.kind)).toEqual(["text", "reference"]);
+  });
 });
 
 if (false) {
@@ -170,4 +247,12 @@ if (false) {
 
   // @ts-expect-error JSON Schema numeric constraints are numbers.
   f.number({ label: "Invalid", minimum: "0" });
+
+  f.reference({
+    label: "Invalid",
+    // @ts-expect-error Reference sources are GET-only.
+    source: { method: "POST", path: "/accounts" },
+    value: "id",
+    labelFrom: "name",
+  });
 }

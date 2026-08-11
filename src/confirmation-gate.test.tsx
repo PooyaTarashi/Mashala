@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   afterEach,
@@ -249,6 +256,71 @@ describe("ConfirmationGate required policy", () => {
       saveRecipient: false,
     });
     expect(body).not.toContain("Sam");
+  });
+});
+
+describe("ConfirmationGate with a reference field", () => {
+  it("keeps option resolution read-only and executes only after confirmation", async () => {
+    const capability = defineCapability({
+      id: "pay_bill",
+      description: "Pay a bill",
+      fields: {
+        account: f.reference({
+          label: "Account",
+          required: true,
+          source: { method: "GET", path: "/accounts" },
+          value: "id",
+          labelFrom: "display_name",
+        }),
+      },
+      operation: { method: "POST", path: "/bill-payments" },
+      confirmation: "required",
+    });
+    const fetchImpl = vi.fn<typeof fetch>().mockImplementation(
+      async (_input, init) =>
+        init?.method === "GET"
+          ? Response.json([{ id: "acct_1", display_name: "Checking" }])
+          : new Response(null, { status: 201 }),
+    );
+
+    render(
+      <ConfirmationGate
+        capability={capability}
+        baseUrl="https://target.example"
+        fetchImpl={fetchImpl}
+        submitLabel="Review payment"
+      />,
+    );
+
+    const option = await screen.findByRole("option", { name: "Checking" });
+    expect(option).toBeInstanceOf(HTMLOptionElement);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      "https://target.example/accounts",
+      { method: "GET" },
+    );
+
+    fireEvent.change(screen.getByLabelText(/Account/), {
+      target: { value: "acct_1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Review payment" }));
+
+    expect(screen.getByRole("region", { name: "Review and confirm" })).toBeDefined();
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and send" }));
+
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      "https://target.example/bill-payments",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: '{"account":"acct_1"}',
+      },
+    );
   });
 });
 

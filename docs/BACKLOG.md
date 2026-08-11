@@ -240,18 +240,18 @@ The executable shared contracts and validators live in `src/runtime-protocol.ts`
 
 **Acceptance:**
 
-* [ ] `reference` becomes a supported field kind;
-* [ ] field declares one read-only backend source;
-* [ ] v0.1 source uses a declared `GET` operation;
-* [ ] source request executes in the browser;
-* [ ] source defines deterministic projection to option value and label;
-* [ ] resolved options render through the form system;
-* [ ] loading state represented;
-* [ ] retrieval failure represented;
-* [ ] selected value remains subject to deterministic validation;
-* [ ] target-backend credentials never enter canonical spec;
-* [ ] no cascading/dependent reference fields;
-* [ ] tests prove browser execution, projection, rendering, selection and failures.
+* [x] `reference` becomes a supported field kind;
+* [x] field declares one read-only backend source;
+* [x] v0.1 source uses a declared `GET` operation;
+* [x] source request executes in the browser;
+* [x] source defines deterministic projection to option value and label;
+* [x] resolved options render through the form system;
+* [x] loading state represented;
+* [x] retrieval failure represented;
+* [x] selected value remains subject to deterministic validation;
+* [x] target-backend credentials never enter canonical spec;
+* [x] no cascading/dependent reference fields;
+* [x] tests prove browser execution, projection, rendering, selection and failures.
 
 ---
 

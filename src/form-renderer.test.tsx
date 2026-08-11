@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   afterEach,
@@ -69,6 +76,27 @@ function validInitialValues() {
     speed: "standard",
     saveRecipient: false,
   } as const;
+}
+
+function createReferenceForm() {
+  return compileForm({
+    account: f.reference({
+      label: "From account",
+      helpText: "Choose the source account.",
+      required: true,
+      source: { method: "GET", path: "/accounts" },
+      value: "id",
+      labelFrom: "display_name",
+    }),
+    note: f.text({ label: "Note" }),
+  });
+}
+
+function accountResponse() {
+  return Response.json([
+    { id: "acct_1", display_name: "Checking" },
+    { id: "acct_2", display_name: "Savings" },
+  ]);
 }
 
 describe("CompiledForm rendering", () => {
@@ -373,6 +401,139 @@ describe("CompiledForm state and submission", () => {
   });
 });
 
+describe("CompiledForm reference resolution", () => {
+  it("shows loading, renders resolved options, and submits a valid selection", async () => {
+    let resolveFetch: ((response: Response) => void) | undefined;
+    const fetchImpl = vi.fn<typeof fetch>().mockReturnValue(
+      new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+    const onSubmit = vi.fn();
+
+    render(
+      <CompiledForm
+        form={createReferenceForm()}
+        baseUrl="https://target.example/application/"
+        fetchImpl={fetchImpl}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    const account = screen.getByLabelText(/From account/) as HTMLSelectElement;
+    expect(account.disabled).toBe(true);
+    expect(account.getAttribute("aria-busy")).toBe("true");
+    expect(screen.getByRole("status").textContent).toBe("Loading options.");
+    expect(within(account).getByRole("option").textContent).toBe(
+      "Loading options…",
+    );
+
+    resolveFetch?.(accountResponse());
+
+    await waitFor(() => expect(account.disabled).toBe(false));
+    expect(account.getAttribute("aria-busy")).toBeNull();
+    expect(
+      within(account).getAllByRole("option").map((option) => [
+        (option as HTMLOptionElement).value,
+        option.textContent,
+      ]),
+    ).toEqual([
+      ["", "Select an option"],
+      ["acct_1", "Checking"],
+      ["acct_2", "Savings"],
+    ]);
+
+    fireEvent.change(account, { target: { value: "acct_2" } });
+    fireEvent.change(screen.getByLabelText("Note"), {
+      target: { value: "Primary" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      account: "acct_2",
+      note: "Primary",
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://target.example/accounts",
+      { method: "GET" },
+    );
+  });
+
+  it.each([
+    ["HTTP failure", new Response(null, { status: 500 })],
+    ["malformed backend response", Response.json([{ id: "acct_1" }])],
+  ])("shows retrieval failure for %s", async (_case, response) => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(response);
+
+    render(
+      <CompiledForm
+        form={createReferenceForm()}
+        baseUrl="https://target.example"
+        fetchImpl={fetchImpl}
+        onSubmit={() => undefined}
+      />,
+    );
+
+    const failure = await screen.findByRole("alert");
+    expect(failure.textContent).toBe("Options could not be loaded.");
+    const account = screen.getByLabelText(/From account/) as HTMLSelectElement;
+    expect(account.disabled).toBe(true);
+    expect(within(account).getByRole("option").textContent).toBe(
+      "Options unavailable",
+    );
+  });
+
+  it("rejects an arbitrary initial value outside the resolved options", async () => {
+    const onSubmit = vi.fn();
+    render(
+      <CompiledForm
+        form={createReferenceForm()}
+        baseUrl="https://target.example"
+        fetchImpl={vi.fn<typeof fetch>().mockResolvedValue(accountResponse())}
+        initialValues={{ account: "invented_account" }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(
+        (screen.getByLabelText(/From account/) as HTMLSelectElement).disabled,
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(
+      screen.getAllByText("From account must be one of the resolved options."),
+    ).toHaveLength(2);
+  });
+
+  it("rejects a value while its allowed options remain unresolved", () => {
+    const onSubmit = vi.fn();
+    const fetchImpl = vi.fn<typeof fetch>().mockReturnValue(
+      new Promise<Response>(() => undefined),
+    );
+
+    render(
+      <CompiledForm
+        form={createReferenceForm()}
+        baseUrl="https://target.example"
+        fetchImpl={fetchImpl}
+        initialValues={{ account: "acct_1" }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(
+      screen.getAllByText("From account options are still loading."),
+    ).toHaveLength(2);
+  });
+});
+
 describe("CompiledForm validation", () => {
   it("blocks invalid submission and exposes linked required errors", () => {
     const onSubmit = vi.fn();
@@ -529,7 +690,7 @@ describe("CompiledForm types", () => {
       FormDefinition<Names>
     >();
     expectTypeOf<FieldMetadata["kind"]>().toEqualTypeOf<
-      "text" | "longText" | "number" | "select" | "boolean"
+      "text" | "longText" | "number" | "select" | "boolean" | "reference"
     >();
   });
 });

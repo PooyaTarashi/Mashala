@@ -2,15 +2,15 @@
 
 ## Current phase
 
-**P2 LLM integration is complete through the executable runtime-protocol boundary. ISSUE-020's provider boundary, ISSUE-021's capability router, ISSUE-022's slot extractor, and ISSUE-023's executable protocol contracts are complete.**
+**P3 data-backed fields are complete through the first browser-resolved reference field. ISSUE-030's `f.reference` authoring, canonical representation, direct browser GET resolution, deterministic projection, rendering, and allowed-value validation are complete.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, and ISSUE-023 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, a deterministic confirmation boundary, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, and transport-independent runtime events with deterministic validation of untrusted data.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, and ISSUE-030 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution, a deterministic confirmation boundary, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, and transport-independent runtime events with deterministic validation of untrusted data.
 
 ## Accepted decisions
 
 - Project name: **Mashala**.
 - Mashala is a complete generated frontend application.
-- The basic typed field DSL exposes `f.text`, `f.longText`, `f.number`, `f.select`, and `f.boolean` with deterministic JSON-serializable field-level output.
+- The typed field DSL exposes `f.text`, `f.longText`, `f.number`, `f.select`, `f.boolean`, and browser-resolved `f.reference` with deterministic JSON-serializable field-level output.
 - `compileForm` compiles those primitives into the canonical `FormDefinition` schema/metadata split. Fields are optional by default and opt into required status with `required: true`.
 - String length constraints, numeric limits, required names, primitive types, and select enum values exist only in JSON Schema; compiled field metadata retains presentation information only.
 - The canonical compiled artifact is the versioned JSON-serializable `MashalaSpec` in `CANONICAL_SPEC.md`.
@@ -18,7 +18,7 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - v0.1 static fields are `text`, `longText`, `number`, `select`, and `boolean`.
 - v0.1 capability writes declare `POST`, `PUT`, or `PATCH` plus a relative path. Form names map directly to same-named JSON body properties.
 - Confirmation policy is declared per capability.
-- The canonical field metadata union can later add a browser-resolved `reference` field without changing the top-level structure.
+- The canonical field metadata union includes a browser-resolved `reference` field with one GET source and direct string value/label property projections, without changing the top-level structure.
 - Model-visible backend data has a named, non-serialized placeholder type, but ADR-010's projection/minimization mechanism and its eventual spec location remain deliberately unresolved. Automatic forwarding is forbidden.
 - ADR-013 and `RUNTIME_PROTOCOL.md` define the protocol design; `src/runtime-protocol.ts` now provides the corresponding executable versioned discriminated unions and strict runtime validators, independent of transport.
 - LLM-produced routes and form values are untrusted proposals validated against declared capability IDs and JSON Schemas.
@@ -85,12 +85,20 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Server-only mapping functions convert ISSUE-021 matched/out-of-scope/error results to `capability.route.result`, `capability.route.out_of_scope`, or `protocol.error`, and ISSUE-022 proposed/error results to `form.values.proposed` or `protocol.error`.
 - Protocol construction hard-codes version `0.1`, preserves Mashala event correlation fields, exposes no credential/header/secret property, and contains no backend-execution event. No endpoint, streaming mechanism, socket, polling, or other transport was selected.
 
+## P3 implementation
+
+- ISSUE-030 — `f.reference` declares presentation metadata, one root-relative GET source, and direct `value`/`labelFrom` response-item properties.
+- `compileForm` emits a string JSON Schema property plus plain serializable `reference` runtime metadata. It copies only method/path source data and contains no headers or credentials.
+- `resolveReferenceOptions` performs the declared GET directly through the browser fetch boundary, requires a root response array, and rejects the complete result for malformed items or duplicate projected values.
+- `CompiledForm` renders loading, failure, and resolved select states. A selected value must belong to the successfully resolved options in addition to passing the unchanged full-form JSON Schema validation.
+- Reference resolution does not execute a write. `ConfirmationGate` passes the same injectable browser request boundary through to reads so ISSUE-031 can later supply auth integration without changing canonical data.
+- Reference fields are omitted from model slot-extraction contracts; ISSUE-032 remains responsible for any explicit model-visible backend projection.
+
 ## Deliberately unresolved
 
 - ADR-010's exact projection/minimization mechanism for model-visible backend results.
 - The transport carrying runtime protocol events: HTTP, SSE, WebSocket, or a combination.
 - The optional application-level authoring helper beyond the executable `MashalaSpec` type.
-- The exact future `reference` response-mapping shape.
 - Durable conversation persistence beyond the v0.1 single-process proof.
 - The first reference/demo domain.
 - Primary thesis contribution wording and final research questions.
@@ -99,6 +107,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**Implement `f.reference` (ISSUE-030)** is the recommended next backlog task.
+**Implement the auth-context integration interface (ISSUE-031)** is the recommended next backlog task.
 
-ISSUE-023 did not implement authentication integration, runtime protocol transport, workflows, theming, mock-backend infrastructure, RAG, or reference fields. Those later tasks remain incomplete.
+ISSUE-030 did not implement authentication integration, model-visible backend projection, cascading references, runtime protocol transport, workflows, theming, mock-backend infrastructure, or RAG. Those later tasks remain incomplete.

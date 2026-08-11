@@ -5,6 +5,7 @@ import {
   type BackendOperation,
   type JsonValue,
 } from "./spec";
+import { resolveTargetBackendUrl } from "./target-backend-url";
 
 export type { BackendOperation } from "./spec";
 
@@ -28,44 +29,6 @@ export type BackendOperationResult =
       readonly outcome: "network-error";
     };
 
-function targetBaseUrl(value: string | URL): URL {
-  let baseUrl: URL;
-
-  try {
-    baseUrl = new URL(value.toString());
-  } catch {
-    throw new TypeError(
-      "Invalid target backend base URL: expected an absolute HTTP(S) URL.",
-    );
-  }
-
-  if (baseUrl.protocol !== "http:" && baseUrl.protocol !== "https:") {
-    throw new TypeError(
-      "Invalid target backend base URL: expected an absolute HTTP(S) URL.",
-    );
-  }
-
-  if (baseUrl.username !== "" || baseUrl.password !== "") {
-    throw new TypeError(
-      "Invalid target backend base URL: embedded credentials are not allowed.",
-    );
-  }
-
-  return baseUrl;
-}
-
-function targetUrl(baseUrl: URL, path: string): URL {
-  const resolvedUrl = new URL(path, baseUrl);
-
-  if (resolvedUrl.origin !== baseUrl.origin) {
-    throw new TypeError(
-      "Invalid backend operation: path must resolve within the supplied target backend origin.",
-    );
-  }
-
-  return resolvedUrl;
-}
-
 /**
  * Executes one already validated JSON form value directly against a declared
  * target-backend operation. Confirmation, authentication integration, and
@@ -79,8 +42,11 @@ export async function executeBackendOperation({
 }: ExecuteBackendOperationInput): Promise<BackendOperationResult> {
   assertBackendOperation(operationInput);
 
-  const baseUrl = targetBaseUrl(baseUrlInput);
-  const url = targetUrl(baseUrl, operationInput.path);
+  const url = resolveTargetBackendUrl(
+    baseUrlInput,
+    operationInput.path,
+    "Invalid backend operation: path must resolve within the supplied target backend origin.",
+  );
 
   try {
     const response = await fetchImpl(url.href, {

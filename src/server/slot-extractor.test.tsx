@@ -13,6 +13,8 @@ import {
 vi.mock("server-only", () => ({}));
 
 import { transferMoney } from "../examples/transfer-money";
+import { defineCapability } from "../capabilities";
+import { f } from "../fields";
 import { CompiledForm, type FormValue } from "../form-renderer";
 import type { JsonValue } from "../forms";
 import type { LlmProvider } from "./llm/provider";
@@ -265,6 +267,51 @@ describe("extractSlotCandidates", () => {
     expect(request?.instructions).toContain("only declared field names");
     expect(request?.instructions).toContain("empty or partial object is valid");
     expect(request?.instructions).toContain("instead of guessing");
+  });
+
+  it("does not expose reference fields as model-inventable slot values", async () => {
+    const capability = defineCapability({
+      id: "pay_bill",
+      description: "Pay a bill",
+      fields: {
+        account: f.reference({
+          label: "Account",
+          source: { method: "GET", path: "/accounts" },
+          value: "id",
+          labelFrom: "display_name",
+        }),
+        amount: f.number({ label: "Amount" }),
+      },
+      operation: { method: "POST", path: "/bill-payments" },
+      confirmation: "required",
+    });
+    const { provider, generateStructured } = successfulProvider({
+      account: "invented_account",
+    });
+
+    const result = await extractSlotCandidates({
+      capability,
+      utterance: "Use my main account",
+      provider,
+    });
+
+    expect(result).toMatchObject({
+      outcome: "error",
+      error: {
+        kind: "undeclared_fields",
+        fieldNames: ["account"],
+      },
+    });
+    const request = generateStructured.mock.calls[0]?.[0];
+    expect(JSON.parse(request?.input ?? "null")).toEqual({
+      utterance: "Use my main account",
+      fields: [{ name: "amount", label: "Amount" }],
+    });
+    expect(request?.outputSchema).toEqual({
+      type: "object",
+      properties: { amount: { type: "number" } },
+      additionalProperties: false,
+    });
   });
 
   it("rejects operation, confirmation, or capability identity in model output without changing the selection", async () => {

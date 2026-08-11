@@ -73,6 +73,21 @@ textarea.control {
   line-height: 1.45;
 }
 
+.referenceStatus,
+.referenceFailure {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.referenceStatus {
+  color: #5b5b55;
+}
+
+.referenceFailure {
+  color: #8c1d1d;
+}
+
 .errors {
   margin: 0;
   padding-left: 1.25rem;
