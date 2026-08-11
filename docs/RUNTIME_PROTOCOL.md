@@ -6,6 +6,8 @@ This document defines the smallest structured event contract between the Mashala
 
 The protocol carries language-assistance requests and proposals. It does not carry a command for the server to execute a target-backend operation.
 
+The executable shared TypeScript unions and runtime validators live in `src/runtime-protocol.ts`. The transport-independent server adapters that map capability-routing and slot-extraction domain results to these events live in `src/server/runtime-protocol-events.ts`.
+
 ## Architectural boundaries
 
 - Authenticated target-backend operations execute in the user's browser.
@@ -117,7 +119,7 @@ export type ProtocolErrorEvent = RuntimeEvent<
 >;
 ```
 
-The import path in this documentation is illustrative; ISSUE-010 will choose physical source-file locations. The discriminants and payload shapes are normative.
+The discriminants and payload shapes are normative. The executable implementation imports `JsonValue` through `src/spec.ts`, which re-exports the canonical JSON types.
 
 `eventId` and `conversationId` are opaque Mashala identifiers. They must not reuse a target application's authentication token, cookie, credential-bearing session identifier, or provider response ID. `inReplyTo`, when present, names another Mashala `eventId`.
 

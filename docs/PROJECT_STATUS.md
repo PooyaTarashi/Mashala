@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P2 LLM integration is in progress. ISSUE-020's provider boundary, ISSUE-021's capability router, and ISSUE-022's slot extractor are complete.**
+**P2 LLM integration is complete through the executable runtime-protocol boundary. ISSUE-020's provider boundary, ISSUE-021's capability router, ISSUE-022's slot extractor, and ISSUE-023's executable protocol contracts are complete.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, and ISSUE-022 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, a deterministic confirmation boundary, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, and partial slot extraction with declared-key and JSON Schema validation.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, and ISSUE-023 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, a deterministic confirmation boundary, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, and transport-independent runtime events with deterministic validation of untrusted data.
 
 ## Accepted decisions
 
@@ -20,7 +20,7 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Confirmation policy is declared per capability.
 - The canonical field metadata union can later add a browser-resolved `reference` field without changing the top-level structure.
 - Model-visible backend data has a named, non-serialized placeholder type, but ADR-010's projection/minimization mechanism and its eventual spec location remain deliberately unresolved. Automatic forwarding is forbidden.
-- Runtime events use the versioned discriminated unions in `RUNTIME_PROTOCOL.md` and are independent of transport.
+- ADR-013 and `RUNTIME_PROTOCOL.md` define the protocol design; `src/runtime-protocol.ts` now provides the corresponding executable versioned discriminated unions and strict runtime validators, independent of transport.
 - LLM-produced routes and form values are untrusted proposals validated against declared capability IDs and JSON Schemas.
 - Target-backend API calls execute entirely in the user's browser. The Mashala server is not a general proxy/BFF.
 - Target-backend credentials are not part of the runtime protocol and must not be sent to the Mashala server or LLM.
@@ -38,7 +38,7 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 
 - ADR-011, ADR-015, and `TECH_STACK.md` — frozen v0.1 implementation choices and the superseding first-provider decision.
 - ADR-012 and `CANONICAL_SPEC.md` — compiled spec types, invariants, limitations, and complete example.
-- ADR-013 and `RUNTIME_PROTOCOL.md` — browser/server event types, trust rules, and end-to-end flow.
+- ADR-013 and `RUNTIME_PROTOCOL.md` — normative browser/server protocol design, trust rules, and end-to-end flow. Its executable contracts live in `src/runtime-protocol.ts`.
 
 ## P1 implementation
 
@@ -80,6 +80,10 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Mashala rejects malformed output and every undeclared key, then validates the proposal with the selected form schema while omitting only the root `required` list so unrelated missing fields remain allowed. Full `CompiledForm` validation is unchanged.
 - Extracted values are frozen proposals compatible with `CompiledForm.initialValues`; they remain editable and cause no submission, confirmation, target-backend request, or workflow transition.
 - ISSUE-022 adds no runtime transport/events, backend execution, confirmation, RAG, reference fields, or provider-specific extraction contract.
+- ISSUE-023 — executable `RuntimeEvent`, `BrowserToServerEvent`, and `ServerToBrowserEvent` discriminated unions exactly represent ADR-013's seven event types.
+- Shared Ajv 2020-12 validators reject unsupported versions, unknown event types, missing or extra envelope/payload fields, malformed JSON values, direction mismatches, and credential-like fields in generic selected context or proposed values before application handling.
+- Server-only mapping functions convert ISSUE-021 matched/out-of-scope/error results to `capability.route.result`, `capability.route.out_of_scope`, or `protocol.error`, and ISSUE-022 proposed/error results to `form.values.proposed` or `protocol.error`.
+- Protocol construction hard-codes version `0.1`, preserves Mashala event correlation fields, exposes no credential/header/secret property, and contains no backend-execution event. No endpoint, streaming mechanism, socket, polling, or other transport was selected.
 
 ## Deliberately unresolved
 
@@ -95,6 +99,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**Implement executable runtime protocol contracts (ISSUE-023)** is the recommended next backlog task.
+**Implement `f.reference` (ISSUE-030)** is the recommended next backlog task.
 
-ISSUE-022 did not implement authentication integration, runtime protocol transport/events, workflows, theming, mock-backend infrastructure, RAG, or reference fields. Those later tasks remain incomplete.
+ISSUE-023 did not implement authentication integration, runtime protocol transport, workflows, theming, mock-backend infrastructure, RAG, or reference fields. Those later tasks remain incomplete.

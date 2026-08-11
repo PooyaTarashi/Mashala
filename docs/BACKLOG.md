@@ -209,26 +209,26 @@ Acceptance:
 
 ---
 
-### ISSUE-023 — Implement executable runtime protocol
+### ISSUE-023 — Implement executable runtime protocol — Complete
 
 **Goal:** Turn the browser/server protocol already accepted in ADR-013 into executable TypeScript contracts and runtime validation.
 
 **Acceptance:**
 
-* [ ] executable discriminated unions correspond to ADR-013;
-* [ ] user-message event represented;
-* [ ] capability-route result represented;
-* [ ] candidate-form-values event represented;
-* [ ] assistant-message event represented;
-* [ ] selected/minimized backend-context event represented;
-* [ ] out-of-scope and structured error events represented;
-* [ ] incoming untrusted messages are runtime-validated before use;
-* [ ] target-backend credentials cannot appear in protocol contracts;
-* [ ] no server-side target-backend execution event exists;
-* [ ] protocol remains transport-independent;
-* [ ] routing and extraction use these contracts instead of parallel ad-hoc DTOs.
+* [x] executable discriminated unions correspond to ADR-013;
+* [x] user-message event represented;
+* [x] capability-route result represented;
+* [x] candidate-form-values event represented;
+* [x] assistant-message event represented;
+* [x] selected/minimized backend-context event represented;
+* [x] out-of-scope and structured error events represented;
+* [x] incoming untrusted messages are runtime-validated before use;
+* [x] target-backend credentials cannot appear in protocol contracts;
+* [x] no server-side target-backend execution event exists;
+* [x] protocol remains transport-independent;
+* [x] routing and extraction use these contracts instead of parallel ad-hoc DTOs.
 
-ISSUE-022 is complete without introducing transport types. Implement **ISSUE-023** next and integrate the existing routing/extraction contracts with the accepted protocol types without choosing a transport.
+The executable shared contracts and validators live in `src/runtime-protocol.ts`. Server-only adapters in `src/server/runtime-protocol-events.ts` map ISSUE-021 routing and ISSUE-022 extraction domain results to the canonical server-to-browser events without choosing a transport.
 
 ---
 
