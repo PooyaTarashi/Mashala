@@ -139,68 +139,345 @@ Acceptance:
 - [x] focused runtime and type-level tests cover assembly, binding, allowed methods/policies, malformed fields, and top-level conformance;
 - [x] all prior tests, lint, typecheck, and production build pass.
 
-## P2 — LLM
+## P2 — LLM integration
 
-### ISSUE-020 — Server-side provider adapter
+### ISSUE-020 — Server-side LLM provider adapter
 
-Acceptance:
+**Goal:** Establish a provider-neutral server-side LLM boundary, using Google Gemini as the first implementation.
 
-- API key read only server-side;
-- structured model response;
-- mockable tests.
+**v0.1:**
+
+* Google Gemini native `generateContent` REST API;
+* Gemini API key remains server-side;
+* standard request/response only, no streaming or WebSockets.
+
+**Acceptance:**
+
+* [ ] provider-neutral TypeScript interface exists;
+* [ ] Gemini `generateContent` REST adapter implemented;
+* [ ] Gemini-specific request/response structures remain inside the adapter;
+* [ ] `GEMINI_API_KEY` is read only server-side and never exposed to browser code, it is provided in .env file;
+* [ ] structured model output supported;
+* [ ] model output remains untrusted and caller-validated;
+* [ ] provider/network/malformed-response failures are normalized;
+* [ ] provider can be replaced with a fake/mock in tests;
+* [ ] tests require no real Gemini credentials or network access;
+* [ ] no capability-routing or slot-extraction policy implemented;
+* [ ] no target-backend credentials or API execution enter the provider boundary;
+* [ ] no SSE, WebSocket, Live API, or streaming implementation;
+* [ ] lint, typecheck, tests, and production build pass.
+
+**Out of scope:** capability routing, slot extraction, RAG, streaming, browser/server transport, and target-backend execution.
+
+---
 
 ### ISSUE-021 — Capability routing
 
-Acceptance:
+**Goal:** Use the LLM to interpret a user utterance and propose one of the capabilities already declared by the developer.
 
-- model chooses only declared capability IDs;
-- out-of-scope result supported.
+**Acceptance:**
+
+* [ ] router receives a user utterance and declared `CapabilitySpec[]`;
+* [ ] model is exposed only to declared capability IDs/descriptions needed for routing;
+* [ ] structured result contains a proposed declared capability ID or explicit out-of-scope result;
+* [ ] returned capability ID is deterministically checked against the declared capability set;
+* [ ] invented/unknown capability IDs are rejected;
+* [ ] routing never modifies operation or confirmation policy;
+* [ ] routing never executes a capability;
+* [ ] out-of-scope requests are represented explicitly;
+* [ ] mock-provider tests cover valid routing, invented IDs, malformed output, and out-of-scope behavior.
+
+---
 
 ### ISSUE-022 — Slot extraction
 
-Acceptance:
+**Goal:** After routing, let the LLM propose candidate values for fields of the selected capability.
 
-- only declared fields;
-- invalid values rejected by schema;
-- extracted values remain editable.
+**Acceptance:**
 
-## P3 — data-backed field proof
+* [ ] extractor receives the selected `CapabilitySpec` and relevant user utterance;
+* [ ] structured output is limited to fields declared by that capability;
+* [ ] undeclared/model-invented fields are rejected;
+* [ ] partial extraction is supported;
+* [ ] extracted values are treated as proposals, not authoritative values;
+* [ ] candidate values are deterministically validated against the compiled JSON Schema;
+* [ ] invalid candidate values cannot bypass schema validation;
+* [ ] extracted values remain editable by the user;
+* [ ] model cannot modify operation or confirmation policy;
+* [ ] extraction causes no side effect or backend execution;
+* [ ] focused tests cover valid, partial, invalid, malformed, and extra-field output.
+
+---
+
+### ISSUE-023 — Implement executable runtime protocol
+
+**Goal:** Turn the browser/server protocol already accepted in ADR-013 into executable TypeScript contracts and runtime validation.
+
+**Acceptance:**
+
+* [ ] executable discriminated unions correspond to ADR-013;
+* [ ] user-message event represented;
+* [ ] capability-route result represented;
+* [ ] candidate-form-values event represented;
+* [ ] assistant-message event represented;
+* [ ] selected/minimized backend-context event represented;
+* [ ] out-of-scope and structured error events represented;
+* [ ] incoming untrusted messages are runtime-validated before use;
+* [ ] target-backend credentials cannot appear in protocol contracts;
+* [ ] no server-side target-backend execution event exists;
+* [ ] protocol remains transport-independent;
+* [ ] routing and extraction use these contracts instead of parallel ad-hoc DTOs.
+
+I would implement **020 → 023 → 021 → 022**, even though the issue numbers don't perfectly express that ordering.
+
+---
+
+# P3 — Data-backed fields
 
 ### ISSUE-030 — Implement `f.reference`
 
-Acceptance:
+**Goal:** Prove Mashala's core data-backed-field concept using a browser-resolved select/reference field.
 
-- declared GET source;
-- response projection to value/label;
-- request runs in browser.
+**Acceptance:**
+
+* [ ] `reference` becomes a supported field kind;
+* [ ] field declares one read-only backend source;
+* [ ] v0.1 source uses a declared `GET` operation;
+* [ ] source request executes in the browser;
+* [ ] source defines deterministic projection to option value and label;
+* [ ] resolved options render through the form system;
+* [ ] loading state represented;
+* [ ] retrieval failure represented;
+* [ ] selected value remains subject to deterministic validation;
+* [ ] target-backend credentials never enter canonical spec;
+* [ ] no cascading/dependent reference fields;
+* [ ] tests prove browser execution, projection, rendering, selection and failures.
+
+---
 
 ### ISSUE-031 — Auth-context integration interface
 
-Acceptance:
+**Goal:** Allow browser-executed Mashala operations to use the target application's existing authentication mechanism without Mashala owning authentication.
 
-- framework does not mandate token storage;
-- sample implementation works with demo backend.
+**Acceptance:**
 
-### ISSUE-032 — Model-visible backend projection
+* [ ] framework exposes a minimal browser request/auth integration boundary;
+* [ ] Mashala does not prescribe token storage;
+* [ ] Mashala does not implement its own authentication system;
+* [ ] integration supports the existing browser executor;
+* [ ] integration supports `f.reference` reads;
+* [ ] user target-backend credentials remain browser-side;
+* [ ] credentials never enter canonical capability data;
+* [ ] credentials never enter browser/server LLM protocol;
+* [ ] sample/demo backend proves authenticated integration;
+* [ ] tests prove the boundary without coupling Mashala to a specific auth technology.
 
-Acceptance:
+---
 
-- browser can send only selected fields/results;
-- user credential is excluded;
-- result is clearly treated as untrusted context.
+### ISSUE-032 — Implement explicit model-visible backend projection
 
-## P4 — docs/RAG
+**Goal:** Implement the mechanism by which selected/minimized target-backend result data may explicitly be sent to the Mashala server/LLM for interpretation.
 
-### ISSUE-040 — Load Markdown docs
+**Before implementation:** resolve the remaining ADR-010 open question and record the selected mechanism.
 
-### ISSUE-041 — Chunk/index docs
+**Acceptance:**
 
-### ISSUE-042 — Knowledge-answer route
+* [ ] model-visible data must be explicitly selected;
+* [ ] arbitrary backend responses are never automatically forwarded;
+* [ ] projection/minimization happens before data enters the model-facing protocol;
+* [ ] target-backend credentials cannot be included;
+* [ ] projected data is treated as untrusted model context;
+* [ ] absence of an explicit projection means no backend-result data is sent to the model;
+* [ ] deterministic tests prove allowed and excluded data;
+* [ ] implementation matches the new ADR resolving ADR-010's open mechanism.
 
-## Later
+---
 
-- OpenAPI draft importer
-- LangGraph evaluation spike
-- cascading field sources
-- routing evaluation command
-- RTL/Persian polish
+# P4 — Documentation / RAG
+
+Here I would incorporate today's decisions directly.
+
+### ISSUE-040 — Containerized Python RAG foundation
+
+**Goal:** Establish the isolated Python environment used for Mashala documentation indexing and retrieval without requiring developers to maintain Python dependencies.
+
+**Acceptance:**
+
+* [ ] Python RAG implementation has a clear boundary from the Node/Next.js runtime;
+* [ ] Python and FAISS dependencies are containerized;
+* [ ] developer does not need a Mashala-specific Python/pip/virtualenv setup;
+* [ ] RAG subsystem cannot execute target-backend operations;
+* [ ] RAG subsystem does not own capability routing, slot extraction, confirmation, or workflow;
+* [ ] no target-backend credentials are passed to the RAG subsystem;
+* [ ] FAISS remains hidden behind the RAG implementation boundary;
+* [ ] container versions/dependencies are pinned reproducibly.
+
+---
+
+### ISSUE-041 — Define versioned RAG artifact contract
+
+**Goal:** Define what offline RAG building produces independently of FAISS's internal file conventions.
+
+**Acceptance:**
+
+* [ ] artifact format has an explicit version;
+* [ ] artifact records embedding configuration/model identity;
+* [ ] artifact records enough information to map retrieval results to source chunks;
+* [ ] chunk provenance is preserved;
+* [ ] incompatible artifact versions can be rejected deterministically;
+* [ ] incompatible embedding configuration can be detected;
+* [ ] artifact contract does not expose unnecessary FAISS-specific details to the Node runtime;
+* [ ] artifact format is documented;
+* [ ] tests validate compatible and incompatible artifacts.
+
+Do **not** predetermine whether this means two files, three files, etc. Let the implementation satisfy the contract.
+
+---
+
+### ISSUE-042 — Markdown ingestion and chunking
+
+**Goal:** Convert developer-provided Markdown documentation into deterministic retrievable chunks.
+
+**Acceptance:**
+
+* [ ] configured Markdown files can be loaded;
+* [ ] documents are normalized deterministically;
+* [ ] deterministic chunking strategy implemented;
+* [ ] each chunk has stable identity;
+* [ ] source-document provenance retained;
+* [ ] useful heading/path metadata retained where available;
+* [ ] malformed/unreadable input fails clearly;
+* [ ] chunking requires no LLM;
+* [ ] deterministic fixture tests exist.
+
+---
+
+### ISSUE-043 — Local embeddings and FAISS index builder
+
+**Goal:** Build the initial retrieval index offline using local embeddings.
+
+**v0.1 implementation:**
+
+* Ollama;
+* `nomic-embed-text`;
+* Python;
+* FAISS.
+
+**Acceptance:**
+
+* [ ] chunks are embedded using local Ollama `nomic-embed-text`;
+* [ ] no external embedding API key is required;
+* [ ] embedding configuration is recorded in artifact metadata;
+* [ ] FAISS index is built from generated embeddings;
+* [ ] index and associated Mashala artifacts are serializable for deployment;
+* [ ] same inputs/configuration produce structurally compatible artifacts;
+* [ ] useful build failures are reported clearly;
+* [ ] FAISS remains an implementation detail behind the RAG boundary.
+
+---
+
+### ISSUE-044 — Implement `mashala rag build`
+
+**Goal:** Give developers one Mashala command for producing deployable RAG artifacts.
+
+Expected developer interface:
+
+```bash
+mashala rag build
+```
+
+**Acceptance:**
+
+* [ ] command exists in the Mashala developer tooling;
+* [ ] command invokes the versioned containerized RAG builder;
+* [ ] documentation input is supplied to the container;
+* [ ] generated artifacts are written back to a configured host output location;
+* [ ] developer does not invoke Python directly;
+* [ ] developer does not manage FAISS/Python dependencies;
+* [ ] Docker availability is checked with a useful failure message;
+* [ ] Ollama/model availability is checked with a useful failure message;
+* [ ] builder failure produces a useful CLI failure;
+* [ ] successful build reports artifact location and useful summary;
+* [ ] command can run locally or in developer-selected CI without Mashala prescribing CI/CD.
+
+---
+
+### ISSUE-045 — Load and validate prebuilt RAG artifacts
+
+**Goal:** Allow runtime retrieval to start from artifacts produced elsewhere rather than rebuilding the documentation corpus.
+
+**Acceptance:**
+
+* [ ] runtime loads prebuilt artifacts;
+* [ ] corpus indexing is not required at runtime startup;
+* [ ] artifact format version is validated;
+* [ ] embedding configuration is validated;
+* [ ] corrupt/incomplete artifacts fail safely;
+* [ ] source/chunk metadata remains available after loading;
+* [ ] retrieval index is loaded once and reused;
+* [ ] tests use prebuilt fixture artifacts.
+
+---
+
+### ISSUE-046 — Runtime RAG retrieval service
+
+**Goal:** Expose narrow runtime semantic retrieval over the prebuilt documentation index.
+
+Conceptually:
+
+```text
+query
+  ↓
+query embedding
+  ↓
+FAISS search
+  ↓
+top-k chunks + provenance
+```
+
+**Acceptance:**
+
+* [ ] persistent Python retrieval runtime loads artifacts once;
+* [ ] query is embedded using configuration compatible with the index;
+* [ ] top-k retrieval supported;
+* [ ] results contain chunk identity/content/provenance and retrieval score where appropriate;
+* [ ] service performs retrieval only;
+* [ ] service does not call the conversational LLM;
+* [ ] service cannot execute target-backend operations;
+* [ ] malformed requests/results fail predictably;
+* [ ] deterministic integration tests exist over a small fixture corpus.
+
+---
+
+### ISSUE-047 — Node ↔ RAG retrieval client
+
+**Goal:** Allow the Mashala Node runtime to retrieve documentation without depending on Python/FAISS internals.
+
+**Acceptance:**
+
+* [ ] Node-side retrieval interface exists;
+* [ ] Python service implements that boundary through a narrow transport contract;
+* [ ] Node code does not import or understand FAISS internals;
+* [ ] retrieval failures are normalized;
+* [ ] timeout/failure does not produce a target-backend side effect;
+* [ ] returned chunks retain provenance;
+* [ ] mock retrieval implementation exists for Node tests.
+
+---
+
+### ISSUE-048 — Knowledge-answer flow
+
+**Goal:** Answer documentation questions using retrieved developer documentation as grounded context.
+
+**Acceptance:**
+
+* [ ] user documentation question can trigger retrieval;
+* [ ] relevant chunks are retrieved before model answering;
+* [ ] only selected retrieved chunks enter model context;
+* [ ] retrieved documentation is treated as untrusted context, not system instructions;
+* [ ] answer is grounded in retrieved developer documentation;
+* [ ] insufficient retrieval can produce an explicit insufficient-context/out-of-scope response rather than invented knowledge;
+* [ ] RAG flow cannot execute target-backend operations;
+* [ ] tests cover grounded answer, no useful retrieval, malformed retrieval, and retrieval-service failure.
+
+---
