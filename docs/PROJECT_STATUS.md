@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P2 LLM integration is in progress. ISSUE-020's provider boundary and ISSUE-021's capability router are complete.**
+**P2 LLM integration is in progress. ISSUE-020's provider boundary, ISSUE-021's capability router, and ISSUE-022's slot extractor are complete.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, and ISSUE-021 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, a deterministic confirmation boundary, a server-only provider-neutral LLM boundary with a Google Gemini implementation, and deterministic allow-listed capability routing over developer-declared IDs and descriptions.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, and ISSUE-022 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend execution, a deterministic confirmation boundary, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, and partial slot extraction with declared-key and JSON Schema validation.
 
 ## Accepted decisions
 
@@ -75,6 +75,11 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - The provider proposes either `matched` with a capability ID or explicit `out_of_scope`. Mashala validates the exact output shape, rejects undeclared IDs, and returns the original declared `CapabilitySpec` object for a valid match.
 - Routing errors distinguish malformed model output, unknown capability IDs, and normalized provider failures. Routing does not inspect or execute backend operations and does not alter forms or confirmation policy.
 - ISSUE-021 adds no runtime transport/events, slot extraction, workflow, backend execution, or Gemini-specific routing contract.
+- ISSUE-022 — the server-only `extractSlotCandidates` API receives the selected `CapabilitySpec`, utterance, and provider-neutral LLM dependency, then returns partial validated candidate values or a structured extraction error.
+- The model sees field names, labels/help text, select value labels, and property-level JSON Schema constraints. It does not receive capability identity/description, operation, confirmation policy, authentication state, credentials, or backend results.
+- Mashala rejects malformed output and every undeclared key, then validates the proposal with the selected form schema while omitting only the root `required` list so unrelated missing fields remain allowed. Full `CompiledForm` validation is unchanged.
+- Extracted values are frozen proposals compatible with `CompiledForm.initialValues`; they remain editable and cause no submission, confirmation, target-backend request, or workflow transition.
+- ISSUE-022 adds no runtime transport/events, backend execution, confirmation, RAG, reference fields, or provider-specific extraction contract.
 
 ## Deliberately unresolved
 
@@ -90,6 +95,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**Implement executable runtime protocol contracts (ISSUE-023)** is the recommended next backlog task before slot extraction.
+**Implement executable runtime protocol contracts (ISSUE-023)** is the recommended next backlog task.
 
-ISSUE-021 did not implement slot extraction, authentication integration, runtime protocol transport/events, workflows, theming, mock-backend infrastructure, or reference fields. Those later tasks remain incomplete.
+ISSUE-022 did not implement authentication integration, runtime protocol transport/events, workflows, theming, mock-backend infrastructure, RAG, or reference fields. Those later tasks remain incomplete.

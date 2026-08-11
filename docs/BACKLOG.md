@@ -189,23 +189,23 @@ Acceptance:
 
 ---
 
-### ISSUE-022 — Slot extraction
+### ISSUE-022 — Slot extraction — Complete
 
 **Goal:** After routing, let the LLM propose candidate values for fields of the selected capability.
 
 **Acceptance:**
 
-* [ ] extractor receives the selected `CapabilitySpec` and relevant user utterance;
-* [ ] structured output is limited to fields declared by that capability;
-* [ ] undeclared/model-invented fields are rejected;
-* [ ] partial extraction is supported;
-* [ ] extracted values are treated as proposals, not authoritative values;
-* [ ] candidate values are deterministically validated against the compiled JSON Schema;
-* [ ] invalid candidate values cannot bypass schema validation;
-* [ ] extracted values remain editable by the user;
-* [ ] model cannot modify operation or confirmation policy;
-* [ ] extraction causes no side effect or backend execution;
-* [ ] focused tests cover valid, partial, invalid, malformed, and extra-field output.
+* [x] extractor receives the selected `CapabilitySpec` and relevant user utterance;
+* [x] structured output is limited to fields declared by that capability;
+* [x] undeclared/model-invented fields are rejected;
+* [x] partial extraction is supported;
+* [x] extracted values are treated as proposals, not authoritative values;
+* [x] candidate values are deterministically validated against the compiled JSON Schema;
+* [x] invalid candidate values cannot bypass schema validation;
+* [x] extracted values remain editable by the user;
+* [x] model cannot modify operation or confirmation policy;
+* [x] extraction causes no side effect or backend execution;
+* [x] focused tests cover valid, partial, invalid, malformed, and extra-field output.
 
 ---
 
@@ -228,7 +228,7 @@ Acceptance:
 * [ ] protocol remains transport-independent;
 * [ ] routing and extraction use these contracts instead of parallel ad-hoc DTOs.
 
-With ISSUE-021 complete without introducing transport types, implement **023 → 022** next.
+ISSUE-022 is complete without introducing transport types. Implement **ISSUE-023** next and integrate the existing routing/extraction contracts with the accepted protocol types without choosing a transport.
 
 ---
 
