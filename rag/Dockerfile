@@ -1,7 +1,7 @@
 FROM python:3.13.14-slim-bookworm@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8
 
 LABEL org.opencontainers.image.title="Mashala RAG subsystem"
-LABEL org.opencontainers.image.description="Isolated offline documentation embedding and FAISS artifact builder"
+LABEL org.opencontainers.image.description="Isolated RAG artifact builder and retrieval-only runtime"
 LABEL org.opencontainers.image.version="0.1.0"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -23,7 +23,7 @@ COPY src ./src
 COPY tests ./tests
 
 # Every image build proves that the locked distributions are installed, the
-# native FAISS module loads, and the offline builder passes its focused tests.
+# native FAISS module loads, and the RAG boundary passes its focused tests.
 RUN python -m unittest discover -s tests -p "test_*.py"
 RUN python -m mashala_rag
 

@@ -29,11 +29,10 @@ the Ollama model implicitly.
 
 ## Boundary
 
-The container has no ports, runtime retrieval transport, credentials,
-target-backend client, conversational LLM client, capability router, slot
-extractor, confirmation logic, or workflow state. FAISS is imported only by the
-private Python implementation in this build context. Node code receives no
-FAISS types, paths, or index-format knowledge.
+The container has no target-backend client, credential input, conversational
+LLM client, capability router, slot extractor, confirmation logic, or workflow
+state. FAISS is imported only by the private Python implementation in this build
+context. Node code receives no FAISS types, paths, or index-format knowledge.
 
 ISSUE-041 adds the Mashala-owned artifact manifest and deterministic metadata
 validation in `src/mashala_rag/artifact_contract.py`. The normative shape and
@@ -125,6 +124,27 @@ FAISS index and checks its training state, dimension and entry count. Later
 `load()` calls return the same `LoadedRagArtifacts` and index. Chunk content,
 source provenance and retrieval-ID mappings remain available on that state.
 
+ISSUE-046 composes that cached loader with a local Ollama query embedder and a
+single JSON-over-HTTP retrieval operation. Start the persistent container
+runtime with:
+
+```text
+serve \
+  --artifact-directory /workspace/artifacts \
+  --ollama-base-url http://host.docker.internal:11434
+```
+
+`serve` is passed to the image's existing `python -m mashala_rag` entry point;
+the artifact directory is mounted read-only by the runtime deployment.
+
+`POST /retrieve` accepts only `{"query":"...","topK":5}` (`topK` is optional)
+and returns ordered plain-data results with `chunkId`, `content`, `provenance`,
+and `score`. The runtime uses `search_query`-prefixed, L2-normalized Ollama
+embeddings and refuses to start if its full embedding identity differs from the
+artifact. The FAISS index is loaded at service construction and reused for all
+requests. The normative transport shape and failure behavior are documented in
+`../docs/RAG_RETRIEVAL_SERVICE.md`.
+
 Run the full Python test suite with the locked dependencies inside this build
 context (the Docker build runs the same command):
 
@@ -132,6 +152,6 @@ context (the Docker build runs the same command):
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-There is still no retrieval endpoint/service, query embedding/search, runtime
-query execution, Node retrieval client, or knowledge-answer flow. Those belong
+There is still no Node retrieval client, conversational knowledge-answer flow,
+automatic RAG routing, or browser interaction in this subsystem. Those belong
 to later focused issues.

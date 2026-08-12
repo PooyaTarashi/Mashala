@@ -28,6 +28,7 @@ Old chatbot conversations are historical evidence, not the current specification
 - `TECH_STACK.md` — frozen v0.1 technology choices
 - `CANONICAL_SPEC.md` — normative compiled v0.2 artifact and example
 - `RAG_ARTIFACT_CONTRACT.md` — versioned offline RAG artifact manifest
+- `RAG_RETRIEVAL_SERVICE.md` — persistent Python retrieval-only HTTP contract
 - `RUNTIME_PROTOCOL.md` — normative browser/server v0.1 event contract
 - `ROADMAP.md` — staged project plan
 - `BACKLOG.md` — implementation tasks and completion status

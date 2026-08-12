@@ -5,6 +5,10 @@ from importlib.metadata import PackageNotFoundError, version
 import faiss
 
 from .build_command import build_main
+from .artifact_loader import ArtifactLoadError
+from .ollama_embeddings import OllamaEmbeddingError
+from .retrieval_http import serve_main
+from .retrieval_service import RetrievalServiceError
 
 
 EXPECTED_DISTRIBUTIONS = {
@@ -44,8 +48,19 @@ def main(arguments: list[str] | None = None) -> int:
     if command_arguments:
         if command_arguments[0] == "build":
             return build_main(command_arguments[1:])
+        if command_arguments[0] == "serve":
+            try:
+                return serve_main(command_arguments[1:])
+            except (
+                ArtifactLoadError,
+                OllamaEmbeddingError,
+                RetrievalServiceError,
+                OSError,
+            ) as error:
+                print(f"RAG retrieval startup failed: {error}", file=sys.stderr)
+                return 1
         print(
-            f"Unknown RAG builder command: {command_arguments[0]}",
+            f"Unknown RAG command: {command_arguments[0]}",
             file=sys.stderr,
         )
         return 2

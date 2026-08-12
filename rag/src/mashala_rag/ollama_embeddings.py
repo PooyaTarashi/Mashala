@@ -130,7 +130,7 @@ class EmbeddingBatch:
 
 
 class OllamaEmbeddingClient:
-    """Embed documents through Ollama's batch ``POST /api/embed`` endpoint."""
+    """Embed documents and retrieval queries through local Ollama."""
 
     def __init__(
         self,
@@ -141,24 +141,53 @@ class OllamaEmbeddingClient:
         self.config = config or OllamaEmbeddingConfig()
         self._transport = transport or _post_json
 
+    def metadata(self) -> EmbeddingMetadata:
+        """Return the complete vector-space identity used by this client."""
+
+        return self.config.metadata()
+
     def embed_documents(self, documents: list[str]) -> EmbeddingBatch:
-        if not isinstance(documents, list) or not documents:
-            _fail("invalid_embedding_input", "expected at least one document")
-        normalized_documents: list[str] = []
-        for index, document in enumerate(documents):
-            if not isinstance(document, str) or not document.strip():
+        """Return document vectors in the artifact's document vector space."""
+
+        return self._embed_inputs(
+            documents,
+            input_label="document",
+            task_prefix=self.config.document_task_prefix,
+        )
+
+    def embed_query(self, query: str) -> EmbeddingBatch:
+        """Return one query vector compatible with indexed document vectors."""
+
+        if not isinstance(query, str) or not query.strip():
+            _fail("invalid_embedding_input", "query must be a non-empty string")
+        return self._embed_inputs(
+            [query],
+            input_label="query",
+            task_prefix=self.config.query_task_prefix,
+        )
+
+    def _embed_inputs(
+        self,
+        inputs: list[str],
+        *,
+        input_label: str,
+        task_prefix: str,
+    ) -> EmbeddingBatch:
+        if not isinstance(inputs, list) or not inputs:
+            _fail("invalid_embedding_input", f"expected at least one {input_label}")
+        normalized_inputs: list[str] = []
+        for index, value in enumerate(inputs):
+            if not isinstance(value, str) or not value.strip():
                 _fail(
                     "invalid_embedding_input",
-                    f"document {index} must be a non-empty string",
+                    f"{input_label} {index} must be a non-empty string",
                 )
-            normalized_documents.append(
-                f"{self.config.document_task_prefix}: {document}"
-            )
+            normalized_inputs.append(f"{task_prefix}: {value}")
 
         endpoint = self.config.base_url.rstrip("/") + "/api/embed"
         payload: dict[str, object] = {
             "model": self.config.model,
-            "input": normalized_documents,
+            "input": normalized_inputs,
             "truncate": self.config.truncate,
         }
         try:
@@ -183,7 +212,7 @@ class OllamaEmbeddingClient:
         vectors = _normalize_response(
             response,
             requested_model=self.config.model,
-            expected_count=len(normalized_documents),
+            expected_count=len(normalized_inputs),
             expected_dimension=self.config.expected_dimension,
             normalize=self.config.normalize,
         )

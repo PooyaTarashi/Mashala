@@ -141,6 +141,13 @@ compatibility, chunks and source provenance, retrieval-ID mappings, and an
 arbitrary-length list of opaque retrieval-index artifact descriptors. The
 manifest exposes no FAISS class, index type, or serialization detail to Node.
 
+At runtime, the persistent Python service defined in
+`RAG_RETRIEVAL_SERVICE.md` validates and loads that bundle once, embeds each
+query with the artifact-compatible local Ollama configuration, searches the
+retained private index, and returns plain chunks with provenance and scores over
+one JSON `POST /retrieve` operation. It performs no conversational answering or
+target-backend execution.
+
 ## Data-backed form fields
 
 A static schema is insufficient when form choices depend on the authenticated user.

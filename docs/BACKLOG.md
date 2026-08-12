@@ -419,7 +419,7 @@ mashala rag build
 
 ---
 
-### ISSUE-046 — Runtime RAG retrieval service
+### ISSUE-046 — Runtime RAG retrieval service — Complete
 
 **Goal:** Expose narrow runtime semantic retrieval over the prebuilt documentation index.
 
@@ -437,15 +437,15 @@ top-k chunks + provenance
 
 **Acceptance:**
 
-* [ ] persistent Python retrieval runtime loads artifacts once;
-* [ ] query is embedded using configuration compatible with the index;
-* [ ] top-k retrieval supported;
-* [ ] results contain chunk identity/content/provenance and retrieval score where appropriate;
-* [ ] service performs retrieval only;
-* [ ] service does not call the conversational LLM;
-* [ ] service cannot execute target-backend operations;
-* [ ] malformed requests/results fail predictably;
-* [ ] deterministic integration tests exist over a small fixture corpus.
+* [x] persistent Python retrieval runtime loads artifacts once;
+* [x] query is embedded using configuration compatible with the index;
+* [x] top-k retrieval supported;
+* [x] results contain chunk identity/content/provenance and retrieval score where appropriate;
+* [x] service performs retrieval only;
+* [x] service does not call the conversational LLM;
+* [x] service cannot execute target-backend operations;
+* [x] malformed requests/results fail predictably;
+* [x] deterministic integration tests exist over a small fixture corpus.
 
 ---
 

@@ -27,11 +27,13 @@ MANIFEST_FILENAME = "manifest.json"
 
 
 class RetrievalIndex(Protocol):
-    """The structural index state needed before query retrieval is implemented."""
+    """The private index state used for startup validation and retrieval."""
 
     d: int
     ntotal: int
     is_trained: bool
+
+    def search(self, vectors: object, top_k: int) -> tuple[object, object]: ...
 
 
 IndexReader = Callable[[tuple[Path, ...]], RetrievalIndex]

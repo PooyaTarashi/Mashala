@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P4 documentation/RAG work now includes validated runtime loading of prebuilt artifacts. ISSUE-045 checks manifest and embedding compatibility, verifies declared artifact integrity, deserializes and checks the FAISS index once, and retains chunk provenance without rebuilding or querying the corpus.**
+**P4 documentation/RAG work now includes a persistent retrieval-only Python runtime. ISSUE-046 validates and loads prebuilt artifacts once, embeds queries through compatible local Ollama `nomic-embed-text`, reuses the retained FAISS index for top-k search, and returns plain chunks with provenance and scores over a narrow JSON/HTTP boundary.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, and ISSUE-045 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, and cached runtime loading of validated prebuilt artifacts.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, and ISSUE-046 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of validated prebuilt artifacts, and a persistent retrieval-only JSON/HTTP service.
 
 ## Accepted decisions
 
@@ -35,6 +35,7 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - v0.1 uses ephemeral in-memory conversation state only and no persistent provider session. No database, ORM, or vector database is selected.
 - ADR-014 places documentation indexing and retrieval behind an isolated Python container boundary. FAISS is the initial internal implementation and is not exposed to Node/Next.js.
 - The offline RAG artifact contract is plain JSON manifest version `1.0`; consumers accept only explicitly supported versions and require exact embedding provider/model/dimension/configuration compatibility.
+- The Python RAG runtime exposes only `POST /retrieve`, loads one compatible artifact/index state at startup, uses the recorded `search_query` Ollama embedding space, and returns plain chunk identity/content/provenance/score results.
 
 ## P0 artifacts
 
@@ -132,6 +133,10 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Loaded index dimension/training state/count must agree with manifest embedding and retrieval mappings. Validated chunks, full provenance, and retrieval-ID mappings remain available in one `LoadedRagArtifacts` state.
 - Each loader instance caches its first successful state under a lock, so one runtime/service lifecycle reuses the same FAISS index. The loader imports no Markdown ingestion, embedding, or index-building path.
 - ISSUE-045 adds no query embedding/search, retrieval endpoint/service, Node retrieval client, or knowledge-answer flow.
+- ISSUE-046 — `RagRetrievalService` constructs around one cached ISSUE-045 loader state, validates the query embedder against the complete artifact embedding identity, and uses local Ollama `search_query` embeddings for exact top-k FAISS search.
+- The JSON-over-HTTP transport accepts only `POST /retrieve` with a non-empty `query` and optional bounded `topK`. It rejects unknown fields and returns only plain chunk identity, content, provenance, and score data; malformed input, Ollama failures, incompatible responses, and index failures have stable sanitized errors.
+- Deterministic tests exercise the checked-in two-chunk artifact and real FAISS index through the persistent HTTP server, prove one-time index loading/reuse, verify query prefixes, ranking/top-k/provenance, and cover request, embedding, compatibility, and retrieval failures.
+- ISSUE-046 adds no Node retrieval client, Gemini/conversational answering, capability routing, slot extraction, workflow/confirmation behavior, target-backend operation, credential field, automatic RAG routing, or browser interaction.
 
 ## Deliberately unresolved
 
@@ -145,6 +150,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**ISSUE-046 — Runtime RAG retrieval service** is the recommended next focused implementation task.
+**ISSUE-047 — Node ↔ RAG retrieval client** is the recommended next focused implementation task.
 
-ISSUE-045 did not implement query embedding/search, a retrieval endpoint/service, a Node retrieval client, or a knowledge-answer flow. Those later RAG tasks remain incomplete.
+ISSUE-046 intentionally did not implement the Node client or knowledge-answer flow. Those later RAG tasks remain incomplete.

@@ -66,6 +66,13 @@ The CLI checks Docker, Ollama, and the exact embedding model before building. It
 builds and runs the pinned repository RAG container and streams container output
 and errors. The operation is independent of any CI provider.
 
+The same isolated image can run the persistent retrieval-only service over a
+read-only artifact mount by passing `serve` to its container entry point. Its
+sole operation is JSON `POST /retrieve`; see
+`docs/RAG_RETRIEVAL_SERVICE.md` for lifecycle, request/result, scoring, and
+failure contracts. No Node retrieval client or knowledge-answer flow is
+implemented yet.
+
 ## Form compilation
 
 The five static field builders compile to JSON Schema Draft 2020-12 plus same-keyed Mashala presentation metadata. Fields are optional unless `required: true` is set.

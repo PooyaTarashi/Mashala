@@ -82,6 +82,32 @@ class OllamaEmbeddingTests(unittest.TestCase):
             },
         )
 
+    def test_embeds_one_query_with_the_recorded_query_prefix(self) -> None:
+        captured: dict[str, object] = {}
+
+        def transport(
+            _url: str, payload: dict[str, object], _timeout: float
+        ) -> object:
+            captured.update(payload)
+            return {
+                "model": "nomic-embed-text:v1.5",
+                "embeddings": [[0, 3, 4]],
+            }
+
+        client = OllamaEmbeddingClient(
+            OllamaEmbeddingConfig(expected_dimension=3),
+            transport=transport,
+        )
+
+        batch = client.embed_query("How do transfers work?")
+
+        self.assertEqual(
+            captured["input"],
+            ["search_query: How do transfers work?"],
+        )
+        self.assertEqual(batch.vectors, ((0.0, 0.6, 0.8),))
+        self.assertEqual(batch.metadata, client.metadata())
+
     def test_rejects_malformed_responses(self) -> None:
         cases = [
             ("not an object", []),
