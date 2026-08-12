@@ -376,7 +376,7 @@ Do **not** predetermine whether this means two files, three files, etc. Let the 
 
 ---
 
-### ISSUE-044 — Implement `mashala rag build`
+### ISSUE-044 — Implement `mashala rag build` — Complete
 
 **Goal:** Give developers one Mashala command for producing deployable RAG artifacts.
 
@@ -388,17 +388,17 @@ mashala rag build
 
 **Acceptance:**
 
-* [ ] command exists in the Mashala developer tooling;
-* [ ] command invokes the versioned containerized RAG builder;
-* [ ] documentation input is supplied to the container;
-* [ ] generated artifacts are written back to a configured host output location;
-* [ ] developer does not invoke Python directly;
-* [ ] developer does not manage FAISS/Python dependencies;
-* [ ] Docker availability is checked with a useful failure message;
-* [ ] Ollama/model availability is checked with a useful failure message;
-* [ ] builder failure produces a useful CLI failure;
-* [ ] successful build reports artifact location and useful summary;
-* [ ] command can run locally or in developer-selected CI without Mashala prescribing CI/CD.
+* [x] command exists in the Mashala developer tooling;
+* [x] command invokes the versioned containerized RAG builder;
+* [x] documentation input is supplied to the container;
+* [x] generated artifacts are written back to a configured host output location;
+* [x] developer does not invoke Python directly;
+* [x] developer does not manage FAISS/Python dependencies;
+* [x] Docker availability is checked with a useful failure message;
+* [x] Ollama/model availability is checked with a useful failure message;
+* [x] builder failure produces a useful CLI failure;
+* [x] successful build reports artifact location and useful summary;
+* [x] command can run locally or in developer-selected CI without Mashala prescribing CI/CD.
 
 ---
 

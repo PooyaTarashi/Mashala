@@ -1,8 +1,8 @@
 # Mashala RAG subsystem
 
 This directory is the complete Python build context for Mashala documentation
-indexing and retrieval. Developers build and run it with Docker; Mashala does
-not require host Python, pip, a virtual environment, or a host FAISS install.
+indexing and retrieval. Developers invoke it through the Mashala CLI; Mashala
+does not require host Python, pip, a virtual environment, or a host FAISS install.
 
 ```text
 Node / Next.js
@@ -15,16 +15,17 @@ Node / Next.js
                     +-- internal FAISS dependency
 ```
 
-Build and run the foundation smoke command:
+The developer-facing build command is:
 
 ```bash
-docker build --tag mashala-rag:issue-043 rag
-docker run --rm --network none mashala-rag:issue-043
+mashala rag build
 ```
 
-The image build itself imports FAISS and checks every installed distribution
-against the expected pinned version. The runtime command repeats that check and
-prints a small JSON health/version report. It needs no network access.
+The CLI builds the checked-in Docker context as
+`mashala-rag-builder:0.1.0`, checks Docker and local Ollama
+`nomic-embed-text:v1.5`, mounts documentation read-only, mounts the selected
+host artifact directory writable, and streams build failures. It never pulls
+the Ollama model implicitly.
 
 ## Boundary
 
@@ -97,10 +98,10 @@ The internal Python API produces this deployable bundle:
 `manifest.json` is canonical UTF-8 JSON validated against the ISSUE-041
 contract. `retrieval/index.bin` is an opaque checksummed artifact; its FAISS
 serialization is not described to Node. `build_rag_artifacts` accepts an
-`OllamaEmbeddingClient` and normalized chunks, but no developer-facing command
-is added by ISSUE-043. Container-to-host Ollama routing is supplied later by the
-`mashala rag build` integration; the client base URL is RAG-local
-configuration.
+`OllamaEmbeddingClient` and normalized chunks. ISSUE-044's container entrypoint
+composes Markdown discovery/ingestion with that existing builder. The Node CLI
+supplies container-to-host Ollama routing and reports the host output path plus
+manifest document/chunk/version summary.
 
 Run the full Python test suite with the locked dependencies inside this build
 context (the Docker build runs the same command):
@@ -109,6 +110,5 @@ context (the Docker build runs the same command):
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-There is still no artifact loader, retrieval endpoint/service, CLI build
-command, runtime query execution, or Node-to-Python communication. Those belong
-to later focused issues.
+There is still no artifact loader, retrieval endpoint/service, runtime query
+execution, or Node retrieval client. Those belong to later focused issues.

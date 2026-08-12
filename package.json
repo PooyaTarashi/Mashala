@@ -2,7 +2,11 @@
   "name": "mashala",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "A framework for generating conversational frontend applications.",
+  "bin": {
+    "mashala": "./bin/mashala.mjs"
+  },
   "engines": {
     "node": ">=24 <25",
     "npm": ">=11 <12"

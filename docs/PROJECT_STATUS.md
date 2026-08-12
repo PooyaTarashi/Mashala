@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P4 documentation/RAG work now includes offline local embedding and deployable FAISS artifact building. ISSUE-043 embeds normalized chunks through local Ollama `nomic-embed-text:v1.5`, builds an exact flat index, and writes manifest 1.0 plus an opaque checksummed index artifact without adding runtime retrieval.**
+**P4 documentation/RAG work now includes the developer-facing `mashala rag build` command. ISSUE-044 checks Docker and local Ollama, runs the versioned containerized builder with safe host input/output mounts, and reports deployable artifact summaries without adding runtime retrieval.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, and ISSUE-043 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, and offline local embedding plus exact-index artifact serialization.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, and ISSUE-044 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, and a CI-independent containerized RAG build command.
 
 ## Accepted decisions
 
@@ -124,6 +124,10 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Manifest 1.0 records provider/model/dimension plus document/query prefixes, normalization, and truncation settings. The builder uses exact FAISS `IndexFlatIP`, sequential opaque retrieval mappings, canonical JSON, and a checksummed opaque `retrieval/index.bin` artifact.
 - Failures distinguish Ollama unavailability, missing local model, malformed responses, dimension/count mismatches, index construction/serialization, metadata serialization, and artifact writes. Mocked Ollama tests need no live model or developer API key.
 - ISSUE-043 adds no `mashala rag build` command, artifact loader, query embedding/runtime retrieval, retrieval service, or Node retrieval client.
+- ISSUE-044 — `mashala rag build` resolves configurable host documentation and artifact directories, checks the Docker daemon and exact local Ollama model, builds the checked-in RAG context under versioned image tag `mashala-rag-builder:0.1.0`, and runs the private builder container.
+- Documentation is mounted read-only at `/workspace/docs`; artifacts are bind-mounted writable at `/workspace/output`. Native Linux loopback Ollama uses host networking, Docker Desktop uses `host.docker.internal`, and configured remote origins pass through unchanged.
+- Container stdout/stderr remains visible, non-zero image/container results become CLI failures, and success reports the canonical host output path plus document, chunk, and artifact-format counts from the generated manifest.
+- ISSUE-044 adds no artifact loader, retrieval service, Node retrieval client, runtime query execution, knowledge-answer flow, or CI/CD provider integration.
 
 ## Deliberately unresolved
 
@@ -137,6 +141,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**ISSUE-044 — Implement `mashala rag build`** is the recommended next focused implementation task.
+**ISSUE-045 — Load and validate prebuilt RAG artifacts** is the recommended next focused implementation task.
 
-ISSUE-043 did not implement a developer-facing build command, artifact loading, runtime retrieval, a retrieval service, or Node-to-Python transport. Those later RAG tasks remain incomplete.
+ISSUE-044 did not implement artifact loading, runtime retrieval, a retrieval service, a Node retrieval client, or a knowledge-answer flow. Those later RAG tasks remain incomplete.

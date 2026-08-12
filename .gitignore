@@ -3,6 +3,7 @@ node_modules/
 
 # Next.js output
 .next/
+.mashala/
 out/
 
 # Test and TypeScript output

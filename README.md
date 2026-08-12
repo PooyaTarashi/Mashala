@@ -11,6 +11,10 @@ The core idea is that users should not need to learn an application's navigation
 - Node.js 24.19.0 (pinned in `.nvmrc`)
 - npm 11.17.0
 
+RAG artifact builds additionally require Docker and a running local Ollama with
+`nomic-embed-text:v1.5` already installed. Mashala does not install Python,
+FAISS, or Ollama models on the host.
+
 The supported Node.js range is `>=24 <25`. Use npm only; `package-lock.json` is the authoritative lockfile.
 
 ## Setup
@@ -32,8 +36,35 @@ If Node.js 24.19.0 is not installed yet, install it with your Node version manag
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run strict TypeScript checks |
 | `npm test` | Run Vitest once and exit |
+| `mashala rag build` | Build deployable documentation/RAG artifacts |
 
 The default local URL for the development and production servers is `http://localhost:3000`.
+
+## RAG artifact build
+
+Install the required model explicitly once, start Ollama, and run the Mashala
+CLI from the project directory:
+
+```bash
+ollama pull nomic-embed-text:v1.5
+mashala rag build
+```
+
+By default the command recursively indexes Markdown below `docs/` and writes
+`manifest.json` plus opaque retrieval artifacts below `.mashala/rag/`. Override
+the locations or select particular relative sources when needed:
+
+```bash
+mashala rag build \
+  --input developer-docs \
+  --source guides \
+  --source policies/terms.md \
+  --output build/rag
+```
+
+The CLI checks Docker, Ollama, and the exact embedding model before building. It
+builds and runs the pinned repository RAG container and streams container output
+and errors. The operation is independent of any CI provider.
 
 ## Form compilation
 

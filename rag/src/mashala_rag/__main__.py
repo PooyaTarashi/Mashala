@@ -4,6 +4,8 @@ from importlib.metadata import PackageNotFoundError, version
 
 import faiss
 
+from .build_command import build_main
+
 
 EXPECTED_DISTRIBUTIONS = {
     "faiss-cpu": "1.14.3",
@@ -20,7 +22,8 @@ def installed_version(distribution: str) -> str:
         raise RuntimeError(f"Missing locked distribution: {distribution}") from error
 
 
-def main() -> int:
+def main(arguments: list[str] | None = None) -> int:
+    command_arguments = sys.argv[1:] if arguments is None else arguments
     actual_python = sys.version_info[:3]
     actual_distributions = {
         distribution: installed_version(distribution)
@@ -38,6 +41,15 @@ def main() -> int:
             f"{actual_distributions}"
         )
 
+    if command_arguments:
+        if command_arguments[0] == "build":
+            return build_main(command_arguments[1:])
+        print(
+            f"Unknown RAG builder command: {command_arguments[0]}",
+            file=sys.stderr,
+        )
+        return 2
+
     report = {
         "component": "mashala-rag",
         "faiss": faiss.__version__,
@@ -50,4 +62,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

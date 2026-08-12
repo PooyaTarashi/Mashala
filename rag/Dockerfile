@@ -2,6 +2,7 @@ FROM python:3.13.14-slim-bookworm@sha256:67a1e1f215ccda113cfc024e8639049257e88f2
 
 LABEL org.opencontainers.image.title="Mashala RAG subsystem"
 LABEL org.opencontainers.image.description="Isolated offline documentation embedding and FAISS artifact builder"
+LABEL org.opencontainers.image.version="0.1.0"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
