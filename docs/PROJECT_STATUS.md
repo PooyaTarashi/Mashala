@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P4 documentation/RAG work now includes a persistent retrieval-only Python runtime. ISSUE-046 validates and loads prebuilt artifacts once, embeds queries through compatible local Ollama `nomic-embed-text`, reuses the retained FAISS index for top-k search, and returns plain chunks with provenance and scores over a narrow JSON/HTTP boundary.**
+**P4 documentation/RAG work now includes a provider-neutral knowledge-answer path. ISSUE-048 retrieves developer documentation before conversational generation, sends only a bounded ranked selection as untrusted model context, requires grounded outputs to name selected chunk IDs, retains Mashala-owned provenance, and fails explicitly when documentation support is insufficient.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, and ISSUE-046 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of validated prebuilt artifacts, and a persistent retrieval-only JSON/HTTP service.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, and ISSUE-048 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, and a grounded documentation knowledge-answer flow with explicit insufficient-context behavior.
 
 ## Accepted decisions
 
@@ -36,6 +36,8 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - ADR-014 places documentation indexing and retrieval behind an isolated Python container boundary. FAISS is the initial internal implementation and is not exposed to Node/Next.js.
 - The offline RAG artifact contract is plain JSON manifest version `1.0`; consumers accept only explicitly supported versions and require exact embedding provider/model/dimension/configuration compatibility.
 - The Python RAG runtime exposes only `POST /retrieve`, loads one compatible artifact/index state at startup, uses the recorded `search_query` Ollama embedding space, and returns plain chunk identity/content/provenance/score results.
+- Node runtime code depends on `DocumentationRetriever`, which accepts only query text and optional top-k and returns Mashala-owned chunks or normalized failures. The concrete server-only client contains the ISSUE-046 HTTP transport and exposes no Python/FAISS types.
+- Documentation answering uses `DocumentationRetriever` before `LlmProvider`, bounds the model-visible ranked chunk selection, and treats questions/chunks as untrusted data. Grounded provider output must cite selected chunk IDs that Mashala binds back to retrieval provenance; absent support is explicit.
 
 ## P0 artifacts
 
@@ -137,6 +139,13 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - The JSON-over-HTTP transport accepts only `POST /retrieve` with a non-empty `query` and optional bounded `topK`. It rejects unknown fields and returns only plain chunk identity, content, provenance, and score data; malformed input, Ollama failures, incompatible responses, and index failures have stable sanitized errors.
 - Deterministic tests exercise the checked-in two-chunk artifact and real FAISS index through the persistent HTTP server, prove one-time index loading/reuse, verify query prefixes, ranking/top-k/provenance, and cover request, embedding, compatibility, and retrieval failures.
 - ISSUE-046 adds no Node retrieval client, Gemini/conversational answering, capability routing, slot extraction, workflow/confirmation behavior, target-backend operation, credential field, automatic RAG routing, or browser interaction.
+- ISSUE-047 — `DocumentationRetriever` accepts only query text and optional bounded top-k, then returns normalized chunk identity/content/provenance/score data or a small sanitized failure union.
+- `createPythonRagRetriever` is a server-only `POST /retrieve` adapter with strict response validation, a 65-second default abort timeout aligned beyond the Python service's configured embedding timeout, and no retry or target-backend dependency. `createFakeDocumentationRetriever` provides static or handler-driven replacement for Node tests and ISSUE-048.
+- ISSUE-047 adds no knowledge-answer prompt/flow, automatic question classification, RAG indexing/build changes, runtime protocol event, workflow/confirmation change, or target-backend behavior.
+- ISSUE-048 — `answerDocumentationQuestion` requests ranked chunks through `DocumentationRetriever`, validates the result, and selects at most three of five requested chunks before invoking `LlmProvider.generateStructured`.
+- Static Mashala instructions and JSON-serialized untrusted question/documentation data remain separate. Grounded output must name selected chunk IDs; Mashala retains their provenance without putting provenance or unselected chunks in the prompt.
+- Empty retrieval and model-declared insufficient support are explicit `insufficient_context` outcomes. Retrieval, provider, and malformed-boundary failures remain distinct. The input and result contracts contain no target-backend operation, capability, confirmation, workflow, request callable, or credential.
+- Fake-only unit tests cover ordering and selection, provenance, empty and model-insufficient support, malformed retrieval/model results, retrieval/provider failures, malicious instruction-like documentation, and absence of target-backend execution. These tests prove the boundary, not general RAG quality.
 
 ## Deliberately unresolved
 
@@ -150,6 +159,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**ISSUE-047 — Node ↔ RAG retrieval client** is the recommended next focused implementation task.
+No next focused implementation task has been selected.
 
-ISSUE-046 intentionally did not implement the Node client or knowledge-answer flow. Those later RAG tasks remain incomplete.
+ISSUE-048 intentionally does not implement automatic question classification, a transport endpoint, or advanced citation presentation.

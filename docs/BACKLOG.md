@@ -449,35 +449,35 @@ top-k chunks + provenance
 
 ---
 
-### ISSUE-047 — Node ↔ RAG retrieval client
+### ISSUE-047 — Node ↔ RAG retrieval client — Complete
 
 **Goal:** Allow the Mashala Node runtime to retrieve documentation without depending on Python/FAISS internals.
 
 **Acceptance:**
 
-* [ ] Node-side retrieval interface exists;
-* [ ] Python service implements that boundary through a narrow transport contract;
-* [ ] Node code does not import or understand FAISS internals;
-* [ ] retrieval failures are normalized;
-* [ ] timeout/failure does not produce a target-backend side effect;
-* [ ] returned chunks retain provenance;
-* [ ] mock retrieval implementation exists for Node tests.
+* [x] Node-side retrieval interface exists;
+* [x] Python service implements that boundary through a narrow transport contract;
+* [x] Node code does not import or understand FAISS internals;
+* [x] retrieval failures are normalized;
+* [x] timeout/failure does not produce a target-backend side effect;
+* [x] returned chunks retain provenance;
+* [x] mock retrieval implementation exists for Node tests.
 
 ---
 
-### ISSUE-048 — Knowledge-answer flow
+### ISSUE-048 — Knowledge-answer flow — Complete
 
 **Goal:** Answer documentation questions using retrieved developer documentation as grounded context.
 
 **Acceptance:**
 
-* [ ] user documentation question can trigger retrieval;
-* [ ] relevant chunks are retrieved before model answering;
-* [ ] only selected retrieved chunks enter model context;
-* [ ] retrieved documentation is treated as untrusted context, not system instructions;
-* [ ] answer is grounded in retrieved developer documentation;
-* [ ] insufficient retrieval can produce an explicit insufficient-context/out-of-scope response rather than invented knowledge;
-* [ ] RAG flow cannot execute target-backend operations;
-* [ ] tests cover grounded answer, no useful retrieval, malformed retrieval, and retrieval-service failure.
+* [x] user documentation question can trigger retrieval;
+* [x] relevant chunks are retrieved before model answering;
+* [x] only selected retrieved chunks enter model context;
+* [x] retrieved documentation is treated as untrusted context, not system instructions;
+* [x] answer is grounded in retrieved developer documentation;
+* [x] insufficient retrieval can produce an explicit insufficient-context/out-of-scope response rather than invented knowledge;
+* [x] RAG flow cannot execute target-backend operations;
+* [x] tests cover grounded answer, no useful retrieval, malformed retrieval, and retrieval-service failure.
 
 ---

@@ -148,6 +148,20 @@ retained private index, and returns plain chunks with provenance and scores over
 one JSON `POST /retrieve` operation. It performs no conversational answering or
 target-backend execution.
 
+### Documentation knowledge answers
+
+The ISSUE-048 server-only knowledge path described in
+`KNOWLEDGE_ANSWER_FLOW.md` invokes the provider-neutral Node retriever before
+the provider-neutral conversational model. It sends only a bounded selection of
+ranked chunks to the model as explicitly labeled untrusted data. A grounded
+answer must cite selected Mashala chunk IDs, which deterministic code binds back
+to retained source provenance. Empty or insufficient support produces an
+explicit insufficient-context result instead of an application-specific guess.
+
+This path has no capability, operation, confirmation, workflow, credential, or
+target-backend request input and does not alter the browser-direct execution
+boundary.
+
 ## Data-backed form fields
 
 A static schema is insufficient when form choices depend on the authenticated user.
