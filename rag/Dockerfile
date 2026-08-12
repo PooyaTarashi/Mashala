@@ -1,7 +1,7 @@
 FROM python:3.13.14-slim-bookworm@sha256:67a1e1f215ccda113cfc024e8639049257e88f273898f595b61476d128d387e8
 
-LABEL org.opencontainers.image.title="Mashala RAG foundation"
-LABEL org.opencontainers.image.description="Isolated Python and FAISS environment for future Mashala documentation retrieval"
+LABEL org.opencontainers.image.title="Mashala RAG subsystem"
+LABEL org.opencontainers.image.description="Isolated offline documentation embedding and FAISS artifact builder"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -21,9 +21,8 @@ RUN python -m pip install \
 COPY src ./src
 COPY tests ./tests
 
-# Every image build proves that the locked distributions are installed and that
-# the native FAISS module loads in this container. Contract tests use only the
-# standard library and validate no index implementation details.
+# Every image build proves that the locked distributions are installed, the
+# native FAISS module loads, and the offline builder passes its focused tests.
 RUN python -m unittest discover -s tests -p "test_*.py"
 RUN python -m mashala_rag
 

@@ -352,7 +352,7 @@ Do **not** predetermine whether this means two files, three files, etc. Let the 
 
 ---
 
-### ISSUE-043 — Local embeddings and FAISS index builder
+### ISSUE-043 — Local embeddings and FAISS index builder — Complete
 
 **Goal:** Build the initial retrieval index offline using local embeddings.
 
@@ -365,14 +365,14 @@ Do **not** predetermine whether this means two files, three files, etc. Let the 
 
 **Acceptance:**
 
-* [ ] chunks are embedded using local Ollama `nomic-embed-text`;
-* [ ] no external embedding API key is required;
-* [ ] embedding configuration is recorded in artifact metadata;
-* [ ] FAISS index is built from generated embeddings;
-* [ ] index and associated Mashala artifacts are serializable for deployment;
-* [ ] same inputs/configuration produce structurally compatible artifacts;
-* [ ] useful build failures are reported clearly;
-* [ ] FAISS remains an implementation detail behind the RAG boundary.
+* [x] chunks are embedded using local Ollama `nomic-embed-text`;
+* [x] no external embedding API key is required;
+* [x] embedding configuration is recorded in artifact metadata;
+* [x] FAISS index is built from generated embeddings;
+* [x] index and associated Mashala artifacts are serializable for deployment;
+* [x] same inputs/configuration produce structurally compatible artifacts;
+* [x] useful build failures are reported clearly;
+* [x] FAISS remains an implementation detail behind the RAG boundary.
 
 ---
 

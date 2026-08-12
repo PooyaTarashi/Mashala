@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P4 documentation/RAG work now includes deterministic Markdown ingestion. ISSUE-042 loads explicitly configured files/directories, normalizes them, and produces stable heading-aware ISSUE-041 chunk records without embeddings, indexing, or retrieval.**
+**P4 documentation/RAG work now includes offline local embedding and deployable FAISS artifact building. ISSUE-043 embeds normalized chunks through local Ollama `nomic-embed-text:v1.5`, builds an exact flat index, and writes manifest 1.0 plus an opaque checksummed index artifact without adding runtime retrieval.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, and ISSUE-042 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS foundation, a versioned Mashala-owned RAG artifact contract, and deterministic Markdown ingestion with stable provenance.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, and ISSUE-043 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, and offline local embedding plus exact-index artifact serialization.
 
 ## Accepted decisions
 
@@ -120,6 +120,10 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Normalization is LF/NFC/trailing-whitespace canonicalization. Heading-bounded, block-aware greedy chunking uses a configurable character target while keeping fenced code and oversized individual blocks intact.
 - Chunks use ISSUE-041 `ArtifactChunk`/`ChunkProvenance`, carry stable source/chunk SHA-256 identities, normalized source line bounds, source URI/digest/title, and heading paths where available.
 - ISSUE-042 adds no Ollama call, embedding execution, FAISS index construction, artifact serialization, build CLI, artifact loading, runtime retrieval, retrieval service, or Node communication.
+- ISSUE-043 — the private RAG Ollama client batches `search_document`-prefixed chunks through local `POST /api/embed` using `nomic-embed-text:v1.5`, disables silent truncation, validates finite vectors and the configured dimension, and performs deterministic L2 normalization without any API key or cloud fallback.
+- Manifest 1.0 records provider/model/dimension plus document/query prefixes, normalization, and truncation settings. The builder uses exact FAISS `IndexFlatIP`, sequential opaque retrieval mappings, canonical JSON, and a checksummed opaque `retrieval/index.bin` artifact.
+- Failures distinguish Ollama unavailability, missing local model, malformed responses, dimension/count mismatches, index construction/serialization, metadata serialization, and artifact writes. Mocked Ollama tests need no live model or developer API key.
+- ISSUE-043 adds no `mashala rag build` command, artifact loader, query embedding/runtime retrieval, retrieval service, or Node retrieval client.
 
 ## Deliberately unresolved
 
@@ -133,6 +137,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**ISSUE-043 — Local embeddings and FAISS index builder** is the recommended next focused implementation task.
+**ISSUE-044 — Implement `mashala rag build`** is the recommended next focused implementation task.
 
-ISSUE-042 did not implement embeddings, index building, a build command, artifact loading, retrieval, a retrieval service, or Node-to-Python transport. Those later RAG tasks remain incomplete.
+ISSUE-043 did not implement a developer-facing build command, artifact loading, runtime retrieval, a retrieval service, or Node-to-Python transport. Those later RAG tasks remain incomplete.
