@@ -481,3 +481,206 @@ top-k chunks + provenance
 * [x] tests cover grounded answer, no useful retrieval, malformed retrieval, and retrieval-service failure.
 
 ---
+
+# P5 — End-to-end conversational vertical slice
+
+Reordered from the original P5 backlog. The original acceptance criteria are kept as
+written (they were well-scoped); only the **sequence** and **priority tags** are new.
+
+Rationale for the reordering: transport and chat UI (ISSUE-049, ISSUE-050) are useless
+without something valid to feed them, so the minimal application assembly (ISSUE-053)
+comes first even though it was numbered last. Everything needed to demo one working
+transaction end-to-end is tagged **Must-have**. Everything that improves correctness or
+polish but isn't required to demo is tagged **Should-have** or **Nice-to-have**, so if
+time runs out, it's clear what can be cut and mentioned as a known limitation instead.
+
+---
+
+## Must-have — required for any working demo
+
+### ISSUE-053 — Provide application runtime assembly — Not started
+
+Goal: Define the minimal application-level assembly that supplies a compiled MashalaSpec
+and server runtime dependencies to the transport and chat page.
+
+Acceptance:
+
+- [ ] one documented application-level configuration path provides application metadata
+  and declared capabilities as a valid MashalaSpec;
+- [ ] the runtime receives only developer-declared capability/spec data for routing and
+  form rendering;
+- [ ] server-only provider and documentation-retriever configuration remains outside
+  browser bundles;
+- [ ] missing, malformed, or incompatible application configuration fails with a clear
+  sanitized startup/runtime error;
+- [ ] configuration contains no user target-backend credentials, arbitrary executable
+  request transformations, or server-side target-backend proxy settings;
+- [ ] the existing transfer example or an equivalent declared fixture can drive the
+  complete chat workflow;
+- [ ] focused tests cover valid assembly and rejected malformed configuration.
+
+Why first: without this, ISSUE-049 and ISSUE-050 have nothing valid to route or render.
+Build and test this in isolation before touching transport or UI code.
+
+---
+
+### ISSUE-049 — Implement HTTP runtime transport — Not started
+
+Goal: Select ordinary HTTP request/response as the initial non-streaming transport for
+the ADR-013 runtime events and implement the browser/server boundary.
+
+Acceptance:
+
+- [ ] HTTP endpoint and request/response framing are documented without changing the
+  meanings of the versioned runtime-protocol events;
+- [ ] browser-to-server input accepts only validated user.message and
+  backend.context.selected events;
+- [ ] server-to-browser responses carry validated canonical events in deterministic
+  event order;
+- [ ] correlation identifiers are preserved without using target-backend session
+  identifiers, provider identifiers, or credentials;
+- [ ] malformed, unsupported-version, and internal failures produce sanitized
+  protocol.error events;
+- [ ] transport requests contain no target-backend headers, cookies, access tokens, or
+  other credentials;
+- [ ] the route handler does not execute, proxy, or receive instructions to execute
+  target-backend operations;
+- [ ] focused transport contract tests cover valid event delivery, ordering, malformed
+  input, correlation, and sanitized failures.
+
+---
+
+### ISSUE-050 — Build minimal working chat UI — Not started
+
+Goal: Replace the scaffold page with a usable conversational interface backed by the
+runtime transport.
+
+Acceptance:
+
+- [ ] a page-level chat component accepts user text and emits a canonical user.message
+  through the selected transport;
+- [ ] pending submission and transport failure states are visible and do not create
+  duplicate messages or requests;
+- [ ] capability.route.result updates only declared-capability UI state;
+- [ ] form.values.proposed is merged only through deterministic schema validation into
+  editable CompiledForm state;
+- [ ] assistant.message, capability.route.out_of_scope, and protocol.error results are
+  rendered as distinct user-visible outcomes;
+- [ ] matched capabilities render the existing CompiledForm and use the existing
+  ConfirmationGate for submission;
+- [ ] AI-proposed values remain editable, and chat text cannot bypass form validation or
+  confirmation;
+- [ ] the UI is keyboard-accessible and provides accessible labels/status feedback for
+  message submission and errors;
+- [ ] focused component tests cover message sending, event rendering, invalid proposals,
+  out-of-scope results, and protocol errors.
+
+**Checkpoint:** after ISSUE-053, 049, and 050, you should be able to type a request like
+"transfer 500 to X" in the browser and watch it flow through routing, extraction, form
+fill, confirmation, and a real backend call. This is the minimum needed to demo the
+project. Verify this actually works before moving on.
+
+---
+
+## Should-have — needed for a coherent, defensible demo
+
+### ISSUE-052 — Orchestrate the page-level capability workflow — Not started
+
+Goal: Connect routing, slot extraction, deterministic form interaction, confirmation,
+browser execution, and result display into one explicit conversational workflow.
+
+Acceptance:
+
+- [ ] legal browser workflow states cover idle, routing, filling, confirming, executing,
+  completed, and failed outcomes;
+- [ ] a matched route selects only a declared capability and triggers slot extraction for
+  that capability;
+- [ ] route and extraction events are correlated with the originating user message and
+  cannot update an unrelated active capability;
+- [ ] partial slot proposals populate only valid declared fields and leave missing values
+  for the user to complete;
+- [ ] reference-field reads continue to execute in the browser with the target app's
+  request integration;
+- [ ] projected backend context is sent only when an ADR-016 descriptor permits it, and
+  only after browser-side minimization;
+- [ ] confirmation executes the exact reviewed valid snapshot through the browser-side
+  executor;
+- [ ] target-backend success, HTTP failure, and network failure are displayed distinctly
+  without routing the request through the Mashala server;
+- [ ] stale, cancelled, or concurrent workflow actions cannot authorize an unintended
+  backend request;
+- [ ] focused integration tests cover the complete successful flow, validation
+  correction, cancellation, backend failure, and out-of-scope flow.
+
+Why here: ISSUE-049/050 make one happy-path demo possible; this issue makes the flow
+robust enough that edge cases (cancel, retry, bad backend response) don't break the
+demo or embarrass you if a reviewer tries something unexpected.
+
+---
+
+## Nice-to-have — cut first if time runs short
+
+### ISSUE-051 — Classify transactional and documentation messages — Not started
+
+Goal: Add the server-side decision that directs an incoming user message to either
+declared-capability handling or the ISSUE-048 documentation-answer path.
+
+Acceptance:
+
+- [ ] classification produces only transactional, documentation, or an explicit
+  unsupported/ambiguous outcome;
+- [ ] classification treats the user message as untrusted data;
+- [ ] transactional messages proceed to declared-capability routing only;
+- [ ] documentation messages invoke answerDocumentationQuestion before conversational
+  answer generation;
+- [ ] knowledge-answer outcomes are deterministically mapped to user-visible assistant,
+  insufficient-context, or sanitized error results;
+- [ ] ambiguous or malformed classification never invents a capability, target-backend
+  operation, or documentation fact;
+- [ ] classification cannot execute a capability, alter confirmation policy, or access
+  target-backend credentials;
+- [ ] tests cover transactional routing, grounded documentation answers, insufficient
+  context, ambiguity, malformed model output, and provider failure.
+
+Fallback if skipped: hardcode a single mode (transactional-only) for the demo, or add a
+simple UI toggle between "ask a question" and "do a transaction." Disclose this as a
+known simplification in the final report rather than leaving it silently unfinished.
+
+---
+
+## Optional — only if significant time remains
+
+### ISSUE-054 — Add browser end-to-end coverage for the vertical slice — Not started
+
+Goal: Select a browser end-to-end test runner and prove the user-facing safety
+boundaries across the completed vertical slice.
+
+Acceptance:
+
+- [ ] a browser end-to-end runner is selected and documented;
+- [ ] an end-to-end fixture covers user message, route result, editable proposed form
+  values, required confirmation, browser-direct backend execution, and result display;
+- [ ] tests prove that cancelling confirmation produces no target-backend write;
+- [ ] tests prove that invalid or undeclared proposed values do not reach backend
+  execution;
+- [ ] tests prove that target-backend credentials are absent from Mashala transport
+  requests;
+- [ ] tests prove that documentation questions do not trigger target-backend execution;
+- [ ] tests run without real LLM credentials, real target-backend credentials, or
+  external provider access.
+
+Scaled-down alternative if time is tight: skip a full E2E runner and instead write one
+manual test script (a numbered list of clicks/inputs and expected results) that you run
+by hand before your defense. Note in the final report that automated browser E2E
+coverage is a known gap.
+
+---
+
+## Suggested execution order
+
+1. ISSUE-053 (application assembly)
+2. ISSUE-049 (transport)
+3. ISSUE-050 (chat UI) — **checkpoint: one full transaction working live**
+4. ISSUE-052 (orchestration robustness)
+5. ISSUE-051 (classifier) — or its fallback
+6. ISSUE-054 (E2E tests) — or its scaled-down alternative
