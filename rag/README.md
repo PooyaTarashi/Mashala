@@ -103,6 +103,28 @@ composes Markdown discovery/ingestion with that existing builder. The Node CLI
 supplies container-to-host Ollama routing and reports the host output path plus
 manifest document/chunk/version summary.
 
+ISSUE-045 loads that bundle without invoking the offline pipeline:
+
+```python
+from pathlib import Path
+
+from mashala_rag.artifact_loader import RagArtifactLoader
+from mashala_rag.ollama_embeddings import OllamaEmbeddingConfig
+
+loader = RagArtifactLoader(
+    artifact_directory=Path("/workspace/artifacts"),
+    expected_embedding=OllamaEmbeddingConfig().metadata(),
+)
+runtime_state = loader.load()
+```
+
+One loader belongs to one runtime/service lifecycle. Its first successful
+`load()` validates manifest version and metadata, exact embedding compatibility,
+declared artifact paths, sizes and SHA-256 digests, then deserializes the private
+FAISS index and checks its training state, dimension and entry count. Later
+`load()` calls return the same `LoadedRagArtifacts` and index. Chunk content,
+source provenance and retrieval-ID mappings remain available on that state.
+
 Run the full Python test suite with the locked dependencies inside this build
 context (the Docker build runs the same command):
 
@@ -110,5 +132,6 @@ context (the Docker build runs the same command):
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-There is still no artifact loader, retrieval endpoint/service, runtime query
-execution, or Node retrieval client. Those belong to later focused issues.
+There is still no retrieval endpoint/service, query embedding/search, runtime
+query execution, Node retrieval client, or knowledge-answer flow. Those belong
+to later focused issues.

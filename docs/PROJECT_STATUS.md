@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P4 documentation/RAG work now includes the developer-facing `mashala rag build` command. ISSUE-044 checks Docker and local Ollama, runs the versioned containerized builder with safe host input/output mounts, and reports deployable artifact summaries without adding runtime retrieval.**
+**P4 documentation/RAG work now includes validated runtime loading of prebuilt artifacts. ISSUE-045 checks manifest and embedding compatibility, verifies declared artifact integrity, deserializes and checks the FAISS index once, and retains chunk provenance without rebuilding or querying the corpus.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, and ISSUE-044 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, and a CI-independent containerized RAG build command.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, and ISSUE-045 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, and cached runtime loading of validated prebuilt artifacts.
 
 ## Accepted decisions
 
@@ -128,6 +128,10 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Documentation is mounted read-only at `/workspace/docs`; artifacts are bind-mounted writable at `/workspace/output`. Native Linux loopback Ollama uses host networking, Docker Desktop uses `host.docker.internal`, and configured remote origins pass through unchanged.
 - Container stdout/stderr remains visible, non-zero image/container results become CLI failures, and success reports the canonical host output path plus document, chunk, and artifact-format counts from the generated manifest.
 - ISSUE-044 adds no artifact loader, retrieval service, Node retrieval client, runtime query execution, knowledge-answer flow, or CI/CD provider integration.
+- ISSUE-045 — `RagArtifactLoader` reads `manifest.json`, applies the ISSUE-041 contract plus exact expected embedding compatibility, verifies every declared artifact path/size/SHA-256 digest, and asks the private FAISS reader to deserialize the already-built index.
+- Loaded index dimension/training state/count must agree with manifest embedding and retrieval mappings. Validated chunks, full provenance, and retrieval-ID mappings remain available in one `LoadedRagArtifacts` state.
+- Each loader instance caches its first successful state under a lock, so one runtime/service lifecycle reuses the same FAISS index. The loader imports no Markdown ingestion, embedding, or index-building path.
+- ISSUE-045 adds no query embedding/search, retrieval endpoint/service, Node retrieval client, or knowledge-answer flow.
 
 ## Deliberately unresolved
 
@@ -141,6 +145,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**ISSUE-045 — Load and validate prebuilt RAG artifacts** is the recommended next focused implementation task.
+**ISSUE-046 — Runtime RAG retrieval service** is the recommended next focused implementation task.
 
-ISSUE-044 did not implement artifact loading, runtime retrieval, a retrieval service, a Node retrieval client, or a knowledge-answer flow. Those later RAG tasks remain incomplete.
+ISSUE-045 did not implement query embedding/search, a retrieval endpoint/service, a Node retrieval client, or a knowledge-answer flow. Those later RAG tasks remain incomplete.

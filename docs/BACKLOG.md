@@ -402,20 +402,20 @@ mashala rag build
 
 ---
 
-### ISSUE-045 — Load and validate prebuilt RAG artifacts
+### ISSUE-045 — Load and validate prebuilt RAG artifacts — Complete
 
 **Goal:** Allow runtime retrieval to start from artifacts produced elsewhere rather than rebuilding the documentation corpus.
 
 **Acceptance:**
 
-* [ ] runtime loads prebuilt artifacts;
-* [ ] corpus indexing is not required at runtime startup;
-* [ ] artifact format version is validated;
-* [ ] embedding configuration is validated;
-* [ ] corrupt/incomplete artifacts fail safely;
-* [ ] source/chunk metadata remains available after loading;
-* [ ] retrieval index is loaded once and reused;
-* [ ] tests use prebuilt fixture artifacts.
+* [x] runtime loads prebuilt artifacts;
+* [x] corpus indexing is not required at runtime startup;
+* [x] artifact format version is validated;
+* [x] embedding configuration is validated;
+* [x] corrupt/incomplete artifacts fail safely;
+* [x] source/chunk metadata remains available after loading;
+* [x] retrieval index is loaded once and reused;
+* [x] tests use prebuilt fixture artifacts.
 
 ---
 
