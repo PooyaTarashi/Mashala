@@ -132,6 +132,15 @@ mashala start
 
 CI/CD selection is outside the framework's research scope.
 
+### Offline RAG artifacts
+
+ADR-014 places documentation indexing and runtime retrieval inside the isolated
+Python container boundary. Offline building produces the versioned, plain-JSON
+Mashala manifest defined in `RAG_ARTIFACT_CONTRACT.md`. It records embedding
+compatibility, chunks and source provenance, retrieval-ID mappings, and an
+arbitrary-length list of opaque retrieval-index artifact descriptors. The
+manifest exposes no FAISS class, index type, or serialization detail to Node.
+
 ## Data-backed form fields
 
 A static schema is insufficient when form choices depend on the authenticated user.

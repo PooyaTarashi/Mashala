@@ -297,58 +297,58 @@ The executable shared contracts and validators live in `src/runtime-protocol.ts`
 
 Here I would incorporate today's decisions directly.
 
-### ISSUE-040 — Containerized Python RAG foundation
+### ISSUE-040 — Containerized Python RAG foundation — Complete
 
 **Goal:** Establish the isolated Python environment used for Mashala documentation indexing and retrieval without requiring developers to maintain Python dependencies.
 
 **Acceptance:**
 
-* [ ] Python RAG implementation has a clear boundary from the Node/Next.js runtime;
-* [ ] Python and FAISS dependencies are containerized;
-* [ ] developer does not need a Mashala-specific Python/pip/virtualenv setup;
-* [ ] RAG subsystem cannot execute target-backend operations;
-* [ ] RAG subsystem does not own capability routing, slot extraction, confirmation, or workflow;
-* [ ] no target-backend credentials are passed to the RAG subsystem;
-* [ ] FAISS remains hidden behind the RAG implementation boundary;
-* [ ] container versions/dependencies are pinned reproducibly.
+* [x] Python RAG implementation has a clear boundary from the Node/Next.js runtime;
+* [x] Python and FAISS dependencies are containerized;
+* [x] developer does not need a Mashala-specific Python/pip/virtualenv setup;
+* [x] RAG subsystem cannot execute target-backend operations;
+* [x] RAG subsystem does not own capability routing, slot extraction, confirmation, or workflow;
+* [x] no target-backend credentials are passed to the RAG subsystem;
+* [x] FAISS remains hidden behind the RAG implementation boundary;
+* [x] container versions/dependencies are pinned reproducibly.
 
 ---
 
-### ISSUE-041 — Define versioned RAG artifact contract
+### ISSUE-041 — Define versioned RAG artifact contract — Complete
 
 **Goal:** Define what offline RAG building produces independently of FAISS's internal file conventions.
 
 **Acceptance:**
 
-* [ ] artifact format has an explicit version;
-* [ ] artifact records embedding configuration/model identity;
-* [ ] artifact records enough information to map retrieval results to source chunks;
-* [ ] chunk provenance is preserved;
-* [ ] incompatible artifact versions can be rejected deterministically;
-* [ ] incompatible embedding configuration can be detected;
-* [ ] artifact contract does not expose unnecessary FAISS-specific details to the Node runtime;
-* [ ] artifact format is documented;
-* [ ] tests validate compatible and incompatible artifacts.
+* [x] artifact format has an explicit version;
+* [x] artifact records embedding configuration/model identity;
+* [x] artifact records enough information to map retrieval results to source chunks;
+* [x] chunk provenance is preserved;
+* [x] incompatible artifact versions can be rejected deterministically;
+* [x] incompatible embedding configuration can be detected;
+* [x] artifact contract does not expose unnecessary FAISS-specific details to the Node runtime;
+* [x] artifact format is documented;
+* [x] tests validate compatible and incompatible artifacts.
 
 Do **not** predetermine whether this means two files, three files, etc. Let the implementation satisfy the contract.
 
 ---
 
-### ISSUE-042 — Markdown ingestion and chunking
+### ISSUE-042 — Markdown ingestion and chunking — Complete
 
 **Goal:** Convert developer-provided Markdown documentation into deterministic retrievable chunks.
 
 **Acceptance:**
 
-* [ ] configured Markdown files can be loaded;
-* [ ] documents are normalized deterministically;
-* [ ] deterministic chunking strategy implemented;
-* [ ] each chunk has stable identity;
-* [ ] source-document provenance retained;
-* [ ] useful heading/path metadata retained where available;
-* [ ] malformed/unreadable input fails clearly;
-* [ ] chunking requires no LLM;
-* [ ] deterministic fixture tests exist.
+* [x] configured Markdown files can be loaded;
+* [x] documents are normalized deterministically;
+* [x] deterministic chunking strategy implemented;
+* [x] each chunk has stable identity;
+* [x] source-document provenance retained;
+* [x] useful heading/path metadata retained where available;
+* [x] malformed/unreadable input fails clearly;
+* [x] chunking requires no LLM;
+* [x] deterministic fixture tests exist.
 
 ---
 

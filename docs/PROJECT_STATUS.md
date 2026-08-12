@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P3 data-backed fields are complete through explicit model-visible backend projection. ISSUE-032 implements ADR-016's fail-closed browser-side minimization and sends only selected plain JSON through `backend.context.selected` as untrusted language context.**
+**P4 documentation/RAG work now includes deterministic Markdown ingestion. ISSUE-042 loads explicitly configured files/directories, normalizes them, and produces stable heading-aware ISSUE-041 chunk records without embeddings, indexing, or retrieval.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, and ISSUE-032 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, and transport-independent runtime events with deterministic validation of untrusted data.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, and ISSUE-042 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS foundation, a versioned Mashala-owned RAG artifact contract, and deterministic Markdown ingestion with stable provenance.
 
 ## Accepted decisions
 
@@ -32,7 +32,9 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - The v0.1 implementation stack is TypeScript, Node.js 24.x LTS, npm, React, Next.js App Router, Vitest, and Ajv.
 - Google Gemini through the native non-streaming `generateContent` REST API is the first provider adapter under ADR-015; the exact model is server configuration.
 - Gemini-specific request/response shapes remain inside its adapter. Mashala code sees only provider-neutral structured request/result/error types, and callers remain responsible for deterministic output validation.
-- v0.1 uses ephemeral in-memory conversation state only and no persistent provider session. No database, ORM, or vector store is selected.
+- v0.1 uses ephemeral in-memory conversation state only and no persistent provider session. No database, ORM, or vector database is selected.
+- ADR-014 places documentation indexing and retrieval behind an isolated Python container boundary. FAISS is the initial internal implementation and is not exposed to Node/Next.js.
+- The offline RAG artifact contract is plain JSON manifest version `1.0`; consumers accept only explicitly supported versions and require exact embedding provider/model/dimension/configuration compatibility.
 
 ## P0 artifacts
 
@@ -103,6 +105,22 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - `createSelectedBackendContextEvent` and its already-projected-data variant construct only the accepted `backend.context.selected` shape. Full backend results do not enter the event, and the runtime protocol independently rejects credential-like context keys.
 - `extractSlotCandidates` validates the incoming context event and capability binding before provider use. It places only purpose/data in the provider input under `trust: "untrusted"`; context never enters system instructions, output schema, operation, confirmation, authorization, workflow, or execution state.
 
+## P4 implementation
+
+- ISSUE-040 — `rag/` is a standalone Docker build context containing the complete Python environment. The main Node package has no Python, pip, virtualenv, or FAISS dependency or script.
+- The image pins Python 3.13.14 through an immutable official-image digest and installs exact `faiss-cpu`, `numpy`, and `packaging` versions from `requirements.lock` without resolving undeclared transitive packages.
+- Image construction runs an internal health/version command that imports FAISS and verifies every installed version. The same command is the non-networked container entry point.
+- The container exposes no port or Node transport and contains no target-backend client, credential input, conversational LLM client, capability routing, slot extraction, confirmation, or workflow behavior.
+- ISSUE-040 adds no Markdown ingestion, embedding, index building, artifact contract, retrieval endpoint/service, or Node-to-Python communication.
+- ISSUE-041 — `rag/src/mashala_rag/artifact_contract.py` defines strict manifest validation and deterministic error codes without loading any referenced files.
+- Manifest `1.0` contains embedding identity/configuration, chunk count/content/identity, per-chunk source provenance, an exact retrieval-ID-to-chunk mapping, and a variable-length list of checksummed opaque retrieval-index artifact descriptors.
+- `docs/RAG_ARTIFACT_CONTRACT.md` is the normative contract description. Neither the manifest nor Node exposes FAISS class names, index types, or serialization details.
+- Dependency-free Python contract tests run during the RAG image build. ISSUE-041 adds no Markdown loading/chunking, embedding call, index construction, build command, artifact loading, retrieval service, or Node retrieval client.
+- ISSUE-042 — `rag/src/mashala_rag/markdown_ingestion.py` loads configured relative Markdown files or recursively expanded directories below one documentation root, failing explicitly for invalid, unavailable, unreadable, duplicate, or malformed documents.
+- Normalization is LF/NFC/trailing-whitespace canonicalization. Heading-bounded, block-aware greedy chunking uses a configurable character target while keeping fenced code and oversized individual blocks intact.
+- Chunks use ISSUE-041 `ArtifactChunk`/`ChunkProvenance`, carry stable source/chunk SHA-256 identities, normalized source line bounds, source URI/digest/title, and heading paths where available.
+- ISSUE-042 adds no Ollama call, embedding execution, FAISS index construction, artifact serialization, build CLI, artifact loading, runtime retrieval, retrieval service, or Node communication.
+
 ## Deliberately unresolved
 
 - The transport carrying runtime protocol events: HTTP, SSE, WebSocket, or a combination.
@@ -115,6 +133,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-**Select the next focused backlog issue after the completed P3 data-backed-field slice** is the recommended planning task.
+**ISSUE-043 — Local embeddings and FAISS index builder** is the recommended next focused implementation task.
 
-ISSUE-032 did not implement cascading references, runtime protocol transport, workflows, theming, general mock-backend infrastructure, or RAG. Those later tasks remain incomplete.
+ISSUE-042 did not implement embeddings, index building, a build command, artifact loading, retrieval, a retrieval service, or Node-to-Python transport. Those later RAG tasks remain incomplete.
