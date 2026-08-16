@@ -1,12 +1,10 @@
 import "server-only";
 
-import Ajv2020 from "ajv/dist/2020.js";
-import type { ValidateFunction } from "ajv";
-
 import type {
   FormDefinition,
   JsonSchema202012,
 } from "../forms";
+import { validateFormValueProposal } from "../form-value-proposal";
 import type { CapabilitySpec } from "../spec";
 import {
   validateBrowserToServerEvent,
@@ -129,45 +127,12 @@ function modelEligibleProperties(
   );
 }
 
-function partialObjectSchema(
-  form: FormDefinition,
-): JsonSchema202012 {
-  return {
-    $schema: form.schema.$schema,
-    ...(form.schema.$id === undefined ? {} : { $id: form.schema.$id }),
-    type: "object",
-    properties: modelEligibleProperties(form),
-    additionalProperties: false,
-  };
-}
-
 function providerOutputSchema(form: FormDefinition): JsonSchema202012 {
   return {
     type: "object",
     properties: modelEligibleProperties(form),
     additionalProperties: false,
   };
-}
-
-function compilePartialValidator(form: FormDefinition): ValidateFunction {
-  try {
-    return new Ajv2020({ allErrors: true }).compile(
-      partialObjectSchema(form),
-    );
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Invalid selected capability form: JSON Schema compilation failed: ${detail}`,
-    );
-  }
-}
-
-function frozenCandidateValues<FieldName extends string>(
-  output: Record<string, unknown>,
-): SlotCandidateValues<FieldName> {
-  return Object.freeze(
-    Object.fromEntries(Object.entries(output)),
-  ) as SlotCandidateValues<FieldName>;
 }
 
 /**
@@ -185,7 +150,6 @@ export async function extractSlotCandidates<
   SlotExtractionResult<FieldName>
 > {
   const form = capability.form;
-  const validate = compilePartialValidator(form);
   const declaredFieldNames = new Set(
     Object.keys(modelEligibleProperties(form)),
   );
@@ -269,7 +233,8 @@ export async function extractSlotCandidates<
     };
   }
 
-  if (!validate(providerResult.output)) {
+  const validation = validateFormValueProposal(form, providerResult.output);
+  if (!validation.accepted) {
     return {
       outcome: "error",
       error: {
@@ -282,6 +247,6 @@ export async function extractSlotCandidates<
 
   return {
     outcome: "proposed",
-    values: frozenCandidateValues<FieldName>(providerResult.output),
+    values: validation.values as SlotCandidateValues<FieldName>,
   };
 }

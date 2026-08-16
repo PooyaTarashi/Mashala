@@ -561,35 +561,40 @@ workflow state machine, classifier, or target-backend request path.
 
 ---
 
-### ISSUE-050 — Build minimal working chat UI — Not started
+### ISSUE-050 — Build minimal working chat UI — Complete
 
 Goal: Replace the scaffold page with a usable conversational interface backed by the
 runtime transport.
 
 Acceptance:
 
-- [ ] a page-level chat component accepts user text and emits a canonical user.message
+- [x] a page-level chat component accepts user text and emits a canonical user.message
   through the selected transport;
-- [ ] pending submission and transport failure states are visible and do not create
+- [x] pending submission and transport failure states are visible and do not create
   duplicate messages or requests;
-- [ ] capability.route.result updates only declared-capability UI state;
-- [ ] form.values.proposed is merged only through deterministic schema validation into
+- [x] capability.route.result updates only declared-capability UI state;
+- [x] form.values.proposed is merged only through deterministic schema validation into
   editable CompiledForm state;
-- [ ] assistant.message, capability.route.out_of_scope, and protocol.error results are
+- [x] assistant.message, capability.route.out_of_scope, and protocol.error results are
   rendered as distinct user-visible outcomes;
-- [ ] matched capabilities render the existing CompiledForm and use the existing
+- [x] matched capabilities render the existing CompiledForm and use the existing
   ConfirmationGate for submission;
-- [ ] AI-proposed values remain editable, and chat text cannot bypass form validation or
+- [x] AI-proposed values remain editable, and chat text cannot bypass form validation or
   confirmation;
-- [ ] the UI is keyboard-accessible and provides accessible labels/status feedback for
+- [x] the UI is keyboard-accessible and provides accessible labels/status feedback for
   message submission and errors;
-- [ ] focused component tests cover message sending, event rendering, invalid proposals,
+- [x] focused component tests cover message sending, event rendering, invalid proposals,
   out-of-scope results, and protocol errors.
 
 **Checkpoint:** after ISSUE-053, 049, and 050, you should be able to type a request like
 "transfer 500 to X" in the browser and watch it flow through routing, extraction, form
 fill, confirmation, and a real backend call. This is the minimum needed to demo the
 project. Verify this actually works before moving on.
+
+The focused component integration proof exercises the declared `transfer_money` fixture
+through a canonical route and extracted candidates, edits the compiled form, verifies
+that neither chat nor review executes the backend, confirms explicitly, and observes one
+browser-side `POST /transfers` through the target-app request integration.
 
 ---
 

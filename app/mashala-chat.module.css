@@ -1,0 +1,187 @@
+.page {
+  display: grid;
+  width: min(100% - 2rem, 52rem);
+  min-height: 100vh;
+  margin: 0 auto;
+  align-content: start;
+  gap: 1.5rem;
+  padding: 2rem 0 4rem;
+}
+
+.header,
+.chat,
+.capability {
+  display: grid;
+  gap: 1rem;
+}
+
+.header {
+  border-bottom: 1px solid #d5d5cf;
+  padding-bottom: 1.25rem;
+}
+
+.header h1,
+.header p,
+.chat h2,
+.chat p,
+.capability h2,
+.capability p {
+  margin: 0;
+}
+
+.header h1 {
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  letter-spacing: -0.04em;
+}
+
+.eyebrow {
+  color: #1e5e3f;
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.chat,
+.capability {
+  border: 1px solid #d5d5cf;
+  border-radius: 0.7rem;
+  background: #fff;
+  padding: 1.25rem;
+}
+
+.empty,
+.technicalLabel,
+.status {
+  color: #5b5b55;
+}
+
+.messages {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.messages article {
+  display: grid;
+  gap: 0.3rem;
+  border-left: 0.3rem solid #aaa9a1;
+  padding: 0.8rem 1rem;
+}
+
+.messages p {
+  overflow-wrap: anywhere;
+}
+
+.userMessage {
+  background: #f2f7f3;
+  border-left-color: #1e5e3f !important;
+}
+
+.routeResult,
+.proposalResult {
+  background: #f5f6fa;
+  border-left-color: #52658f !important;
+}
+
+.assistantMessage {
+  background: #f7f7f5;
+}
+
+.outOfScope {
+  background: #fff8e9;
+  border-left-color: #98752a !important;
+}
+
+.protocolError,
+.transportFailure {
+  color: #7d1717;
+  background: #fff4f4;
+}
+
+.protocolError {
+  border-left-color: #a32626 !important;
+}
+
+.technicalLabel {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.composer {
+  display: grid;
+  gap: 0.45rem;
+  border-top: 1px solid #e4e4df;
+  padding-top: 1rem;
+}
+
+.composer label {
+  font-weight: 650;
+}
+
+.composerRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+}
+
+.composer input,
+.composer button {
+  border-radius: 0.45rem;
+  font: inherit;
+  padding: 0.7rem 0.8rem;
+}
+
+.composer input {
+  min-width: 0;
+  border: 1px solid #aaa9a1;
+}
+
+.composer button {
+  border: 0;
+  background: #1e5e3f;
+  color: #fff;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.composer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.composer input:focus-visible,
+.composer button:focus-visible {
+  outline: 3px solid #8cb8ff;
+  outline-offset: 2px;
+}
+
+.status {
+  min-height: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.transportFailure {
+  border: 1px solid #c65b5b;
+  border-left-width: 0.35rem;
+  border-radius: 0.45rem;
+  padding: 0.8rem 1rem;
+}
+
+@media (max-width: 36rem) {
+  .page {
+    width: min(100% - 1rem, 52rem);
+    padding-top: 1rem;
+  }
+
+  .chat,
+  .capability {
+    padding: 1rem;
+  }
+
+  .composerRow {
+    grid-template-columns: 1fr;
+  }
+}

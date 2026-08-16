@@ -1,9 +1,6 @@
-export default function Home() {
-  return (
-    <main>
-      <h1>Mashala</h1>
-      <p>The application scaffold is ready.</p>
-    </main>
-  );
-}
+import mashalaApplication from "../mashala.config";
+import { MashalaChat } from "./mashala-chat";
 
+export default function Home() {
+  return <MashalaChat application={mashalaApplication} />;
+}
