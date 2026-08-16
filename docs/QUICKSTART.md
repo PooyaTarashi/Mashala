@@ -357,12 +357,16 @@ npm run dev
 npm run lint
 npm run typecheck
 npm test
+npm run test:e2e
 npm run build
 npm run start
 ~~~
 
 npm run dev starts the current Next.js application. npm run build and npm run
-start are the production pair. RAG is separate: build artifacts with
+start are the production pair. `npm run test:e2e` builds the application and
+runs the deterministic Playwright Chromium suite; install its browser once
+with `npx playwright install chromium`. The E2E fixture uses no live Gemini,
+Ollama/RAG, or target-backend service. RAG is separate: build artifacts with
 mashala rag build, then run the retrieval service in its container if the
 knowledge-answer path is enabled. The scaffold does not automatically start
 RAG or connect it to the page.

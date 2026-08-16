@@ -673,29 +673,30 @@ known simplification in the final report rather than leaving it silently unfinis
 
 ## Optional — only if significant time remains
 
-### ISSUE-054 — Add browser end-to-end coverage for the vertical slice — Not started
+### ISSUE-054 — Add browser end-to-end coverage for the vertical slice — Complete
 
 Goal: Select a browser end-to-end test runner and prove the user-facing safety
 boundaries across the completed vertical slice.
 
 Acceptance:
 
-- [ ] a browser end-to-end runner is selected and documented;
-- [ ] an end-to-end fixture covers user message, route result, editable proposed form
+- [x] a browser end-to-end runner is selected and documented;
+- [x] an end-to-end fixture covers user message, route result, editable proposed form
   values, required confirmation, browser-direct backend execution, and result display;
-- [ ] tests prove that cancelling confirmation produces no target-backend write;
-- [ ] tests prove that invalid or undeclared proposed values do not reach backend
+- [x] tests prove that cancelling confirmation produces no target-backend write;
+- [x] tests prove that invalid or undeclared proposed values do not reach backend
   execution;
-- [ ] tests prove that target-backend credentials are absent from Mashala transport
+- [x] tests prove that target-backend credentials are absent from Mashala transport
   requests;
-- [ ] tests prove that documentation questions do not trigger target-backend execution;
-- [ ] tests run without real LLM credentials, real target-backend credentials, or
+- [x] tests prove that documentation questions do not trigger target-backend execution;
+- [x] tests run without real LLM credentials, real target-backend credentials, or
   external provider access.
 
-Scaled-down alternative if time is tight: skip a full E2E runner and instead write one
-manual test script (a numbered list of clicks/inputs and expected results) that you run
-by hand before your defense. Note in the final report that automated browser E2E
-coverage is a known gap.
+Playwright runs one Chromium project against the production Next.js page. A
+local gateway supplies correlated deterministic runtime events, requires a
+fake browser cookie only for the fixture target write, records both boundaries,
+and proxies all page assets to Next.js. No application runtime feature or ADR
+was added for the test harness.
 
 ---
 
@@ -706,4 +707,4 @@ coverage is a known gap.
 3. ISSUE-050 (chat UI) — **checkpoint: one full transaction working live**
 4. ISSUE-052 (orchestration robustness)
 5. ISSUE-051 (classifier) — complete
-6. ISSUE-054 (E2E tests) — or its scaled-down alternative
+6. ISSUE-054 (E2E tests) — complete

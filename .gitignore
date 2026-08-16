@@ -8,6 +8,8 @@ out/
 
 # Test and TypeScript output
 coverage/
+playwright-report/
+test-results/
 *.tsbuildinfo
 
 # Local environment files

@@ -13,6 +13,7 @@ ADR-011 freezes the implementation choices for the first vertical slice, as amen
 | App framework | Next.js App Router on the Node.js runtime | Provides the complete React app and server-only Mashala endpoints in one conventional application; the Edge runtime is not a v0.1 target |
 | Repository layout | Single package | No monorepo/workspace split until a concrete packaging requirement exists |
 | Unit/contract tests | Vitest | Small TypeScript-friendly runner for DSL, schema, protocol, and state-machine tests |
+| Browser end-to-end tests | Playwright, Chromium project | Mature Next.js-documented runner with built-in managed servers, browser assertions, and minimal single-package setup |
 | Canonical validation | JSON Schema Draft 2020-12 | Portable deterministic form validation contract |
 | Schema validator | Ajv, 2020-12 entry point | Mature validator with the required JSON Schema draft support |
 | LLM abstraction | Mashala-owned provider interface | Keeps provider-specific requests and responses outside canonical/runtime contracts |
@@ -37,7 +38,12 @@ Dependency upgrades are explicit changes. A major-version upgrade that changes a
 
 ## Testing boundary
 
-Vitest is the P0-selected runner for unit and contract tests. A browser end-to-end runner is intentionally not selected before browser UI exists. Selecting one later is an implementation decision unless it changes public architecture.
+Vitest remains the P0-selected runner for unit and contract tests. ISSUE-054
+selects Playwright for browser end-to-end coverage as an implementation
+decision; it does not change a public contract or require an ADR. One Chromium
+project exercises the production Next.js page through a deterministic local
+runtime/target-backend fixture gateway, without live provider or backend
+dependencies.
 
 ## Persistence limitation
 

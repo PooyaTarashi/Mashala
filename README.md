@@ -36,9 +36,30 @@ If Node.js 24.19.0 is not installed yet, install it with your Node version manag
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run strict TypeScript checks |
 | `npm test` | Run Vitest once and exit |
+| `npm run test:e2e` | Build the app and run the Playwright Chromium E2E suite |
 | `mashala rag build` | Build deployable documentation/RAG artifacts |
 
 The default local URL for the development and production servers is `http://localhost:3000`.
+
+## Browser end-to-end tests
+
+ISSUE-054 uses Playwright because it is the mature, conventional browser runner
+documented by the installed Next.js version and requires only one runner
+dependency and configuration file. Install its Chromium binary once, then run
+the suite:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+The command creates a production build and starts both Next.js and a local
+fixture gateway. The gateway serves the real page, returns deterministic
+runtime events at `/api/runtime`, and records browser-direct writes at
+`/transfers`. It uses only a fake target-session cookie; Gemini, Ollama/RAG, a
+real target backend, real credentials, and external network access are not
+used. Playwright traces, screenshots, and HTML reports are retained only as
+ignored local test output.
 
 ## RAG artifact build
 

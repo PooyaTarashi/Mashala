@@ -2,13 +2,15 @@
 
 ## Current phase
 
-**P5 now classifies new messages into transactional, documentation, or unsupported/ambiguous handling while preserving the deterministic page-level transaction workflow.**
+**P5 now has automated browser end-to-end coverage for the completed deterministic vertical slice and its major user-facing safety boundaries.**
 
 ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, a strict non-streaming HTTP boundary for canonical runtime events, and a minimal accessible chat/form page for one happy-path transaction.
 
-ISSUE-051 and ISSUE-052 are also complete. The classifier adds the documentation
+ISSUE-051, ISSUE-052, and ISSUE-054 are also complete. The classifier adds the documentation
 handoff, while the page-owned transition table hardens the transaction flow
-against stale, cancelled, duplicate, and concurrent actions.
+against stale, cancelled, duplicate, and concurrent actions. Playwright now
+exercises the production page with deterministic local runtime and target-backend
+fixtures and no live provider, RAG, credential, or external-service dependency.
 
 ## Accepted decisions
 
@@ -187,6 +189,13 @@ against stale, cancelled, duplicate, and concurrent actions.
   grounded, insufficient-context, and failure outcomes to existing canonical
   assistant or error events. Unsupported, malformed, and provider-failure
   outcomes stop safely before either path can invent an operation or fact.
+- ISSUE-054 — Playwright runs one Chromium E2E project against the production
+  Next.js page through a local fixture gateway. Five scenarios cover the full
+  editable confirmed transfer, cancellation, invalid and undeclared proposals,
+  documentation-only handling, and runtime credential exclusion.
+- The gateway records that the confirmed write goes to its fixture target
+  handler while the fake target-session cookie is absent from `/api/runtime`.
+  Tests invoke no Gemini, Ollama/RAG, real target backend, or external provider.
 
 ## Deliberately unresolved
 
@@ -198,4 +207,4 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-ISSUE-054 — add browser end-to-end coverage for the completed vertical slice.
+No next implementation issue is currently selected in the backlog.
