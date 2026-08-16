@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**P4 documentation/RAG work now includes a provider-neutral knowledge-answer path. ISSUE-048 retrieves developer documentation before conversational generation, sends only a bounded ranked selection as untrusted model context, requires grounded outputs to name selected chunk IDs, retains Mashala-owned provenance, and fails explicitly when documentation support is insufficient.**
+**P5 now has its initial ordinary HTTP runtime transport. ISSUE-049 carries accepted ADR-013 events through strict non-streaming `POST /api/runtime` framing and uses ISSUE-053's validated application/runtime assembly.**
 
-ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, and ISSUE-048 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, and a grounded documentation knowledge-answer flow with explicit insufficient-context behavior.
+ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, and a strict non-streaming HTTP boundary for canonical runtime events.
 
 ## Accepted decisions
 
@@ -38,6 +38,8 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - The Python RAG runtime exposes only `POST /retrieve`, loads one compatible artifact/index state at startup, uses the recorded `search_query` Ollama embedding space, and returns plain chunk identity/content/provenance/score results.
 - Node runtime code depends on `DocumentationRetriever`, which accepts only query text and optional top-k and returns Mashala-owned chunks or normalized failures. The concrete server-only client contains the ISSUE-046 HTTP transport and exposes no Python/FAISS types.
 - Documentation answering uses `DocumentationRetriever` before `LlmProvider`, bounds the model-visible ranked chunk selection, and treats questions/chunks as untrusted data. Grounded provider output must cite selected chunk IDs that Mashala binds back to retrieval provenance; absent support is explicit.
+- `mashala.config.ts` is the application-level configuration path. It calls `defineMashalaApplication` with `AppMetadata` and existing `CapabilitySpec` values and exports one validated, isolated `MashalaSpec`; it defines no parallel canonical schema.
+- `assembleMashalaApplication` lives in the `server-only` module `src/server/application-runtime.ts`. It validates the supplied spec, requires provider-neutral `LlmProvider` and `DocumentationRetriever` instances, keeps them outside serializable application data, and resolves capabilities only from the validated developer declaration.
 
 ## P0 artifacts
 
@@ -147,10 +149,18 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - Empty retrieval and model-declared insufficient support are explicit `insufficient_context` outcomes. Retrieval, provider, and malformed-boundary failures remain distinct. The input and result contracts contain no target-backend operation, capability, confirmation, workflow, request callable, or credential.
 - Fake-only unit tests cover ordering and selection, provenance, empty and model-insufficient support, malformed retrieval/model results, retrieval/provider failures, malicious instruction-like documentation, and absence of target-backend execution. These tests prove the boundary, not general RAG quality.
 
+## P5 implementation
+
+- ISSUE-053 — `defineMashalaApplication` is the single application-level helper for canonical app metadata plus capabilities. It assigns spec version `0.2`, validates the complete compiled spec, rejects unknown configuration keys, and returns frozen isolated JSON data.
+- The repository application definition is `mashala.config.ts` and declares the existing `transfer_money` fixture. Its serializable output contains only `specVersion`, `app`, and `capabilities`.
+- The server-only `assembleMashalaApplication` boundary requires the validated application plus `LlmProvider` and `DocumentationRetriever` instances. Missing definitions, malformed/incompatible specs, malformed capabilities, and missing dependencies use stable sanitized errors.
+- Runtime capability lookup returns only declarations from the validated spec. No target-backend credential, proxy setting, request transformation, transport, UI, classifier, workflow orchestration, or new RAG/auth behavior was added.
+- ISSUE-049 — `POST /api/runtime` accepts exactly one validated `user.message` or `backend.context.selected` in `{ "event": ... }` and returns validated canonical server events in the ordered `{ "events": [...] }` frame.
+- New matched user messages return routing before extraction; active-capability messages and selected backend context use the existing capability-bound extraction path. Accepted conversation and reply correlation is preserved with server-generated Mashala event IDs.
+- Malformed JSON/framing/direction, unsupported versions, credential-bearing input, and unexpected failures produce canonical sanitized `protocol.error` events. The route adds no target-backend fetch/proxy, workflow orchestration, classifier, SSE, WebSocket, or streaming behavior.
+
 ## Deliberately unresolved
 
-- The transport carrying runtime protocol events: HTTP, SSE, WebSocket, or a combination.
-- The optional application-level authoring helper beyond the executable `MashalaSpec` type.
 - Durable conversation persistence beyond the v0.1 single-process proof.
 - The first reference/demo domain.
 - Primary thesis contribution wording and final research questions.
@@ -159,6 +169,8 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-No next focused implementation task has been selected.
+ISSUE-050 — build the minimal working chat UI on the accepted HTTP runtime transport.
 
-ISSUE-048 intentionally does not implement automatic question classification, a transport endpoint, or advanced citation presentation.
+ISSUE-049 intentionally does not implement chat UI, workflow orchestration,
+classification, new authentication behavior, target-backend execution changes,
+or streaming transports.

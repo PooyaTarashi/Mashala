@@ -24,6 +24,81 @@ These are logical events, independent of HTTP, SSE, WebSocket, or another transp
 
 Within one logical response, a transport must preserve event order. No stronger delivery guarantee is defined in P0.
 
+## Initial HTTP transport
+
+ISSUE-049 selects ordinary non-streaming HTTP request/response as the first
+transport without changing any event meaning.
+
+The Next.js endpoint is:
+
+```text
+POST /api/runtime
+Content-Type: application/json
+```
+
+One request carries exactly one canonical browser event in this strict frame:
+
+```json
+{
+  "event": {
+    "protocolVersion": "0.1",
+    "eventId": "browser_event_1",
+    "conversationId": "conversation_1",
+    "type": "user.message",
+    "payload": { "text": "Send 250 to Sam" }
+  }
+}
+```
+
+The only accepted event types remain `user.message` and
+`backend.context.selected`. Unknown frame fields, invalid event directions,
+credential-like selected data, unsupported protocol versions, and malformed
+JSON fail closed.
+
+Every response uses one deterministic JSON frame. The `events` array is in
+processing order and every member is a validated canonical server event:
+
+```json
+{
+  "events": [
+    {
+      "protocolVersion": "0.1",
+      "eventId": "server_event_1",
+      "conversationId": "conversation_1",
+      "inReplyTo": "browser_event_1",
+      "type": "capability.route.result",
+      "payload": {
+        "outcome": "matched",
+        "capabilityId": "transfer_money"
+      }
+    }
+  ]
+}
+```
+
+For a new matched `user.message`, routing is returned before slot candidates.
+An active-capability message and a valid selected backend context use only the
+existing capability-bound extraction path. Out-of-scope or routing failure
+stops processing after the first event. The transport adds no page workflow or
+target-backend operation.
+
+Accepted events preserve their `conversationId`; each response event uses its
+own Mashala event ID and names the accepted browser `eventId` in `inReplyTo`.
+Malformed requests that cannot be trusted receive server-generated Mashala
+correlation IDs. Provider IDs, target-backend session IDs, and credentials are
+never used for correlation.
+
+Successful protocol delivery, including canonical domain-level error events,
+uses HTTP 200. Invalid JSON, framing, direction, credentials, or versions use
+HTTP 400 with one canonical `protocol.error`. Unexpected internal failures use
+HTTP 500 with a sanitized `internal_error`; raw failures and stack traces are
+not returned. Responses are `Cache-Control: no-store`.
+
+The endpoint rejects target-backend authorization headers and accepts no
+cookies, headers, operations, or credentials in its strict JSON frame. It
+does not proxy or execute target-backend requests. It provides no SSE,
+WebSocket, token streaming, reconnection, or retry channel.
+
 ## TypeScript contract
 
 ```ts

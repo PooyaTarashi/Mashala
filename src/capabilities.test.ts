@@ -1,7 +1,8 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
+import mashalaBankDemo from "../mashala.config";
 import { defineCapability } from "./capabilities";
-import { mashalaBankDemo, transferMoney } from "./examples/transfer-money";
+import { transferMoney } from "./examples/transfer-money";
 import { f } from "./fields";
 import { compileForm } from "./forms";
 import type {

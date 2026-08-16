@@ -498,55 +498,66 @@ time runs out, it's clear what can be cut and mentioned as a known limitation in
 
 ## Must-have — required for any working demo
 
-### ISSUE-053 — Provide application runtime assembly — Not started
+### ISSUE-053 — Provide application runtime assembly — Complete
 
 Goal: Define the minimal application-level assembly that supplies a compiled MashalaSpec
 and server runtime dependencies to the transport and chat page.
 
 Acceptance:
 
-- [ ] one documented application-level configuration path provides application metadata
+- [x] one documented application-level configuration path provides application metadata
   and declared capabilities as a valid MashalaSpec;
-- [ ] the runtime receives only developer-declared capability/spec data for routing and
+- [x] the runtime receives only developer-declared capability/spec data for routing and
   form rendering;
-- [ ] server-only provider and documentation-retriever configuration remains outside
+- [x] server-only provider and documentation-retriever configuration remains outside
   browser bundles;
-- [ ] missing, malformed, or incompatible application configuration fails with a clear
+- [x] missing, malformed, or incompatible application configuration fails with a clear
   sanitized startup/runtime error;
-- [ ] configuration contains no user target-backend credentials, arbitrary executable
+- [x] configuration contains no user target-backend credentials, arbitrary executable
   request transformations, or server-side target-backend proxy settings;
-- [ ] the existing transfer example or an equivalent declared fixture can drive the
+- [x] the existing transfer example or an equivalent declared fixture can drive the
   complete chat workflow;
-- [ ] focused tests cover valid assembly and rejected malformed configuration.
+- [x] focused tests cover valid assembly and rejected malformed configuration.
+
+The application entry point is `mashala.config.ts`, which supplies metadata and
+existing `CapabilitySpec` values through `defineMashalaApplication`. Server transport
+code will use `src/server/application-runtime.ts` to attach `LlmProvider` and
+`DocumentationRetriever` instances without adding them to serializable application data.
 
 Why first: without this, ISSUE-049 and ISSUE-050 have nothing valid to route or render.
 Build and test this in isolation before touching transport or UI code.
 
 ---
 
-### ISSUE-049 — Implement HTTP runtime transport — Not started
+### ISSUE-049 — Implement HTTP runtime transport — Complete
 
 Goal: Select ordinary HTTP request/response as the initial non-streaming transport for
 the ADR-013 runtime events and implement the browser/server boundary.
 
 Acceptance:
 
-- [ ] HTTP endpoint and request/response framing are documented without changing the
+- [x] HTTP endpoint and request/response framing are documented without changing the
   meanings of the versioned runtime-protocol events;
-- [ ] browser-to-server input accepts only validated user.message and
+- [x] browser-to-server input accepts only validated user.message and
   backend.context.selected events;
-- [ ] server-to-browser responses carry validated canonical events in deterministic
+- [x] server-to-browser responses carry validated canonical events in deterministic
   event order;
-- [ ] correlation identifiers are preserved without using target-backend session
+- [x] correlation identifiers are preserved without using target-backend session
   identifiers, provider identifiers, or credentials;
-- [ ] malformed, unsupported-version, and internal failures produce sanitized
+- [x] malformed, unsupported-version, and internal failures produce sanitized
   protocol.error events;
-- [ ] transport requests contain no target-backend headers, cookies, access tokens, or
+- [x] transport requests contain no target-backend headers, cookies, access tokens, or
   other credentials;
-- [ ] the route handler does not execute, proxy, or receive instructions to execute
+- [x] the route handler does not execute, proxy, or receive instructions to execute
   target-backend operations;
-- [ ] focused transport contract tests cover valid event delivery, ordering, malformed
+- [x] focused transport contract tests cover valid event delivery, ordering, malformed
   input, correlation, and sanitized failures.
+
+The initial transport is strict JSON `POST /api/runtime`: `{ "event": ... }`
+in and `{ "events": [...] }` out. The server assembles the repository
+application through ISSUE-053, invokes only existing routing and extraction,
+and validates every response event before delivery. It adds no streaming,
+workflow state machine, classifier, or target-backend request path.
 
 ---
 

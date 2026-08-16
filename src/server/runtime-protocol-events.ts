@@ -4,6 +4,7 @@ import {
   RUNTIME_PROTOCOL_VERSION,
   type CapabilityRouteResultEvent,
   type OutOfScopeEvent,
+  type ProtocolErrorCode,
   type ProtocolErrorEvent,
   type SlotCandidatesProposedEvent,
 } from "../runtime-protocol";
@@ -33,6 +34,12 @@ export type SlotExtractionProtocolEvent =
   | SlotCandidatesProposedEvent
   | ProtocolErrorEvent;
 
+export interface ProtocolErrorPayload {
+  readonly code: ProtocolErrorCode;
+  readonly message: string;
+  readonly retryable: boolean;
+}
+
 function commonEnvelope(metadata: ServerProtocolEventMetadata) {
   return {
     protocolVersion: RUNTIME_PROTOCOL_VERSION,
@@ -44,30 +51,34 @@ function commonEnvelope(metadata: ServerProtocolEventMetadata) {
   } as const;
 }
 
+/** Constructs a canonical, sanitized protocol error event. */
+export function createProtocolErrorEvent(
+  metadata: ServerProtocolEventMetadata,
+  payload: ProtocolErrorPayload,
+): ProtocolErrorEvent {
+  return Object.freeze({
+    ...commonEnvelope(metadata),
+    type: "protocol.error",
+    payload: Object.freeze(payload),
+  });
+}
+
 function protocolError(
   metadata: ServerProtocolEventMetadata,
   error: CapabilityRoutingError | SlotExtractionError,
 ): ProtocolErrorEvent {
   if (error.kind === "provider_failure") {
-    return Object.freeze({
-      ...commonEnvelope(metadata),
-      type: "protocol.error",
-      payload: Object.freeze({
-        code: "internal_error",
-        message: error.failure.message,
-        retryable: error.failure.retryable,
-      }),
+    return createProtocolErrorEvent(metadata, {
+      code: "internal_error",
+      message: "The LLM provider request could not be completed.",
+      retryable: error.failure.retryable,
     });
   }
 
-  return Object.freeze({
-    ...commonEnvelope(metadata),
-    type: "protocol.error",
-    payload: Object.freeze({
-      code: "invalid_model_output",
-      message: error.message,
-      retryable: false,
-    }),
+  return createProtocolErrorEvent(metadata, {
+    code: "invalid_model_output",
+    message: error.message,
+    retryable: false,
   });
 }
 

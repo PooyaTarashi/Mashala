@@ -1,6 +1,5 @@
 import { defineCapability } from "../capabilities";
 import { f } from "../fields";
-import type { MashalaSpec } from "../spec";
 
 /** Executable counterpart of docs/CANONICAL_SPEC.md's current example. */
 export const transferMoney = defineCapability({
@@ -39,15 +38,4 @@ export const transferMoney = defineCapability({
     path: "/transfers",
   },
   confirmation: "required",
-});
-
-export const mashalaBankDemo: MashalaSpec = Object.freeze({
-  specVersion: "0.2",
-  app: Object.freeze({
-    id: "mashala_bank_demo",
-    name: "Mashala Bank Demo",
-    description:
-      "A demonstration application for common retail banking tasks.",
-  }),
-  capabilities: Object.freeze([transferMoney]),
 });
