@@ -14,7 +14,9 @@ import {
 import type {
   FieldMetadata,
   FormDefinition,
+  JsonValue,
   JsonSchema202012,
+  ReferenceFieldMetadata,
 } from "./forms";
 import {
   assertReferenceSource,
@@ -41,6 +43,21 @@ export interface CompiledFormProps<FieldName extends string = string> {
   readonly baseUrl?: string | URL;
   /** Target-app browser request behavior; defaults to browser fetch. */
   readonly request?: TargetBackendRequest;
+  /** Reports deterministic user edits without making this a controlled form. */
+  readonly onChange?: (value: FormValue<FieldName>) => void;
+  /** Receives only already-projected ADR-016 context, never a full response. */
+  readonly onReferenceModelContext?: (
+    context: ResolvedReferenceModelContext<FieldName>,
+  ) => void;
+}
+
+export interface ResolvedReferenceModelContext<
+  FieldName extends string = string,
+> {
+  readonly fieldName: FieldName;
+  readonly source: ReferenceFieldMetadata["source"];
+  readonly purpose: "reference_resolution" | "result_interpretation";
+  readonly data: JsonValue;
 }
 
 interface RenderableField {
@@ -455,6 +472,8 @@ export function CompiledForm<FieldName extends string>({
   formId = DEFAULT_FORM_ID,
   baseUrl,
   request,
+  onChange,
+  onReferenceModelContext,
 }: CompiledFormProps<FieldName>) {
   const fields = useMemo(() => renderableFields(form), [form]);
   const validator = useMemo(() => compileValidator(form), [form]);
@@ -483,10 +502,11 @@ export function CompiledForm<FieldName extends string>({
       if (field.metadata.kind !== "reference") {
         continue;
       }
+      const referenceField = field.metadata;
 
       void resolveReferenceOptions({
         baseUrl,
-        field: field.metadata,
+        field: referenceField,
         ...(request === undefined ? {} : { request }),
       }).then((result) => {
         if (!active) {
@@ -501,17 +521,32 @@ export function CompiledForm<FieldName extends string>({
         setReferenceStates((current) =>
           Object.freeze({ ...current, [field.name]: nextState }),
         );
+
+        if (
+          result.outcome === "success" &&
+          result.modelContext !== undefined
+        ) {
+          onReferenceModelContext?.({
+            fieldName: field.name as FieldName,
+            source: referenceField.source,
+            purpose: result.modelContext.purpose,
+            data: result.modelContext.data,
+          });
+        }
       });
     }
 
     return () => {
       active = false;
     };
-  }, [baseUrl, fields, request]);
+  }, [baseUrl, fields, onReferenceModelContext, request]);
 
   function updateValue(name: string, value: FormFieldValue | undefined): void {
     const nextValues = { ...values, [name]: value };
     setValues(nextValues);
+    onChange?.(
+      candidateValue(fields, nextValues) as FormValue<FieldName>,
+    );
 
     if (hasValidated) {
       setIssues(

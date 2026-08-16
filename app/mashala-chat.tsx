@@ -2,19 +2,35 @@
 
 import {
   type FormEvent,
+  useCallback,
   useId,
   useMemo,
   useRef,
   useState,
 } from "react";
 
+import type { BackendOperationResult } from "../src/backend-executor";
 import { ConfirmationGate } from "../src/confirmation-gate";
 import {
   mergeFormValueProposal,
 } from "../src/form-value-proposal";
-import type { FormValue } from "../src/form-renderer";
+import type {
+  ResolvedReferenceModelContext,
+} from "../src/form-renderer";
+import { createSelectedBackendContextEventFromProjection } from "../src/model-visible-backend-projection";
+import {
+  activeWorkflowCapabilityId,
+  INITIAL_PAGE_CAPABILITY_WORKFLOW,
+  isCorrelatedWorkflowResponse,
+  transitionPageCapabilityWorkflow,
+  workflowFormValues,
+  type PageWorkflowAction,
+  type PendingWorkflowRequest,
+  type WorkflowCorrelation,
+} from "../src/page-capability-workflow";
 import {
   RUNTIME_PROTOCOL_VERSION,
+  type BrowserToServerEvent,
   type ServerToBrowserEvent,
   type UserMessageEvent,
 } from "../src/runtime-protocol";
@@ -171,26 +187,79 @@ export function MashalaChat({
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
+  const pendingChatEventIdRef = useRef<string | undefined>(undefined);
   const [transportFailure, setTransportFailure] = useState<string>();
   const [entries, setEntries] = useState<readonly ConversationEntry[]>([]);
-  const [activeCapabilityId, setActiveCapabilityId] = useState<string>();
-  const [proposedValues, setProposedValues] = useState<FormValue>({});
-  const [formRevision, setFormRevision] = useState(0);
+  const [workflow, setWorkflow] = useState(INITIAL_PAGE_CAPABILITY_WORKFLOW);
+  const workflowRef = useRef(workflow);
+  const seenServerEventIdsRef = useRef(new Set<string>());
+  const usedBrowserEventIdsRef = useRef(new Set<string>());
+  const sentReferenceContextsRef = useRef(new Set<string>());
+  const activeCapabilityId = activeWorkflowCapabilityId(workflow);
   const activeCapability =
     activeCapabilityId === undefined
       ? undefined
       : capabilities.get(activeCapabilityId);
+  const proposedValues = workflowFormValues(workflow);
+  const formRevision =
+    "formRevision" in workflow ? workflow.formRevision : 0;
   const backendBaseUrl =
     targetBackendBaseUrl ??
     (typeof window === "undefined" ? "http://localhost" : window.location.origin);
 
-  function applyServerEvents(serverEvents: readonly ServerToBrowserEvent[]): void {
-    let nextCapabilityId = activeCapabilityId;
-    let nextValues = proposedValues;
-    let acceptedProposal = false;
+  const commitWorkflow = useCallback((action: PageWorkflowAction): boolean => {
+    const current = workflowRef.current;
+    const next = transitionPageCapabilityWorkflow(current, action);
+    if (next === current) {
+      return false;
+    }
+    workflowRef.current = next;
+    setWorkflow(next);
+    return true;
+  }, []);
+
+  const nextEventId = useCallback((): string => {
+    const supplied = createEventId?.();
+    const sequence = ++eventSequenceRef.current;
+    const candidate =
+      supplied ?? `${conversationIdRef.current}_event_${String(sequence)}`;
+    const unique = usedBrowserEventIdsRef.current.has(candidate)
+      ? `${candidate}_${String(sequence)}`
+      : candidate;
+    usedBrowserEventIdsRef.current.add(unique);
+    return unique;
+  }, [createEventId]);
+
+  const applyServerEvents = useCallback((
+    request: BrowserToServerEvent,
+    serverEvents: readonly ServerToBrowserEvent[],
+  ): void => {
+    const correlation: WorkflowCorrelation = {
+      eventId: request.eventId,
+      conversationId: request.conversationId,
+    };
     const nextEntries: ConversationEntry[] = [];
+    if (!isCorrelatedWorkflowResponse(workflowRef.current, correlation)) {
+      return;
+    }
 
     for (const event of serverEvents) {
+      if (
+        event.conversationId !== correlation.conversationId ||
+        event.inReplyTo !== correlation.eventId ||
+        seenServerEventIdsRef.current.has(event.eventId)
+      ) {
+        continue;
+      }
+      if (
+        !isCorrelatedWorkflowResponse(workflowRef.current, correlation) &&
+        event.type !== "assistant.message" &&
+        event.type !== "protocol.error"
+      ) {
+        continue;
+      }
+      seenServerEventIdsRef.current.add(event.eventId);
+
       switch (event.type) {
         case "capability.route.result": {
           const declaredCapability = capabilities.get(event.payload.capabilityId);
@@ -201,13 +270,17 @@ export function MashalaChat({
               code: "invalid_event",
               text: "The runtime selected a capability that this application does not declare.",
             });
+            commitWorkflow({ type: "routing.failed", correlation });
             break;
           }
 
-          if (nextCapabilityId !== declaredCapability.id) {
-            nextValues = {};
+          if (!commitWorkflow({
+            type: "route.matched",
+            correlation,
+            capabilityId: declaredCapability.id,
+          })) {
+            break;
           }
-          nextCapabilityId = declaredCapability.id;
           nextEntries.push({
             id: event.eventId,
             kind: "route",
@@ -218,9 +291,11 @@ export function MashalaChat({
         }
         case "form.values.proposed": {
           const declaredCapability = capabilities.get(event.payload.capabilityId);
+          const currentWorkflow = workflowRef.current;
           if (
             declaredCapability === undefined ||
-            declaredCapability.id !== nextCapabilityId
+            currentWorkflow.phase !== "filling" ||
+            declaredCapability.id !== currentWorkflow.capabilityId
           ) {
             nextEntries.push({
               id: event.eventId,
@@ -233,7 +308,7 @@ export function MashalaChat({
 
           const merge = mergeFormValueProposal(
             declaredCapability.form,
-            nextValues,
+            currentWorkflow.values,
             event.payload.values,
           );
           if (!merge.accepted) {
@@ -246,12 +321,18 @@ export function MashalaChat({
             break;
           }
 
-          nextValues = merge.values;
-          acceptedProposal = true;
+          if (!commitWorkflow({
+            type: "proposal.accepted",
+            correlation,
+            capabilityId: declaredCapability.id,
+            values: merge.values,
+          })) {
+            break;
+          }
           nextEntries.push({
             id: event.eventId,
             kind: "proposal",
-            fieldCount: Object.keys(merge.values).length,
+            fieldCount: Object.keys(event.payload.values).length,
           });
           break;
         }
@@ -263,6 +344,9 @@ export function MashalaChat({
           });
           break;
         case "capability.route.out_of_scope":
+          if (!commitWorkflow({ type: "route.out_of_scope", correlation })) {
+            break;
+          }
           nextEntries.push({
             id: event.eventId,
             kind: "out-of-scope",
@@ -272,6 +356,7 @@ export function MashalaChat({
           });
           break;
         case "protocol.error":
+          commitWorkflow({ type: "routing.failed", correlation });
           nextEntries.push({
             id: event.eventId,
             kind: "protocol-error",
@@ -282,19 +367,79 @@ export function MashalaChat({
       }
     }
 
-    setEntries((current) => [...current, ...nextEntries]);
-    setActiveCapabilityId(nextCapabilityId);
-    setProposedValues(nextValues);
-    if (acceptedProposal) {
-      setFormRevision((current) => current + 1);
+    if (isCorrelatedWorkflowResponse(workflowRef.current, correlation)) {
+      commitWorkflow({ type: "response.finished", correlation });
     }
-  }
+    if (nextEntries.length > 0) {
+      setEntries((current) => [...current, ...nextEntries]);
+    }
+  }, [capabilities, commitWorkflow]);
+
+  const sendReferenceContext = useCallback((
+    context: ResolvedReferenceModelContext,
+  ): void => {
+    const current = workflowRef.current;
+    if (
+      current.phase !== "filling" ||
+      activeWorkflowCapabilityId(current) === undefined
+    ) {
+      return;
+    }
+
+    const deduplicationKey = `${String(current.runId)}:${current.capabilityId}:${context.fieldName}`;
+    if (sentReferenceContextsRef.current.has(deduplicationKey)) {
+      return;
+    }
+
+    const eventResult = createSelectedBackendContextEventFromProjection({
+      source: context.source,
+      context: { purpose: context.purpose, data: context.data },
+      capabilityId: current.capabilityId,
+      eventId: nextEventId(),
+      conversationId: conversationIdRef.current,
+    });
+    if (eventResult.outcome !== "projected") {
+      return;
+    }
+
+    const request: PendingWorkflowRequest = {
+      eventId: eventResult.event.eventId,
+      conversationId: eventResult.event.conversationId,
+      kind: "backend-context",
+    };
+    if (!commitWorkflow({
+      type: "extraction.requested",
+      request,
+      capabilityId: current.capabilityId,
+      supersedePending: false,
+    })) {
+      return;
+    }
+    sentReferenceContextsRef.current.add(deduplicationKey);
+
+    void transport(eventResult.event)
+      .then((events) => applyServerEvents(eventResult.event, events))
+      .catch((error: unknown) => {
+        const correlation: WorkflowCorrelation = request;
+        if (isCorrelatedWorkflowResponse(workflowRef.current, correlation)) {
+          commitWorkflow({ type: "routing.failed", correlation });
+          setTransportFailure(transportFailureMessage(error));
+        }
+      });
+  }, [applyServerEvents, commitWorkflow, nextEventId, transport]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const text = message.trim();
 
-    if (text === "" || pendingRef.current) {
+    const currentWorkflow = workflowRef.current;
+    const canSend =
+      currentWorkflow.phase === "idle" ||
+      currentWorkflow.phase === "filling" ||
+      (currentWorkflow.phase === "failed" &&
+        !("capabilityId" in currentWorkflow));
+
+    if (text === "" || pendingRef.current || !canSend) {
       return;
     }
 
@@ -303,34 +448,88 @@ export function MashalaChat({
     setTransportFailure(undefined);
     setMessage("");
 
+    const currentCapabilityId = activeWorkflowCapabilityId(currentWorkflow);
     const browserEvent: UserMessageEvent = {
       protocolVersion: RUNTIME_PROTOCOL_VERSION,
-      eventId:
-        createEventId?.() ??
-        `${conversationIdRef.current}_event_${String(++eventSequenceRef.current)}`,
+      eventId: nextEventId(),
       conversationId: conversationIdRef.current,
       type: "user.message",
       payload: {
         text,
-        ...(activeCapabilityId === undefined
+        ...(currentCapabilityId === undefined
           ? {}
-          : { activeCapabilityId }),
+          : { activeCapabilityId: currentCapabilityId }),
       },
     };
+
+    const request: PendingWorkflowRequest = {
+      eventId: browserEvent.eventId,
+      conversationId: browserEvent.conversationId,
+      kind: currentCapabilityId === undefined ? "route" : "extraction",
+    };
+    const accepted =
+      currentCapabilityId === undefined
+        ? commitWorkflow({ type: "route.requested", request })
+        : commitWorkflow({
+            type: "extraction.requested",
+            request,
+            capabilityId: currentCapabilityId,
+            supersedePending: true,
+          });
+    if (!accepted) {
+      pendingRef.current = false;
+      setPending(false);
+      return;
+    }
+    pendingChatEventIdRef.current = browserEvent.eventId;
     setEntries((current) => [
       ...current,
       { id: browserEvent.eventId, kind: "user", text },
     ]);
 
     try {
-      applyServerEvents(await transport(browserEvent));
+      applyServerEvents(browserEvent, await transport(browserEvent));
     } catch (error) {
-      setTransportFailure(transportFailureMessage(error));
+      const correlation: WorkflowCorrelation = request;
+      if (isCorrelatedWorkflowResponse(workflowRef.current, correlation)) {
+        commitWorkflow({ type: "routing.failed", correlation });
+        setTransportFailure(transportFailureMessage(error));
+      }
     } finally {
-      pendingRef.current = false;
-      setPending(false);
+      if (pendingChatEventIdRef.current === browserEvent.eventId) {
+        pendingChatEventIdRef.current = undefined;
+        pendingRef.current = false;
+        setPending(false);
+      }
     }
   }
+
+  function cancelWorkflow(): void {
+    if (!commitWorkflow({ type: "cancel" })) {
+      return;
+    }
+    pendingChatEventIdRef.current = undefined;
+    pendingRef.current = false;
+    setPending(false);
+    setTransportFailure(undefined);
+  }
+
+  function resetWorkflow(): void {
+    if (commitWorkflow({ type: "reset" })) {
+      setTransportFailure(undefined);
+    }
+  }
+
+  const canCompose =
+    workflow.phase === "idle" ||
+    workflow.phase === "filling" ||
+    (workflow.phase === "failed" && !("capabilityId" in workflow));
+  const canCancel =
+    workflow.phase === "routing" ||
+    workflow.phase === "filling" ||
+    workflow.phase === "confirming";
+  const canReset =
+    workflow.phase === "completed" || workflow.phase === "failed";
 
   return (
     <main className={styles.page}>
@@ -342,6 +541,13 @@ export function MashalaChat({
 
       <section className={styles.chat} aria-labelledby="conversation-heading">
         <h2 id="conversation-heading">Conversation</h2>
+        <p
+          className={styles.workflowStatus}
+          data-testid="workflow-state"
+          aria-live="polite"
+        >
+          Workflow state: {workflow.phase.toUpperCase()}
+        </p>
         {entries.length === 0 ? (
           <p className={styles.empty}>Describe what you want to do.</p>
         ) : (
@@ -366,11 +572,14 @@ export function MashalaChat({
               type="text"
               value={message}
               required
-              disabled={pending}
+              disabled={pending || !canCompose}
               aria-describedby="mashala-message-status"
               onChange={(event) => setMessage(event.currentTarget.value)}
             />
-            <button type="submit" disabled={pending || message.trim() === ""}>
+            <button
+              type="submit"
+              disabled={pending || !canCompose || message.trim() === ""}
+            >
               {pending ? "Sending…" : "Send"}
             </button>
           </div>
@@ -389,6 +598,26 @@ export function MashalaChat({
             <strong>Transport failure:</strong> {transportFailure}
           </p>
         )}
+
+        {canCancel ? (
+          <button
+            className={styles.secondaryAction}
+            type="button"
+            onClick={cancelWorkflow}
+          >
+            Cancel current request
+          </button>
+        ) : null}
+
+        {canReset ? (
+          <button
+            className={styles.secondaryAction}
+            type="button"
+            onClick={resetWorkflow}
+          >
+            Start another request
+          </button>
+        ) : null}
       </section>
 
       {activeCapability === undefined ? null : (
@@ -399,7 +628,7 @@ export function MashalaChat({
           <h2 id="active-capability-heading">Complete the request</h2>
           <p>{activeCapability.description}</p>
           <ConfirmationGate
-            key={`${activeCapability.id}-${String(formRevision)}`}
+            key={`${String(workflow.runId)}-${activeCapability.id}-${String(formRevision)}`}
             capability={activeCapability}
             initialValues={proposedValues}
             baseUrl={backendBaseUrl}
@@ -410,6 +639,42 @@ export function MashalaChat({
                 ? "Review request"
                 : "Submit request"
             }
+            onDraftChange={(values) => {
+              commitWorkflow({
+                type: "draft.changed",
+                capabilityId: activeCapability.id,
+                values,
+              });
+            }}
+            onReferenceModelContext={sendReferenceContext}
+            onReview={(snapshot) =>
+              commitWorkflow({
+                type: "review.requested",
+                capabilityId: activeCapability.id,
+                snapshot,
+              })
+            }
+            onReviewCancel={() => {
+              commitWorkflow({
+                type: "review.cancelled",
+                capabilityId: activeCapability.id,
+              });
+            }}
+            onExecutionStart={(snapshot) =>
+              commitWorkflow({
+                type: "execution.requested",
+                capabilityId: activeCapability.id,
+                snapshot,
+                confirmation: activeCapability.confirmation,
+              })
+            }
+            onResult={(result: BackendOperationResult) => {
+              commitWorkflow({
+                type: "execution.finished",
+                capabilityId: activeCapability.id,
+                result,
+              });
+            }}
           />
         </section>
       )}

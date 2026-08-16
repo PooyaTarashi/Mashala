@@ -2,9 +2,12 @@
 
 ## Current phase
 
-**P5 now has a minimal working conversational page. ISSUE-050 sends canonical events over ISSUE-049's strict HTTP transport and composes declared capabilities with the existing deterministic form, confirmation, and browser execution boundaries.**
+**P5 now has a robust deterministic page-level transaction workflow. ISSUE-052 connects correlated routing/extraction, editable forms, confirmation, direct browser execution, and distinct completion/failure results.**
 
 ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, a strict non-streaming HTTP boundary for canonical runtime events, and a minimal accessible chat/form page for one happy-path transaction.
+
+ISSUE-052 is also complete; its page-owned transition table hardens the P5
+transaction flow against stale, cancelled, duplicate, and concurrent actions.
 
 ## Accepted decisions
 
@@ -161,6 +164,20 @@ ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISS
 - ISSUE-050 — `MashalaChat` sends canonical `user.message` events with visible pending/failure state, prevents duplicate pending submissions, and renders route, proposal, assistant, out-of-scope, and protocol-error outcomes distinctly.
 - Browser handling resolves route IDs only through the assembled spec and reuses the deterministic partial-form proposal validator shared with slot extraction. Only valid declared values become editable `ConfirmationGate` initial state; operations and confirmation policy always come from the compiled capability.
 - The transfer integration proof reaches the editable compiled form, required review, explicit confirmation, and one direct browser-side `POST /transfers`. Chat transport never receives or executes a target-backend operation.
+- ISSUE-052 — `PageCapabilityWorkflow` explicitly represents idle, routing,
+  filling, confirming, executing, completed, and failed states. Reference
+  loading remains deterministic field state within filling.
+- Route, extraction, and projected-context responses must match the current
+  Mashala `conversationId` and originating browser `eventId`; review,
+  cancellation, or a superseding request invalidates pending responses.
+- `ConfirmationGate` asks the page workflow to authorize review and execution.
+  Required confirmation executes only the exact reviewed snapshot, duplicate
+  attempts are rejected, and success, HTTP failure, and network failure retain
+  distinct terminal outcomes.
+- `f.reference` continues to use the target-app browser request integration.
+  Its full response is never handed to the page transport: only a successful
+  ADR-016 projection may create `backend.context.selected`, and a missing
+  descriptor creates no context event.
 
 ## Deliberately unresolved
 
@@ -172,9 +189,5 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-ISSUE-052 — orchestrate the page-level capability workflow and harden stale,
-cancelled, concurrent, and multi-turn transitions.
-
-ISSUE-050 intentionally implements only the one-request happy path. It does not add
-robust workflow orchestration, classification, new authentication behavior,
-target-backend proxying, or streaming transports.
+ISSUE-051 — classify transactional and documentation messages without changing
+the ISSUE-052 deterministic transaction workflow.

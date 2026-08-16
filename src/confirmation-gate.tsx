@@ -9,6 +9,7 @@ import {
 import {
   CompiledForm,
   type FormValue,
+  type ResolvedReferenceModelContext,
 } from "./form-renderer";
 import type { FieldMetadata, JsonValue } from "./forms";
 import {
@@ -26,11 +27,20 @@ export interface ConfirmationGateProps<FieldName extends string = string> {
   readonly initialValues?: FormValue<FieldName>;
   readonly request?: TargetBackendRequest;
   readonly onResult?: (result: BackendOperationResult) => void;
+  readonly onDraftChange?: (value: FormValue<FieldName>) => void;
+  readonly onReferenceModelContext?: (
+    context: ResolvedReferenceModelContext<FieldName>,
+  ) => void;
+  /** Page workflow authorization hook for entering review. */
+  readonly onReview?: (value: ValidatedSnapshot) => boolean;
+  /** Page workflow authorization hook for the exact snapshot to execute. */
+  readonly onExecutionStart?: (value: ValidatedSnapshot) => boolean;
+  readonly onReviewCancel?: () => void;
   readonly formId?: string;
   readonly submitLabel?: string;
 }
 
-type ValidatedSnapshot = Readonly<Record<string, JsonValue>>;
+export type ValidatedSnapshot = Readonly<Record<string, JsonValue>>;
 
 type ConfirmationState =
   | { readonly phase: "editing" }
@@ -99,6 +109,11 @@ export function ConfirmationGate<FieldName extends string>({
   initialValues,
   request,
   onResult,
+  onDraftChange,
+  onReferenceModelContext,
+  onReview,
+  onExecutionStart,
+  onReviewCancel,
   formId = DEFAULT_FORM_ID,
   submitLabel = "Submit",
 }: ConfirmationGateProps<FieldName>) {
@@ -138,9 +153,15 @@ export function ConfirmationGate<FieldName extends string>({
 
     switch (confirmation) {
       case "required":
+        if (onReview?.(snapshot) === false) {
+          return;
+        }
         setState({ phase: "reviewing", value: snapshot });
         return;
       case "none":
+        if (onExecutionStart?.(snapshot) === false) {
+          return;
+        }
         void execute(snapshot);
         return;
       default:
@@ -150,12 +171,16 @@ export function ConfirmationGate<FieldName extends string>({
 
   function handleConfirm(): void {
     if (state.phase === "reviewing") {
+      if (onExecutionStart?.(state.value) === false) {
+        return;
+      }
       void execute(state.value);
     }
   }
 
   function handleBack(): void {
     if (state.phase === "reviewing") {
+      onReviewCancel?.();
       setState({ phase: "editing" });
     }
   }
@@ -175,6 +200,8 @@ export function ConfirmationGate<FieldName extends string>({
           formId={formId}
           baseUrl={baseUrl}
           request={request}
+          onChange={onDraftChange}
+          onReferenceModelContext={onReferenceModelContext}
         />
       </div>
 

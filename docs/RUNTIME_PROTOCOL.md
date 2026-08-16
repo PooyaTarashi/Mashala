@@ -99,6 +99,32 @@ cookies, headers, operations, or credentials in its strict JSON frame. It
 does not proxy or execute target-backend requests. It provides no SSE,
 WebSocket, token streaming, reconnection, or retry channel.
 
+## Deterministic page workflow
+
+ISSUE-052 implements the browser transition table independently of this
+transport:
+
+```text
+IDLE → ROUTING → FILLING → CONFIRMING → EXECUTING → COMPLETED | FAILED
+```
+
+`f.reference` loading and validation are deterministic field substates within
+`FILLING`; their GET requests use the same target-app browser request integration
+as confirmed writes. A resolved read produces `backend.context.selected` only
+when its ADR-016 descriptor exists and browser-side projection succeeds.
+
+Every pending route or extraction records the browser event ID and conversation
+ID. A server event may affect the current run only when both match its
+`inReplyTo` and `conversationId`, its event ID has not already been consumed,
+and its capability is the active declared capability. Review, cancellation, or
+a newer user extraction invalidates superseded pending work.
+
+The page accepts review only from a complete deterministically valid form and
+stores an isolated snapshot. Required confirmation can enter `EXECUTING` only
+with that exact snapshot. While executing, duplicate confirmation and
+cancellation cannot create another request. The browser executor then records
+success, target HTTP failure, or network failure as distinct terminal results.
+
 ## TypeScript contract
 
 ```ts

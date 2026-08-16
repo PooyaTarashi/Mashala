@@ -600,37 +600,44 @@ browser-side `POST /transfers` through the target-app request integration.
 
 ## Should-have — needed for a coherent, defensible demo
 
-### ISSUE-052 — Orchestrate the page-level capability workflow — Not started
+### ISSUE-052 — Orchestrate the page-level capability workflow — Complete
 
 Goal: Connect routing, slot extraction, deterministic form interaction, confirmation,
 browser execution, and result display into one explicit conversational workflow.
 
 Acceptance:
 
-- [ ] legal browser workflow states cover idle, routing, filling, confirming, executing,
+- [x] legal browser workflow states cover idle, routing, filling, confirming, executing,
   completed, and failed outcomes;
-- [ ] a matched route selects only a declared capability and triggers slot extraction for
+- [x] a matched route selects only a declared capability and triggers slot extraction for
   that capability;
-- [ ] route and extraction events are correlated with the originating user message and
+- [x] route and extraction events are correlated with the originating user message and
   cannot update an unrelated active capability;
-- [ ] partial slot proposals populate only valid declared fields and leave missing values
+- [x] partial slot proposals populate only valid declared fields and leave missing values
   for the user to complete;
-- [ ] reference-field reads continue to execute in the browser with the target app's
+- [x] reference-field reads continue to execute in the browser with the target app's
   request integration;
-- [ ] projected backend context is sent only when an ADR-016 descriptor permits it, and
+- [x] projected backend context is sent only when an ADR-016 descriptor permits it, and
   only after browser-side minimization;
-- [ ] confirmation executes the exact reviewed valid snapshot through the browser-side
+- [x] confirmation executes the exact reviewed valid snapshot through the browser-side
   executor;
-- [ ] target-backend success, HTTP failure, and network failure are displayed distinctly
+- [x] target-backend success, HTTP failure, and network failure are displayed distinctly
   without routing the request through the Mashala server;
-- [ ] stale, cancelled, or concurrent workflow actions cannot authorize an unintended
+- [x] stale, cancelled, or concurrent workflow actions cannot authorize an unintended
   backend request;
-- [ ] focused integration tests cover the complete successful flow, validation
+- [x] focused integration tests cover the complete successful flow, validation
   correction, cancellation, backend failure, and out-of-scope flow.
 
 Why here: ISSUE-049/050 make one happy-path demo possible; this issue makes the flow
 robust enough that edge cases (cancel, retry, bad backend response) don't break the
 demo or embarrass you if a reviewer tries something unexpected.
+
+`src/page-capability-workflow.ts` is the explicit browser transition table. It
+correlates every route/extraction response to the current Mashala event and
+conversation, invalidates pending work on review or cancellation, and authorizes
+execution only for the exact deterministic snapshot accepted for the current run.
+Reference reads remain a field-level substate of filling and may emit only already-
+projected ADR-016 context.
 
 ---
 

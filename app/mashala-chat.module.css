@@ -52,8 +52,15 @@
 
 .empty,
 .technicalLabel,
-.status {
+.status,
+.workflowStatus {
   color: #5b5b55;
+}
+
+.workflowStatus {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .messages {
@@ -132,6 +139,23 @@
   border-radius: 0.45rem;
   font: inherit;
   padding: 0.7rem 0.8rem;
+}
+
+.secondaryAction {
+  justify-self: start;
+  border: 1px solid #77776f;
+  border-radius: 0.45rem;
+  background: #fff;
+  color: #242421;
+  font: inherit;
+  font-weight: 650;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+}
+
+.secondaryAction:focus-visible {
+  outline: 3px solid #8cb8ff;
+  outline-offset: 2px;
 }
 
 .composer input {
