@@ -2,12 +2,13 @@
 
 ## Current phase
 
-**P5 now has a robust deterministic page-level transaction workflow. ISSUE-052 connects correlated routing/extraction, editable forms, confirmation, direct browser execution, and distinct completion/failure results.**
+**P5 now classifies new messages into transactional, documentation, or unsupported/ambiguous handling while preserving the deterministic page-level transaction workflow.**
 
 ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, a strict non-streaming HTTP boundary for canonical runtime events, and a minimal accessible chat/form page for one happy-path transaction.
 
-ISSUE-052 is also complete; its page-owned transition table hardens the P5
-transaction flow against stale, cancelled, duplicate, and concurrent actions.
+ISSUE-051 and ISSUE-052 are also complete. The classifier adds the documentation
+handoff, while the page-owned transition table hardens the transaction flow
+against stale, cancelled, duplicate, and concurrent actions.
 
 ## Accepted decisions
 
@@ -178,6 +179,14 @@ transaction flow against stale, cancelled, duplicate, and concurrent actions.
   Its full response is never handed to the page transport: only a successful
   ADR-016 projection may create `backend.context.selected`, and a missing
   descriptor creates no context event.
+- ISSUE-051 — `classifyMessage` accepts only untrusted message text and the
+  provider-neutral LLM boundary, then validates exactly `transactional`,
+  `documentation`, or `unsupported_or_ambiguous` without capability IDs.
+- Transactional classifications enter the existing declared-capability router;
+  documentation classifications enter `answerDocumentationQuestion` and map
+  grounded, insufficient-context, and failure outcomes to existing canonical
+  assistant or error events. Unsupported, malformed, and provider-failure
+  outcomes stop safely before either path can invent an operation or fact.
 
 ## Deliberately unresolved
 
@@ -189,5 +198,4 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-ISSUE-051 — classify transactional and documentation messages without changing
-the ISSUE-052 deterministic transaction workflow.
+ISSUE-054 — add browser end-to-end coverage for the completed vertical slice.

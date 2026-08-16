@@ -245,6 +245,25 @@ describe("MashalaChat page capability workflow", () => {
     expect(targetRequest).not.toHaveBeenCalled();
   });
 
+  it("returns a documentation assistant answer to IDLE without rendering or executing", async () => {
+    const transport = vi.fn<RuntimeTransport>().mockImplementation(async (request) => [
+      responseEvent(
+        request,
+        "assistant.message",
+        { text: "Transfers require explicit confirmation." },
+        "documentation_answer",
+      ),
+    ]);
+    const targetRequest = vi.fn<TargetBackendRequest>();
+    renderWorkflow(transport, targetRequest);
+
+    send("Do transfers require confirmation?");
+    await screen.findByText("Transfers require explicit confirmation.");
+    expect(workflowState()).toContain("IDLE");
+    expect(screen.queryByText("Complete the request")).toBeNull();
+    expect(targetRequest).not.toHaveBeenCalled();
+  });
+
   it("ignores a stale route response after cancellation and a newer request", async () => {
     const resolvers = new Map<
       string,

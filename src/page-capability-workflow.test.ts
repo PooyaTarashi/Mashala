@@ -131,4 +131,17 @@ describe("page capability workflow transition table", () => {
       }),
     ).toBe(cancelled);
   });
+
+  it("returns a completed standalone assistant answer to idle", () => {
+    const routing = transitionPageCapabilityWorkflow(
+      INITIAL_PAGE_CAPABILITY_WORKFLOW,
+      { type: "route.requested", request: routeRequest },
+    );
+    const answered = transitionPageCapabilityWorkflow(routing, {
+      type: "message.answered",
+      correlation,
+    });
+
+    expect(answered).toEqual({ phase: "idle", runId: 2 });
+  });
 });

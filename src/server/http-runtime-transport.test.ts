@@ -91,6 +91,10 @@ describe("HTTP runtime transport", () => {
     const generateStructured = queuedProvider(
       {
         outcome: "success",
+        output: { classification: "transactional" },
+      },
+      {
+        outcome: "success",
         output: { outcome: "matched", capabilityId: "transfer_money" },
       },
       {
@@ -135,7 +139,7 @@ describe("HTTP runtime transport", () => {
         (event) => validateServerToBrowserEvent(event).success,
       ),
     ).toBe(true);
-    expect(generateStructured).toHaveBeenCalledTimes(2);
+    expect(generateStructured).toHaveBeenCalledTimes(3);
   });
 
   it("sends a valid selected backend context only to capability-bound extraction", async () => {
@@ -346,7 +350,7 @@ describe("HTTP runtime transport", () => {
         type: "protocol.error",
         payload: {
           code: "internal_error",
-          message: "The LLM provider request could not be completed.",
+          message: "The message classifier could not be completed.",
           retryable: true,
         },
       },

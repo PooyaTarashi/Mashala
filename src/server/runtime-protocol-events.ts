@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   RUNTIME_PROTOCOL_VERSION,
+  type AssistantMessageEvent,
   type CapabilityRouteResultEvent,
   type OutOfScopeEvent,
   type ProtocolErrorCode,
@@ -12,6 +13,8 @@ import type {
   CapabilityRoutingError,
   CapabilityRoutingResult,
 } from "./capability-router";
+import type { KnowledgeAnswerResult } from "./knowledge-answer";
+import type { MessageClassificationError } from "./message-classifier";
 import type {
   SlotCandidateValue,
   SlotCandidateValues,
@@ -32,6 +35,10 @@ export type CapabilityRoutingProtocolEvent =
 
 export type SlotExtractionProtocolEvent =
   | SlotCandidatesProposedEvent
+  | ProtocolErrorEvent;
+
+export type KnowledgeAnswerProtocolEvent =
+  | AssistantMessageEvent
   | ProtocolErrorEvent;
 
 export interface ProtocolErrorPayload {
@@ -63,6 +70,32 @@ export function createProtocolErrorEvent(
   });
 }
 
+/** Constructs canonical user-visible assistant text. */
+export function createAssistantMessageEvent(
+  metadata: ServerProtocolEventMetadata,
+  text: string,
+): AssistantMessageEvent {
+  return Object.freeze({
+    ...commonEnvelope(metadata),
+    type: "assistant.message",
+    payload: Object.freeze({ text }),
+  });
+}
+
+/** Constructs a safe terminal result for an unsupported or ambiguous message. */
+export function createUnsupportedMessageEvent(
+  metadata: ServerProtocolEventMetadata,
+): OutOfScopeEvent {
+  return Object.freeze({
+    ...commonEnvelope(metadata),
+    type: "capability.route.out_of_scope",
+    payload: Object.freeze({
+      message:
+        "I couldn't determine whether you want to perform a supported transaction or ask about this application. Please rephrase your request.",
+    }),
+  });
+}
+
 function protocolError(
   metadata: ServerProtocolEventMetadata,
   error: CapabilityRoutingError | SlotExtractionError,
@@ -79,6 +112,59 @@ function protocolError(
     code: "invalid_model_output",
     message: error.message,
     retryable: false,
+  });
+}
+
+/** Maps a classifier boundary failure without exposing provider details. */
+export function messageClassificationErrorToProtocolEvent(
+  error: MessageClassificationError,
+  metadata: ServerProtocolEventMetadata,
+): ProtocolErrorEvent {
+  if (error.kind === "provider_failure") {
+    return createProtocolErrorEvent(metadata, {
+      code: "internal_error",
+      message: "The message classifier could not be completed.",
+      retryable: error.failure.retryable,
+    });
+  }
+
+  return createProtocolErrorEvent(metadata, {
+    code: "invalid_model_output",
+    message: error.message,
+    retryable: false,
+  });
+}
+
+/** Maps ISSUE-048 outcomes to existing canonical user-visible events. */
+export function knowledgeAnswerResultToProtocolEvent(
+  result: KnowledgeAnswerResult,
+  metadata: ServerProtocolEventMetadata,
+): KnowledgeAnswerProtocolEvent {
+  if (result.outcome === "grounded") {
+    return createAssistantMessageEvent(metadata, result.answer);
+  }
+
+  if (result.outcome === "insufficient_context") {
+    return createAssistantMessageEvent(
+      metadata,
+      "I couldn't find enough information in the application documentation to answer that question.",
+    );
+  }
+
+  const retryable =
+    result.error.kind === "provider_failure" ||
+    result.error.kind === "retrieval_failure"
+      ? result.error.failure.retryable
+      : false;
+  const code =
+    result.error.kind === "invalid_model_output"
+      ? "invalid_model_output"
+      : "internal_error";
+
+  return createProtocolErrorEvent(metadata, {
+    code,
+    message: "The documentation answer could not be completed.",
+    retryable,
   });
 }
 

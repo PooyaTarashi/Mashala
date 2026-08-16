@@ -239,6 +239,7 @@ export function MashalaChat({
       conversationId: request.conversationId,
     };
     const nextEntries: ConversationEntry[] = [];
+    let standaloneAssistantAnswered = false;
     if (!isCorrelatedWorkflowResponse(workflowRef.current, correlation)) {
       return;
     }
@@ -337,6 +338,7 @@ export function MashalaChat({
           break;
         }
         case "assistant.message":
+          standaloneAssistantAnswered ||= workflowRef.current.phase === "routing";
           nextEntries.push({
             id: event.eventId,
             kind: "assistant",
@@ -367,6 +369,9 @@ export function MashalaChat({
       }
     }
 
+    if (standaloneAssistantAnswered) {
+      commitWorkflow({ type: "message.answered", correlation });
+    }
     if (isCorrelatedWorkflowResponse(workflowRef.current, correlation)) {
       commitWorkflow({ type: "response.finished", correlation });
     }

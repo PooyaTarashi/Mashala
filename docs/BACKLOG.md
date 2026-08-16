@@ -643,26 +643,26 @@ projected ADR-016 context.
 
 ## Nice-to-have — cut first if time runs short
 
-### ISSUE-051 — Classify transactional and documentation messages — Not started
+### ISSUE-051 — Classify transactional and documentation messages — Complete
 
 Goal: Add the server-side decision that directs an incoming user message to either
 declared-capability handling or the ISSUE-048 documentation-answer path.
 
 Acceptance:
 
-- [ ] classification produces only transactional, documentation, or an explicit
+- [x] classification produces only transactional, documentation, or an explicit
   unsupported/ambiguous outcome;
-- [ ] classification treats the user message as untrusted data;
-- [ ] transactional messages proceed to declared-capability routing only;
-- [ ] documentation messages invoke answerDocumentationQuestion before conversational
+- [x] classification treats the user message as untrusted data;
+- [x] transactional messages proceed to declared-capability routing only;
+- [x] documentation messages invoke answerDocumentationQuestion before conversational
   answer generation;
-- [ ] knowledge-answer outcomes are deterministically mapped to user-visible assistant,
+- [x] knowledge-answer outcomes are deterministically mapped to user-visible assistant,
   insufficient-context, or sanitized error results;
-- [ ] ambiguous or malformed classification never invents a capability, target-backend
+- [x] ambiguous or malformed classification never invents a capability, target-backend
   operation, or documentation fact;
-- [ ] classification cannot execute a capability, alter confirmation policy, or access
+- [x] classification cannot execute a capability, alter confirmation policy, or access
   target-backend credentials;
-- [ ] tests cover transactional routing, grounded documentation answers, insufficient
+- [x] tests cover transactional routing, grounded documentation answers, insufficient
   context, ambiguity, malformed model output, and provider failure.
 
 Fallback if skipped: hardcode a single mode (transactional-only) for the demo, or add a
@@ -705,5 +705,5 @@ coverage is a known gap.
 2. ISSUE-049 (transport)
 3. ISSUE-050 (chat UI) — **checkpoint: one full transaction working live**
 4. ISSUE-052 (orchestration robustness)
-5. ISSUE-051 (classifier) — or its fallback
+5. ISSUE-051 (classifier) — complete
 6. ISSUE-054 (E2E tests) — or its scaled-down alternative

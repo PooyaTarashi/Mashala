@@ -100,6 +100,10 @@ export type PageWorkflowAction =
       readonly correlation: WorkflowCorrelation;
     }
   | {
+      readonly type: "message.answered";
+      readonly correlation: WorkflowCorrelation;
+    }
+  | {
       readonly type: "draft.changed";
       readonly capabilityId: string;
       readonly values: FormValue;
@@ -295,6 +299,12 @@ export function transitionPageCapabilityWorkflow(
       return state;
 
     case "route.out_of_scope":
+      return state.phase === "routing" &&
+        sameCorrelation(state.request, action.correlation)
+        ? idleAfter(state)
+        : state;
+
+    case "message.answered":
       return state.phase === "routing" &&
         sameCorrelation(state.request, action.correlation)
         ? idleAfter(state)

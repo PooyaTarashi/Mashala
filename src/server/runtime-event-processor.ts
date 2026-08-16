@@ -6,9 +6,14 @@ import type {
 } from "../runtime-protocol";
 import type { MashalaApplicationRuntime } from "./application-runtime";
 import { routeCapability } from "./capability-router";
+import { answerDocumentationQuestion } from "./knowledge-answer";
+import { classifyMessage } from "./message-classifier";
 import {
   capabilityRoutingResultToProtocolEvent,
+  createUnsupportedMessageEvent,
   createProtocolErrorEvent,
+  knowledgeAnswerResultToProtocolEvent,
+  messageClassificationErrorToProtocolEvent,
   slotExtractionResultToProtocolEvent,
   type ServerProtocolEventMetadata,
 } from "./runtime-protocol-events";
@@ -32,8 +37,8 @@ function responseMetadata(
 }
 
 /**
- * Applies only the already-implemented routing and slot-extraction domain
- * operations. It performs no workflow transition or backend request.
+ * Classifies new messages before handing them to the existing capability or
+ * documentation path. It performs no workflow transition or backend request.
  */
 export async function processRuntimeEvent({
   event,
@@ -98,6 +103,41 @@ export async function processRuntimeEvent({
       slotExtractionResultToProtocolEvent(
         extractionResult,
         capability.id,
+        responseMetadata(event, createEventId),
+      ),
+    ]);
+  }
+
+  const classificationResult = await classifyMessage({
+    message: event.payload.text,
+    provider,
+  });
+
+  if (classificationResult.outcome === "error") {
+    return Object.freeze([
+      messageClassificationErrorToProtocolEvent(
+        classificationResult.error,
+        responseMetadata(event, createEventId),
+      ),
+    ]);
+  }
+
+  if (classificationResult.classification === "unsupported_or_ambiguous") {
+    return Object.freeze([
+      createUnsupportedMessageEvent(responseMetadata(event, createEventId)),
+    ]);
+  }
+
+  if (classificationResult.classification === "documentation") {
+    const answerResult = await answerDocumentationQuestion({
+      question: event.payload.text,
+      provider,
+      retriever: applicationRuntime.serverDependencies.documentationRetriever,
+    });
+
+    return Object.freeze([
+      knowledgeAnswerResultToProtocolEvent(
+        answerResult,
         responseMetadata(event, createEventId),
       ),
     ]);
