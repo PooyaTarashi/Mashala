@@ -29,7 +29,7 @@ environment, such as .env.local:
 
 ~~~dotenv
 GEMINI_API_KEY=your-server-side-key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
 ~~~
 
 GEMINI_MODEL is a model name, not a path. Never put either value in browser

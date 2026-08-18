@@ -355,7 +355,7 @@ with your real Gemini key:
 
 ```dotenv
 GEMINI_API_KEY=replace-with-your-real-key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
 MASHALA_RAG_SERVICE_URL=http://127.0.0.1:8765
 ```
 
