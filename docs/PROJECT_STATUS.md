@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**P6 read-capability authoring, browser execution, and result-card compilation are implemented; result-card rendering and workflow integration remain.**
+**P6 read capabilities, browser execution, deterministic result rendering, and the integrated read workflow are implemented.**
 
 ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, a strict non-streaming HTTP boundary for canonical runtime events, and a minimal accessible chat/form page for one happy-path transaction.
 
@@ -12,14 +12,14 @@ against stale, cancelled, duplicate, and concurrent actions. Playwright now
 exercises the production page with deterministic local runtime and target-backend
 fixtures and no live provider, RAG, credential, or external-service dependency.
 
-ISSUE-060, ISSUE-061, and ISSUE-062 are complete. ADR-017 and
+ISSUE-060, ISSUE-061, ISSUE-062, and ISSUE-063 are complete. ADR-017 and
 `CANONICAL_SPEC.md` v0.3 accept the read-capability and deterministic result-view
 contract. The executable TypeScript canonical spec is now v0.3, with typed read
 authoring, deterministic input/binding validation, and direct browser GET
 execution. The deterministic result DSL/compiler now emits validated, isolated
-card or repeated-card metadata with the closed formatter allowlist. Result-card
-rendering and the integrated read workflow from ISSUE-063 have not been
-implemented.
+card or repeated-card metadata with the closed formatter allowlist. The page
+now executes routed reads, collects declared input when present, and renders
+validated results inline through those declarations.
 
 ## Accepted decisions
 
@@ -235,8 +235,8 @@ implemented.
   declared scalar bindings, and calls the target backend directly through
   `TargetBackendRequest` with no GET body.
 - Success, HTTP failure, malformed JSON, response-shape failure, and network
-  failure remain distinct. ISSUE-061 adds no result-card renderer, read page
-  workflow, or Mashala-server target-backend proxy.
+  failure remain distinct. Read execution adds no Mashala-server
+  target-backend proxy.
 - ISSUE-062 — `result.card` and `result.cardList` compile required title,
   optional image/description, and developer-labeled fact declarations into
   deeply frozen plain canonical JSON data.
@@ -247,8 +247,27 @@ implemented.
 - Malformed mappings, duplicate fact IDs, unsupported formatters, missing
   mappings, branch-incompatible card/list data, unsafe image declarations, and
   presentation attempts containing executable/UI/control data fail before use.
-- ISSUE-062 adds no React renderer, read page workflow, capability operation,
-  confirmation, authentication, execution, or provider behavior.
+- ISSUE-063 — the page transition table now includes read-specific collecting,
+  fetching, presenting, and empty phases while preserving the existing write
+  phases and correlation rules. Zero-input reads fetch directly after a valid
+  route; form-backed reads execute only from a valid editable `CompiledForm`
+  submission.
+- Successful objects render through one declared card and successful arrays
+  through the declared repeated-card list. Empty arrays use `emptyText`; one
+  invalid item fails the complete list. In accordance with ADR-017, a root
+  array is rendered completely in source order, while pagination, automatic
+  follow-up requests, and incremental loading remain deferred.
+- Result cards use semantic article/list/fact markup, responsive layouts, live
+  loading/failure states, safe image URLs, developer-authored alt text, and a
+  renderer-owned accessible image fallback. Backend strings are React text,
+  never injected HTML.
+- Full responses stay in browser-owned workflow/transcript state and only
+  declared presentation properties enter the DOM. Rendering sends no result
+  event to `/api/runtime`; only successful ADR-016 projection can produce the
+  minimized context from which `backend.context.selected` may be constructed.
+- Each fetch carries its page run ID and an `AbortSignal`. Cancellation aborts
+  cooperative request integrations, and late results are rejected by the
+  transition table even when an integration ignores cancellation.
 
 ## Deliberately unresolved
 
@@ -260,4 +279,4 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-ISSUE-063 (result rendering and integrated read workflow).
+ISSUE-064 (read-capability end-to-end fixtures and examples).

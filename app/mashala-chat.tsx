@@ -3,6 +3,7 @@
 import {
   type FormEvent,
   useCallback,
+  useEffect,
   useId,
   useMemo,
   useRef,
@@ -14,8 +15,10 @@ import { ConfirmationGate } from "../src/confirmation-gate";
 import {
   mergeFormValueProposal,
 } from "../src/form-value-proposal";
-import type {
-  ResolvedReferenceModelContext,
+import {
+  CompiledForm,
+  type FormValue,
+  type ResolvedReferenceModelContext,
 } from "../src/form-renderer";
 import { createSelectedBackendContextEventFromProjection } from "../src/model-visible-backend-projection";
 import {
@@ -29,6 +32,11 @@ import {
   type WorkflowCorrelation,
 } from "../src/page-capability-workflow";
 import {
+  executeReadCapability,
+  type ReadCapabilityResult,
+} from "../src/read-capability-executor";
+import { ResultCardRenderer } from "../src/result-card-renderer";
+import {
   RUNTIME_PROTOCOL_VERSION,
   type BrowserToServerEvent,
   type ServerToBrowserEvent,
@@ -39,7 +47,12 @@ import {
   RuntimeTransportError,
   type RuntimeTransport,
 } from "../src/runtime-http-client";
-import type { CapabilitySpec, MashalaSpec } from "../src/spec";
+import type {
+  CapabilitySpec,
+  JsonValue,
+  MashalaSpec,
+  ReadCapabilitySpec,
+} from "../src/spec";
 import type { TargetBackendRequest } from "../src/target-backend-request";
 import styles from "./mashala-chat.module.css";
 
@@ -84,6 +97,29 @@ type ConversationEntry =
       readonly kind: "protocol-error";
       readonly text: string;
       readonly code?: string;
+    }
+  | {
+      readonly id: string;
+      readonly kind: "read-loading";
+      readonly runId: number;
+      readonly capabilityId: string;
+    }
+  | {
+      readonly id: string;
+      readonly kind: "read-result";
+      readonly capability: ReadCapabilitySpec;
+      readonly result: Extract<ReadCapabilityResult, { outcome: "success" }>;
+      readonly baseUrl: string | URL;
+    }
+  | {
+      readonly id: string;
+      readonly kind: "read-empty";
+      readonly text: string;
+    }
+  | {
+      readonly id: string;
+      readonly kind: "read-failure";
+      readonly text: string;
     };
 
 const defaultTransport = createRuntimeHttpTransport();
@@ -100,6 +136,25 @@ function transportFailureMessage(error: unknown): string {
   return error instanceof RuntimeTransportError
     ? error.message
     : "The runtime could not be reached. Try again.";
+}
+
+function readFailureMessage(result: Exclude<ReadCapabilityResult, { outcome: "success" | "input-required" }>): string {
+  switch (result.outcome) {
+    case "http-error":
+      return `The target backend returned HTTP ${String(result.response.status)}.`;
+    case "network-error":
+      return "The target backend could not be reached.";
+    case "malformed-json":
+      return "The target backend returned malformed JSON.";
+    case "response-shape-error":
+      return "The target backend response does not match the declared result view.";
+    case "input-error":
+      return "The read input did not match the declared form.";
+  }
+}
+
+function readEntryId(runId: number, capabilityId: string): string {
+  return `read-${String(runId)}-${capabilityId}`;
 }
 
 function renderEntry(entry: ConversationEntry) {
@@ -167,6 +222,44 @@ function renderEntry(entry: ConversationEntry) {
           <p>{entry.text}</p>
         </article>
       );
+    case "read-loading":
+      return (
+        <article
+          className={styles.readLoading}
+          aria-label="Loading read result"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <strong>Loading result</strong>
+          <p>The target backend request is in progress.</p>
+        </article>
+      );
+    case "read-result":
+      return (
+        <article className={styles.readResult} aria-label="Read result">
+          <strong className={styles.resultHeading}>Result</strong>
+          <ResultCardRenderer
+            view={entry.capability.result}
+            data={entry.result.data}
+            baseUrl={entry.baseUrl}
+          />
+        </article>
+      );
+    case "read-empty":
+      return (
+        <article className={styles.readEmpty} aria-label="Empty read result" role="status">
+          <strong>No results</strong>
+          <p>{entry.text}</p>
+        </article>
+      );
+    case "read-failure":
+      return (
+        <article className={styles.readFailure} aria-label="Read failure" role="alert">
+          <strong>Unable to load the result</strong>
+          <p>{entry.text}</p>
+        </article>
+      );
   }
 }
 
@@ -202,6 +295,8 @@ export function MashalaChat({
       : capabilities.get(activeCapabilityId);
   const activeWriteCapability =
     activeCapability?.kind === "write" ? activeCapability : undefined;
+  const activeReadCapability =
+    activeCapability?.kind === "read" ? activeCapability : undefined;
   const proposedValues = workflowFormValues(workflow);
   const formRevision =
     "formRevision" in workflow ? workflow.formRevision : 0;
@@ -281,6 +376,10 @@ export function MashalaChat({
             type: "route.matched",
             correlation,
             capabilityId: declaredCapability.id,
+            capabilityKind: declaredCapability.kind,
+            ...(declaredCapability.kind === "read"
+              ? { readHasInput: declaredCapability.input !== undefined }
+              : {}),
           })) {
             break;
           }
@@ -290,14 +389,41 @@ export function MashalaChat({
             capabilityId: declaredCapability.id,
             description: declaredCapability.description,
           });
+          const matchedWorkflow = workflowRef.current;
+          if (
+            declaredCapability.kind === "read" &&
+            matchedWorkflow.phase === "fetching"
+          ) {
+            nextEntries.push({
+              id: readEntryId(matchedWorkflow.runId, declaredCapability.id),
+              kind: "read-loading",
+              runId: matchedWorkflow.runId,
+              capabilityId: declaredCapability.id,
+            });
+          }
           break;
         }
         case "form.values.proposed": {
           const declaredCapability = capabilities.get(event.payload.capabilityId);
+          if (
+            declaredCapability?.kind === "read" &&
+            declaredCapability.input === undefined
+          ) {
+            if (Object.keys(event.payload.values).length > 0) {
+              nextEntries.push({
+                id: event.eventId,
+                kind: "protocol-error",
+                code: "invalid_model_output",
+                text: "A zero-input read cannot accept suggested values.",
+              });
+            }
+            break;
+          }
           const currentWorkflow = workflowRef.current;
           if (
             declaredCapability === undefined ||
-            currentWorkflow.phase !== "filling" ||
+            (currentWorkflow.phase !== "filling" &&
+              currentWorkflow.phase !== "collecting") ||
             declaredCapability.id !== currentWorkflow.capabilityId
           ) {
             nextEntries.push({
@@ -313,17 +439,7 @@ export function MashalaChat({
             declaredCapability.kind === "write"
               ? declaredCapability.form
               : declaredCapability.input;
-          if (declaredForm === undefined) {
-            if (Object.keys(event.payload.values).length > 0) {
-              nextEntries.push({
-                id: event.eventId,
-                kind: "protocol-error",
-                code: "invalid_model_output",
-                text: "A zero-input read cannot accept suggested values.",
-              });
-            }
-            break;
-          }
+          if (declaredForm === undefined) break;
 
           const merge = mergeFormValueProposal(
             declaredForm,
@@ -403,7 +519,7 @@ export function MashalaChat({
   ): void => {
     const current = workflowRef.current;
     if (
-      current.phase !== "filling" ||
+      (current.phase !== "filling" && current.phase !== "collecting") ||
       activeWorkflowCapabilityId(current) === undefined
     ) {
       return;
@@ -451,6 +567,83 @@ export function MashalaChat({
       });
   }, [applyServerEvents, commitWorkflow, nextEventId, transport]);
 
+  useEffect(() => {
+    if (workflow.phase !== "fetching" || activeReadCapability === undefined) {
+      return;
+    }
+
+    const runId = workflow.runId;
+    const capabilityId = activeReadCapability.id;
+    const entryId = readEntryId(runId, capabilityId);
+    const controller = new AbortController();
+
+    void executeReadCapability({
+      baseUrl: backendBaseUrl,
+      capability: activeReadCapability,
+      ...(activeReadCapability.input === undefined
+        ? {}
+        : {
+            input: workflow.values as Readonly<Record<string, JsonValue>>,
+          }),
+      ...(targetBackendRequest === undefined
+        ? {}
+        : { request: targetBackendRequest }),
+      signal: controller.signal,
+    }).then((result) => {
+      if (!commitWorkflow({
+        type: "read.execution.finished",
+        runId,
+        capabilityId,
+        result,
+      })) {
+        return;
+      }
+
+      setEntries((current) =>
+        current.flatMap((entry): readonly ConversationEntry[] => {
+          if (entry.id !== entryId) {
+            return [entry];
+          }
+          if (result.outcome === "input-required") {
+            return [];
+          }
+          if (result.outcome === "success") {
+            if (Array.isArray(result.data) && result.data.length === 0) {
+              return [{
+                id: entryId,
+                kind: "read-empty",
+                text:
+                  activeReadCapability.result.kind === "cardList"
+                    ? activeReadCapability.result.emptyText
+                    : "No result was returned.",
+              }];
+            }
+            return [{
+              id: entryId,
+              kind: "read-result",
+              capability: activeReadCapability,
+              result,
+              baseUrl: backendBaseUrl,
+            }];
+          }
+          return [{
+            id: entryId,
+            kind: "read-failure",
+            text: readFailureMessage(result),
+          }];
+        }),
+      );
+    });
+
+    return () => controller.abort();
+  }, [
+    activeReadCapability,
+    backendBaseUrl,
+    commitWorkflow,
+    targetBackendRequest,
+    workflow,
+  ]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const text = message.trim();
@@ -459,6 +652,7 @@ export function MashalaChat({
     const canSend =
       currentWorkflow.phase === "idle" ||
       currentWorkflow.phase === "filling" ||
+      currentWorkflow.phase === "collecting" ||
       (currentWorkflow.phase === "failed" &&
         !("capabilityId" in currentWorkflow));
 
@@ -528,8 +722,17 @@ export function MashalaChat({
   }
 
   function cancelWorkflow(): void {
+    const cancelled = workflowRef.current;
     if (!commitWorkflow({ type: "cancel" })) {
       return;
+    }
+    if (cancelled.phase === "fetching") {
+      setEntries((current) =>
+        current.filter(
+          (entry) =>
+            entry.kind !== "read-loading" || entry.runId !== cancelled.runId,
+        ),
+      );
     }
     pendingChatEventIdRef.current = undefined;
     pendingRef.current = false;
@@ -546,13 +749,19 @@ export function MashalaChat({
   const canCompose =
     workflow.phase === "idle" ||
     workflow.phase === "filling" ||
+    workflow.phase === "collecting" ||
     (workflow.phase === "failed" && !("capabilityId" in workflow));
   const canCancel =
     workflow.phase === "routing" ||
     workflow.phase === "filling" ||
+    workflow.phase === "collecting" ||
+    workflow.phase === "fetching" ||
     workflow.phase === "confirming";
   const canReset =
-    workflow.phase === "completed" || workflow.phase === "failed";
+    workflow.phase === "completed" ||
+    workflow.phase === "presenting" ||
+    workflow.phase === "empty" ||
+    workflow.phase === "failed";
 
   return (
     <main className={styles.page}>
@@ -697,6 +906,54 @@ export function MashalaChat({
                 capabilityId: activeWriteCapability.id,
                 result,
               });
+            }}
+          />
+        </section>
+      )}
+
+      {activeReadCapability?.input === undefined ||
+      workflow.phase !== "collecting" ? null : (
+        <section
+          className={styles.capability}
+          aria-labelledby="active-read-capability-heading"
+        >
+          <h2 id="active-read-capability-heading">Choose read inputs</h2>
+          <p>{activeReadCapability.description}</p>
+          <CompiledForm
+            key={`${String(workflow.runId)}-${activeReadCapability.id}-${String(formRevision)}`}
+            form={activeReadCapability.input}
+            initialValues={proposedValues}
+            baseUrl={backendBaseUrl}
+            request={targetBackendRequest}
+            formId={`read-${activeReadCapability.id}`}
+            submitLabel="Fetch result"
+            onChange={(values: FormValue) => {
+              commitWorkflow({
+                type: "draft.changed",
+                capabilityId: activeReadCapability.id,
+                values,
+              });
+            }}
+            onReferenceModelContext={sendReferenceContext}
+            onSubmit={(values: FormValue) => {
+              const runId = workflow.runId;
+              if (!commitWorkflow({
+                type: "read.execution.requested",
+                runId,
+                capabilityId: activeReadCapability.id,
+                values,
+              })) {
+                return;
+              }
+              setEntries((current) => [
+                ...current,
+                {
+                  id: readEntryId(runId, activeReadCapability.id),
+                  kind: "read-loading",
+                  runId,
+                  capabilityId: activeReadCapability.id,
+                },
+              ]);
             }}
           />
         </section>

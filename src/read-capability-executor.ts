@@ -23,6 +23,8 @@ export interface ExecuteReadCapabilityInput {
   readonly input?: Readonly<Record<string, JsonValue>>;
   /** Target-app browser request behavior, including its existing auth context. */
   readonly request?: TargetBackendRequest;
+  /** Optional browser cancellation signal owned by the page workflow. */
+  readonly signal?: AbortSignal;
 }
 
 export type ReadResultData = JsonObject | readonly JsonObject[];
@@ -294,6 +296,7 @@ export async function executeReadCapability({
   capability,
   input: suppliedInput,
   request,
+  signal,
 }: ExecuteReadCapabilityInput): Promise<ReadCapabilityResult> {
   assertReadBackendOperation(capability.operation, capability.input);
 
@@ -333,7 +336,10 @@ export async function executeReadCapability({
 
   let response: Response;
   try {
-    response = await requestTargetBackend(request, url.href, { method: "GET" });
+    response = await requestTargetBackend(request, url.href, {
+      method: "GET",
+      ...(signal === undefined ? {} : { signal }),
+    });
   } catch {
     return { outcome: "network-error" };
   }

@@ -871,7 +871,7 @@ Account card
 
 ---
 
-### ISSUE-063 — Render result cards and integrate the read workflow
+### ISSUE-063 — Render result cards and integrate the read workflow — Complete
 
 **Depends on:** ISSUE-061 and ISSUE-062.
 
@@ -880,28 +880,28 @@ to a safe, accessible card or card-list result inside the conversation.
 
 **Acceptance:**
 
-- [ ] the page workflow has explicit states for routing, collecting any missing
+- [x] the page workflow has explicit states for routing, collecting any missing
   read inputs, fetching, presenting, empty result, and failure;
-- [ ] a zero-input request such as "What is my account balance?" can execute the
+- [x] a zero-input request such as "What is my account balance?" can execute the
   developer-declared browser `GET` after a valid route without manufacturing a
   form value;
-- [ ] a parameterized read renders the existing deterministic form system for
+- [x] a parameterized read renders the existing deterministic form system for
   missing or editable inputs before execution;
-- [ ] a successful root object renders only through its declared single-card
+- [x] a successful root object renders only through its declared single-card
   view;
-- [ ] a successful root array renders only through its declared card-list view;
-- [ ] list loading, empty, partial/malformed, and large-result behavior are
+- [x] a successful root array renders only through its declared card-list view;
+- [x] list loading, empty, partial/malformed, and large-result behavior are
   deterministic and documented;
-- [ ] image URLs are validated and rendered with accessible developer-declared
+- [x] image URLs are validated and rendered with accessible developer-declared
   alternative text/fallback behavior;
-- [ ] cards and lists are keyboard-accessible, responsive, and usable within
+- [x] cards and lists are keyboard-accessible, responsive, and usable within
   the conversation transcript;
-- [ ] full backend responses remain browser-local by default;
-- [ ] only an explicit ADR-016 projection may create model-visible context for
+- [x] full backend responses remain browser-local by default;
+- [x] only an explicit ADR-016 projection may create model-visible context for
   a later follow-up such as "Tell me more about the second product";
-- [ ] stale, superseded, cancelled, or duplicated read requests cannot update
+- [x] stale, superseded, cancelled, or duplicated read requests cannot update
   the wrong conversation run;
-- [ ] component/integration tests cover balance, one product, a product list,
+- [x] component/integration tests cover balance, one product, a product list,
   empty results, malformed data, HTTP failure, and overlapping requests.
 
 ---

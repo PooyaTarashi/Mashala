@@ -345,6 +345,44 @@ describe("executeReadCapability", () => {
     expect(execution).not.toHaveProperty("error");
   });
 
+  it("exposes only an explicit ADR-016 projection alongside browser-local data", async () => {
+    const capability = defineReadCapability({
+      id: "projected_balance",
+      description: "Show a balance with selected model context.",
+      operation: {
+        method: "GET",
+        path: "/account/balance",
+        modelContext: {
+          purpose: "result_interpretation",
+          fields: { visibleBalance: "balance" },
+        },
+      },
+      result: objectView,
+    });
+    const execution = await executeReadCapability({
+      baseUrl: "https://target.example",
+      capability,
+      request: responseRequest({
+        balance: 50,
+        access_token: "browser-secret",
+      }),
+    });
+
+    expect(execution).toMatchObject({
+      outcome: "success",
+      data: { balance: 50, access_token: "browser-secret" },
+      modelContext: {
+        purpose: "result_interpretation",
+        data: { visibleBalance: 50 },
+      },
+    });
+    expect(
+      execution.outcome === "success"
+        ? JSON.stringify(execution.modelContext)
+        : "",
+    ).not.toContain("access_token");
+  });
+
   it("sends no body or headers and never redirects through a Mashala server proxy", async () => {
     const request = responseRequest({ balance: 10 });
 

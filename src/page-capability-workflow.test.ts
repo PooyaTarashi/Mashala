@@ -26,6 +26,7 @@ function fillingState() {
     type: "route.matched",
     correlation,
     capabilityId: "transfer_money",
+    capabilityKind: "write",
   });
 }
 
@@ -41,6 +42,7 @@ describe("page capability workflow transition table", () => {
       type: "route.matched",
       correlation,
       capabilityId: "transfer_money",
+      capabilityKind: "write",
     });
     expect(filling.phase).toBe("filling");
 
@@ -143,5 +145,76 @@ describe("page capability workflow transition table", () => {
     });
 
     expect(answered).toEqual({ phase: "idle", runId: 2 });
+  });
+
+  it("uses explicit read collection, fetch, presentation, empty, and stale-run transitions", () => {
+    const routing = transitionPageCapabilityWorkflow(
+      INITIAL_PAGE_CAPABILITY_WORKFLOW,
+      { type: "route.requested", request: routeRequest },
+    );
+    const collecting = transitionPageCapabilityWorkflow(routing, {
+      type: "route.matched",
+      correlation,
+      capabilityId: "show_product",
+      capabilityKind: "read",
+      readHasInput: true,
+    });
+    expect(collecting.phase).toBe("collecting");
+
+    const fetching = transitionPageCapabilityWorkflow(collecting, {
+      type: "read.execution.requested",
+      runId: collecting.runId,
+      capabilityId: "show_product",
+      values: { productId: "42" },
+    });
+    expect(fetching.phase).toBe("fetching");
+
+    const stale = transitionPageCapabilityWorkflow(fetching, {
+      type: "read.execution.finished",
+      runId: fetching.runId + 1,
+      capabilityId: "show_product",
+      result: {
+        outcome: "success",
+        response: Response.json({ title: "Stale" }),
+        data: { title: "Stale" },
+      },
+    });
+    expect(stale).toBe(fetching);
+
+    const presenting = transitionPageCapabilityWorkflow(fetching, {
+      type: "read.execution.finished",
+      runId: fetching.runId,
+      capabilityId: "show_product",
+      result: {
+        outcome: "success",
+        response: Response.json({ title: "Product" }),
+        data: { title: "Product" },
+      },
+    });
+    expect(presenting.phase).toBe("presenting");
+
+    const zeroInputRouting = transitionPageCapabilityWorkflow(
+      INITIAL_PAGE_CAPABILITY_WORKFLOW,
+      { type: "route.requested", request: routeRequest },
+    );
+    const zeroInputFetching = transitionPageCapabilityWorkflow(zeroInputRouting, {
+      type: "route.matched",
+      correlation,
+      capabilityId: "list_products",
+      capabilityKind: "read",
+      readHasInput: false,
+    });
+    expect(zeroInputFetching.phase).toBe("fetching");
+    const empty = transitionPageCapabilityWorkflow(zeroInputFetching, {
+      type: "read.execution.finished",
+      runId: zeroInputFetching.runId,
+      capabilityId: "list_products",
+      result: {
+        outcome: "success",
+        response: Response.json([]),
+        data: [],
+      },
+    });
+    expect(empty.phase).toBe("empty");
   });
 });

@@ -1,13 +1,18 @@
 import type { BackendOperationResult } from "./backend-executor";
 import type { FormValue } from "./form-renderer";
+import type { ReadCapabilityResult } from "./read-capability-executor";
 import type { JsonValue } from "./spec";
 
 export type PageWorkflowPhase =
   | "idle"
   | "routing"
   | "filling"
+  | "collecting"
   | "confirming"
   | "executing"
+  | "fetching"
+  | "presenting"
+  | "empty"
   | "completed"
   | "failed";
 
@@ -27,6 +32,14 @@ interface CapabilityRun {
   readonly formRevision: number;
 }
 
+type InputPhase = "filling" | "collecting";
+
+type SuccessfulReadResult = Extract<ReadCapabilityResult, { outcome: "success" }>;
+type FailedReadResult = Exclude<
+  ReadCapabilityResult,
+  { outcome: "success" | "input-required" }
+>;
+
 export type PageCapabilityWorkflow =
   | {
       readonly phase: "idle";
@@ -38,7 +51,7 @@ export type PageCapabilityWorkflow =
       readonly request: PendingWorkflowRequest;
     }
   | (CapabilityRun & {
-      readonly phase: "filling";
+      readonly phase: InputPhase;
       readonly pendingRequests: readonly PendingWorkflowRequest[];
     })
   | (CapabilityRun & {
@@ -59,6 +72,21 @@ export type PageCapabilityWorkflow =
       readonly reviewedSnapshot: Readonly<Record<string, JsonValue>>;
       readonly result: Exclude<BackendOperationResult, { outcome: "success" }>;
     })
+  | (CapabilityRun & {
+      readonly phase: "fetching";
+    })
+  | (CapabilityRun & {
+      readonly phase: "presenting";
+      readonly result: SuccessfulReadResult;
+    })
+  | (CapabilityRun & {
+      readonly phase: "empty";
+      readonly result: SuccessfulReadResult;
+    })
+  | (CapabilityRun & {
+      readonly phase: "failed";
+      readonly result: FailedReadResult;
+    })
   | {
       readonly phase: "failed";
       readonly runId: number;
@@ -74,6 +102,8 @@ export type PageWorkflowAction =
       readonly type: "route.matched";
       readonly correlation: WorkflowCorrelation;
       readonly capabilityId: string;
+      readonly capabilityKind: "write" | "read";
+      readonly readHasInput?: boolean;
     }
   | {
       readonly type: "extraction.requested";
@@ -128,6 +158,18 @@ export type PageWorkflowAction =
       readonly capabilityId: string;
       readonly result: BackendOperationResult;
     }
+  | {
+      readonly type: "read.execution.requested";
+      readonly runId: number;
+      readonly capabilityId: string;
+      readonly values: FormValue;
+    }
+  | {
+      readonly type: "read.execution.finished";
+      readonly runId: number;
+      readonly capabilityId: string;
+      readonly result: ReadCapabilityResult;
+    }
   | { readonly type: "cancel" }
   | { readonly type: "reset" };
 
@@ -145,7 +187,7 @@ function sameCorrelation(
 }
 
 function matchingPendingRequest(
-  state: Extract<PageCapabilityWorkflow, { phase: "filling" }>,
+  state: Extract<PageCapabilityWorkflow, { phase: InputPhase }>,
   correlation: WorkflowCorrelation,
 ): PendingWorkflowRequest | undefined {
   return state.pendingRequests.find((request) =>
@@ -210,7 +252,12 @@ export function transitionPageCapabilityWorkflow(
         return state;
       }
       return Object.freeze({
-        phase: "filling",
+        phase:
+          action.capabilityKind === "read"
+            ? action.readHasInput === true
+              ? "collecting"
+              : "fetching"
+            : "filling",
         runId: state.runId,
         capabilityId: action.capabilityId,
         values: Object.freeze({}),
@@ -220,7 +267,7 @@ export function transitionPageCapabilityWorkflow(
 
     case "extraction.requested":
       if (
-        state.phase !== "filling" ||
+        (state.phase !== "filling" && state.phase !== "collecting") ||
         state.capabilityId !== action.capabilityId ||
         state.pendingRequests.some(
           (request) => request.eventId === action.request.eventId,
@@ -239,7 +286,7 @@ export function transitionPageCapabilityWorkflow(
 
     case "proposal.accepted":
       if (
-        state.phase !== "filling" ||
+        (state.phase !== "filling" && state.phase !== "collecting") ||
         state.capabilityId !== action.capabilityId ||
         matchingPendingRequest(state, action.correlation) === undefined
       ) {
@@ -261,7 +308,7 @@ export function transitionPageCapabilityWorkflow(
             })
           : state;
       }
-      if (state.phase !== "filling") {
+      if (state.phase !== "filling" && state.phase !== "collecting") {
         return state;
       }
       if (matchingPendingRequest(state, action.correlation) === undefined) {
@@ -288,7 +335,7 @@ export function transitionPageCapabilityWorkflow(
         });
       }
       if (
-        state.phase === "filling" &&
+        (state.phase === "filling" || state.phase === "collecting") &&
         matchingPendingRequest(state, action.correlation) !== undefined
       ) {
         return transitionPageCapabilityWorkflow(state, {
@@ -312,7 +359,7 @@ export function transitionPageCapabilityWorkflow(
 
     case "draft.changed":
       if (
-        state.phase !== "filling" ||
+        (state.phase !== "filling" && state.phase !== "collecting") ||
         state.capabilityId !== action.capabilityId
       ) {
         return state;
@@ -388,11 +435,60 @@ export function transitionPageCapabilityWorkflow(
       }
       return Object.freeze({ ...state, phase: "failed", result: action.result });
 
+    case "read.execution.requested":
+      if (
+        state.phase !== "collecting" ||
+        state.runId !== action.runId ||
+        state.capabilityId !== action.capabilityId
+      ) {
+        return state;
+      }
+      return Object.freeze({
+        phase: "fetching",
+        runId: state.runId,
+        capabilityId: state.capabilityId,
+        values: isolatedValues(action.values),
+        formRevision: state.formRevision,
+      });
+
+    case "read.execution.finished":
+      if (
+        state.phase !== "fetching" ||
+        state.runId !== action.runId ||
+        state.capabilityId !== action.capabilityId
+      ) {
+        return state;
+      }
+      if (action.result.outcome === "input-required") {
+        return Object.freeze({
+          ...state,
+          phase: "collecting",
+          pendingRequests: Object.freeze([]),
+        });
+      }
+      if (action.result.outcome === "success") {
+        const empty =
+          Array.isArray(action.result.data) && action.result.data.length === 0;
+        return Object.freeze({
+          ...state,
+          phase: empty ? "empty" : "presenting",
+          result: action.result,
+        });
+      }
+      return Object.freeze({
+        ...state,
+        phase: "failed",
+        result: action.result,
+      });
+
     case "cancel":
       return state.phase === "executing" ? state : idleAfter(state);
 
     case "reset":
-      return state.phase === "completed" || state.phase === "failed"
+      return state.phase === "completed" ||
+        state.phase === "presenting" ||
+        state.phase === "empty" ||
+        state.phase === "failed"
         ? idleAfter(state)
         : state;
   }
@@ -406,7 +502,7 @@ export function isCorrelatedWorkflowResponse(
     return sameCorrelation(state.request, correlation);
   }
   return (
-    state.phase === "filling" &&
+    (state.phase === "filling" || state.phase === "collecting") &&
     matchingPendingRequest(state, correlation) !== undefined
   );
 }

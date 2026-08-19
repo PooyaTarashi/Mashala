@@ -88,7 +88,8 @@
 }
 
 .routeResult,
-.proposalResult {
+.proposalResult,
+.readLoading {
   background: #f5f6fa;
   border-left-color: #52658f !important;
 }
@@ -103,13 +104,30 @@
 }
 
 .protocolError,
+.readFailure,
 .transportFailure {
   color: #7d1717;
   background: #fff4f4;
 }
 
-.protocolError {
+.protocolError,
+.readFailure {
   border-left-color: #a32626 !important;
+}
+
+.readResult {
+  gap: 0.75rem !important;
+  background: #f7faf8;
+  border-left-color: #1e5e3f !important;
+}
+
+.readEmpty {
+  background: #f7f7f5;
+  border-left-color: #77776f !important;
+}
+
+.resultHeading {
+  font-size: 1rem;
 }
 
 .technicalLabel {

@@ -1,0 +1,100 @@
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: grid;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid #cfcfc8;
+  border-radius: 0.65rem;
+  background: #fff;
+}
+
+.image,
+.imageFallback {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.image {
+  display: block;
+  object-fit: cover;
+  background: #ecece8;
+}
+
+.imageFallback {
+  display: grid;
+  place-items: center;
+  background: #ecece8;
+  color: #5b5b55;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.content {
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+  padding: 0.9rem;
+}
+
+.content h3,
+.content p,
+.facts,
+.facts dd {
+  margin: 0;
+}
+
+.content h3,
+.content p,
+.facts dd {
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: minmax(6rem, auto) minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: baseline;
+}
+
+.fact dt {
+  color: #5b5b55;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.fact dd {
+  text-align: end;
+}
+
+.empty {
+  color: #5b5b55;
+}
+
+.invalid {
+  color: #7d1717;
+}
+
+@media (max-width: 28rem) {
+  .fact {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+
+  .fact dd {
+    text-align: start;
+  }
+}
