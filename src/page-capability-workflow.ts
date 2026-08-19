@@ -2,6 +2,7 @@ import type { BackendOperationResult } from "./backend-executor";
 import type { FormValue } from "./form-renderer";
 import type { ReadCapabilityResult } from "./read-capability-executor";
 import type { JsonValue } from "./spec";
+import type { PersistedConversationWorkflow } from "./conversation-store";
 
 export type PageWorkflowPhase =
   | "idle"
@@ -175,6 +176,38 @@ export type PageWorkflowAction =
 
 export const INITIAL_PAGE_CAPABILITY_WORKFLOW: PageCapabilityWorkflow =
   Object.freeze({ phase: "idle", runId: 0 });
+
+/**
+ * Reconstructs only ADR-018's already-validated resumable phases. Pending
+ * requests, confirmation snapshots, execution authority, and backend results
+ * have no representation here.
+ */
+export function restorePageCapabilityWorkflow(
+  workflow: PersistedConversationWorkflow,
+  runId: number,
+): PageCapabilityWorkflow {
+  if (workflow.phase === "idle") {
+    return Object.freeze({ phase: "idle", runId });
+  }
+  const values: Record<string, string | number | boolean> = {};
+  for (const [name, value] of Object.entries(workflow.draft ?? {})) {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      values[name] = value;
+    }
+  }
+  return Object.freeze({
+    phase: workflow.phase,
+    runId,
+    capabilityId: workflow.capabilityId,
+    values: Object.freeze(values),
+    formRevision: 0,
+    pendingRequests: Object.freeze([]),
+  });
+}
 
 function sameCorrelation(
   left: WorkflowCorrelation,

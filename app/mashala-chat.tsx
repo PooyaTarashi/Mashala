@@ -13,6 +13,16 @@ import {
 import type { BackendOperationResult } from "../src/backend-executor";
 import { ConfirmationGate } from "../src/confirmation-gate";
 import {
+  ANONYMOUS_AUTH_SCOPE_TAG,
+  conversationOutcomeText,
+  createConversationStore,
+  type ConversationOutcomeSummary,
+  type ConversationRecord,
+  type ConversationStateUpdate,
+  type ConversationStore,
+  type ConversationStoreResult,
+} from "../src/conversation-store";
+import {
   mergeFormValueProposal,
 } from "../src/form-value-proposal";
 import {
@@ -25,6 +35,7 @@ import {
   activeWorkflowCapabilityId,
   INITIAL_PAGE_CAPABILITY_WORKFLOW,
   isCorrelatedWorkflowResponse,
+  restorePageCapabilityWorkflow,
   transitionPageCapabilityWorkflow,
   workflowFormValues,
   type PageWorkflowAction,
@@ -61,6 +72,11 @@ export interface MashalaChatProps {
   readonly transport?: RuntimeTransport;
   readonly targetBackendBaseUrl?: string | URL;
   readonly targetBackendRequest?: TargetBackendRequest;
+  /** Opaque, non-secret target-auth isolation tag. Never a credential. */
+  readonly authScopeTag?: string;
+  /** Injectable provider-neutral store; primarily useful to generated integrations and tests. */
+  readonly conversationStore?: ConversationStore;
+  /** Explicit IDs retain the pre-ISSUE-071 ephemeral test/integration mode. */
   readonly conversationId?: string;
   readonly createEventId?: () => string;
 }
@@ -155,6 +171,81 @@ function readFailureMessage(result: Exclude<ReadCapabilityResult, { outcome: "su
 
 function readEntryId(runId: number, capabilityId: string): string {
   return `read-${String(runId)}-${capabilityId}`;
+}
+
+function freshEphemeralConversationId(): string {
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  return `browser_conversation_${Array.from(bytes, (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("")}`;
+}
+
+function entriesFromRecord(
+  record: ConversationRecord,
+  application: MashalaSpec,
+): readonly ConversationEntry[] {
+  return [
+    ...record.transcript.map((entry): ConversationEntry => ({
+      id: entry.eventId,
+      kind: entry.role,
+      text: entry.text,
+    })),
+    ...record.outcomes.map((summary, index): ConversationEntry => ({
+      id: `outcome-${String(summary.completedAt)}-${String(index)}`,
+      kind: "assistant",
+      text: conversationOutcomeText(summary, application),
+    })),
+  ];
+}
+
+function writeOutcomeSummary(
+  capabilityId: string,
+  result: BackendOperationResult,
+): Omit<ConversationOutcomeSummary, "completedAt"> {
+  if (result.outcome === "success") {
+    return { capabilityId, capabilityKind: "write", outcome: "succeeded" };
+  }
+  if (result.outcome === "http-error") {
+    return {
+      capabilityId,
+      capabilityKind: "write",
+      outcome: "target_http_error",
+      httpStatus: result.response.status,
+    };
+  }
+  return { capabilityId, capabilityKind: "write", outcome: "network_error" };
+}
+
+function readOutcomeSummary(
+  capabilityId: string,
+  result: Exclude<ReadCapabilityResult, { outcome: "input-required" }>,
+): Omit<ConversationOutcomeSummary, "completedAt"> {
+  switch (result.outcome) {
+    case "success":
+      return { capabilityId, capabilityKind: "read", outcome: "succeeded" };
+    case "http-error":
+      return {
+        capabilityId,
+        capabilityKind: "read",
+        outcome: "target_http_error",
+        httpStatus: result.response.status,
+      };
+    case "network-error":
+      return { capabilityId, capabilityKind: "read", outcome: "network_error" };
+    case "malformed-json":
+    case "response-shape-error":
+    case "input-error":
+      return { capabilityId, capabilityKind: "read", outcome: "invalid_response" };
+  }
+}
+
+function persistedDraft(values: FormValue): Readonly<Record<string, JsonValue>> {
+  const draft: Record<string, JsonValue> = {};
+  for (const [name, value] of Object.entries(values)) {
+    if (value !== undefined) draft[name] = value;
+  }
+  return Object.freeze(draft);
 }
 
 function renderEntry(entry: ConversationEntry) {
@@ -268,13 +359,21 @@ export function MashalaChat({
   transport = defaultTransport,
   targetBackendBaseUrl,
   targetBackendRequest,
+  authScopeTag = ANONYMOUS_AUTH_SCOPE_TAG,
+  conversationStore,
   conversationId,
   createEventId,
 }: MashalaChatProps) {
   const capabilities = useMemo(() => capabilityMap(application), [application]);
   const reactId = useId();
+  const persistenceEnabled = conversationStore !== undefined || conversationId === undefined;
+  const [store] = useState<ConversationStore | undefined>(() =>
+    persistenceEnabled
+      ? conversationStore ?? createConversationStore({ application, authScopeTag })
+      : undefined,
+  );
   const conversationIdRef = useRef(
-    conversationId ?? `browser_conversation_${reactId}`,
+    conversationId ?? `pending_conversation_${reactId}`,
   );
   const eventSequenceRef = useRef(0);
   const [message, setMessage] = useState("");
@@ -282,6 +381,15 @@ export function MashalaChat({
   const pendingRef = useRef(false);
   const pendingChatEventIdRef = useRef<string | undefined>(undefined);
   const [transportFailure, setTransportFailure] = useState<string>();
+  const [conversationFailure, setConversationFailure] = useState<string>();
+  const [conversationNotice, setConversationNotice] = useState<string>();
+  const [conversationReady, setConversationReady] = useState(!persistenceEnabled);
+  const [restorationPaused, setRestorationPaused] = useState(false);
+  const [conversationOperational, setConversationOperational] = useState(!persistenceEnabled);
+  const conversationOperationalRef = useRef(!persistenceEnabled);
+  const observedAuthScopeRef = useRef(authScopeTag);
+  const loadGenerationRef = useRef(0);
+  const storeCloseTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [entries, setEntries] = useState<readonly ConversationEntry[]>([]);
   const [workflow, setWorkflow] = useState(INITIAL_PAGE_CAPABILITY_WORKFLOW);
   const workflowRef = useRef(workflow);
@@ -304,16 +412,159 @@ export function MashalaChat({
     targetBackendBaseUrl ??
     (typeof window === "undefined" ? "http://localhost" : window.location.origin);
 
+  useEffect(() => {
+    if (store === undefined) return;
+    if (storeCloseTimerRef.current !== undefined) {
+      clearTimeout(storeCloseTimerRef.current);
+      storeCloseTimerRef.current = undefined;
+    }
+    return () => {
+      storeCloseTimerRef.current = setTimeout(() => store.close(), 0);
+    };
+  }, [store]);
+
+  const restoreConversation = useCallback((record: ConversationRecord): void => {
+    conversationIdRef.current = record.conversationId;
+    eventSequenceRef.current = 0;
+    seenServerEventIdsRef.current.clear();
+    usedBrowserEventIdsRef.current.clear();
+    for (const entry of record.transcript) {
+      if (entry.role === "user") usedBrowserEventIdsRef.current.add(entry.eventId);
+      else seenServerEventIdsRef.current.add(entry.eventId);
+    }
+    sentReferenceContextsRef.current.clear();
+    pendingChatEventIdRef.current = undefined;
+    pendingRef.current = false;
+    setPending(false);
+    setMessage("");
+    setTransportFailure(undefined);
+    setEntries(entriesFromRecord(record, application));
+    setRestorationPaused(record.workflow.phase !== "idle");
+    const restored = restorePageCapabilityWorkflow(record.workflow, record.revision);
+    workflowRef.current = restored;
+    setWorkflow(restored);
+  }, [application]);
+
+  const handleStoreFailure = useCallback((
+    result: Exclude<ConversationStoreResult<unknown>, { ok: true }>,
+  ): void => {
+    if (result.code === "expired" && result.replacement !== undefined) {
+      restoreConversation(result.replacement);
+      conversationOperationalRef.current = true;
+      setConversationOperational(true);
+      setConversationReady(true);
+      setConversationFailure(undefined);
+      setConversationNotice("The previous conversation expired and was cleared. Please try again.");
+      return;
+    }
+    conversationOperationalRef.current = false;
+    setConversationOperational(false);
+    pendingChatEventIdRef.current = undefined;
+    pendingRef.current = false;
+    setPending(false);
+    const stopped = Object.freeze({
+      phase: "idle" as const,
+      runId: workflowRef.current.runId + 1,
+    });
+    workflowRef.current = stopped;
+    setWorkflow(stopped);
+    setConversationReady(true);
+    setConversationFailure(result.message);
+    setConversationNotice(undefined);
+  }, [restoreConversation]);
+
+  useEffect(() => {
+    if (store === undefined) return;
+    const generation = ++loadGenerationRef.current;
+    void (async () => {
+      await Promise.resolve();
+      if (generation !== loadGenerationRef.current) return;
+      setConversationReady(false);
+      conversationOperationalRef.current = false;
+      setConversationOperational(false);
+      setConversationFailure(undefined);
+      setConversationNotice(undefined);
+
+      if (observedAuthScopeRef.current !== authScopeTag) {
+        observedAuthScopeRef.current = authScopeTag;
+        const changed = store.changeIdentity(authScopeTag);
+        if (generation !== loadGenerationRef.current) return;
+        if (!changed.ok) {
+          handleStoreFailure(changed);
+          return;
+        }
+        restoreConversation(changed.value);
+        conversationOperationalRef.current = true;
+        setConversationOperational(true);
+        setConversationReady(true);
+        return;
+      }
+
+      const loaded = await store.load();
+      if (generation !== loadGenerationRef.current) return;
+      if (!loaded.ok) {
+        handleStoreFailure(loaded);
+        return;
+      }
+      restoreConversation(loaded.value.record);
+      conversationOperationalRef.current = true;
+      setConversationOperational(true);
+      setConversationReady(true);
+    })();
+  }, [authScopeTag, handleStoreFailure, restoreConversation, store]);
+
   const commitWorkflow = useCallback((action: PageWorkflowAction): boolean => {
     const current = workflowRef.current;
     const next = transitionPageCapabilityWorkflow(current, action);
     if (next === current) {
       return false;
     }
+
+    if (store !== undefined) {
+      if (!conversationOperationalRef.current) return false;
+      const capabilityId =
+        activeWorkflowCapabilityId(next) ?? activeWorkflowCapabilityId(current);
+      const capability =
+        capabilityId === undefined ? undefined : capabilities.get(capabilityId);
+      let outcome: ConversationStateUpdate["outcome"];
+      if (action.type === "execution.finished") {
+        outcome = writeOutcomeSummary(action.capabilityId, action.result);
+      } else if (
+        action.type === "read.execution.finished" &&
+        action.result.outcome !== "input-required"
+      ) {
+        outcome = readOutcomeSummary(action.capabilityId, action.result);
+      } else if (action.type === "cancel" && current.phase === "fetching") {
+        outcome = {
+          capabilityId: current.capabilityId,
+          capabilityKind: "read",
+          outcome: "cancelled",
+        };
+      }
+      const update: ConversationStateUpdate = {
+        phase: next.phase,
+        ...(capability === undefined
+          ? {}
+          : {
+              capabilityId: capability.id,
+              capabilityKind: capability.kind,
+              ...(capability.kind === "read"
+                ? { readHasInput: capability.input !== undefined }
+                : {}),
+            }),
+        ...("values" in next ? { draft: persistedDraft(next.values) } : {}),
+        ...(outcome === undefined ? {} : { outcome }),
+      };
+      const persisted = store.update(update);
+      if (!persisted.ok) {
+        handleStoreFailure(persisted);
+        return false;
+      }
+    }
     workflowRef.current = next;
     setWorkflow(next);
     return true;
-  }, []);
+  }, [capabilities, handleStoreFailure, store]);
 
   const nextEventId = useCallback((): string => {
     const supplied = createEventId?.();
@@ -326,6 +577,22 @@ export function MashalaChat({
     usedBrowserEventIdsRef.current.add(unique);
     return unique;
   }, [createEventId]);
+
+  const persistTranscriptEntry = useCallback((entry: {
+    readonly eventId: string;
+    readonly role: "user" | "assistant";
+    readonly text: string;
+    readonly source?: "ordinary" | "backend_projection";
+  }): boolean => {
+    if (store === undefined) return true;
+    if (!conversationOperationalRef.current) return false;
+    const persisted = store.append(entry);
+    if (!persisted.ok) {
+      handleStoreFailure(persisted);
+      return false;
+    }
+    return true;
+  }, [handleStoreFailure, store]);
 
   const applyServerEvents = useCallback((
     request: BrowserToServerEvent,
@@ -473,24 +740,44 @@ export function MashalaChat({
         }
         case "assistant.message":
           standaloneAssistantAnswered ||= workflowRef.current.phase === "routing";
+          if (!persistTranscriptEntry({
+            eventId: event.eventId,
+            role: "assistant",
+            text: event.payload.text,
+            source:
+              request.type === "backend.context.selected"
+                ? "backend_projection"
+                : "ordinary",
+          })) {
+            break;
+          }
           nextEntries.push({
             id: event.eventId,
             kind: "assistant",
             text: event.payload.text,
           });
           break;
-        case "capability.route.out_of_scope":
+        case "capability.route.out_of_scope": {
           if (!commitWorkflow({ type: "route.out_of_scope", correlation })) {
+            break;
+          }
+          const text =
+            event.payload.message ??
+            "That request is outside this application's declared capabilities.";
+          if (!persistTranscriptEntry({
+            eventId: event.eventId,
+            role: "assistant",
+            text,
+          })) {
             break;
           }
           nextEntries.push({
             id: event.eventId,
             kind: "out-of-scope",
-            text:
-              event.payload.message ??
-              "That request is outside this application's declared capabilities.",
+            text,
           });
           break;
+        }
         case "protocol.error":
           commitWorkflow({ type: "routing.failed", correlation });
           nextEntries.push({
@@ -512,7 +799,7 @@ export function MashalaChat({
     if (nextEntries.length > 0) {
       setEntries((current) => [...current, ...nextEntries]);
     }
-  }, [capabilities, commitWorkflow]);
+  }, [capabilities, commitWorkflow, persistTranscriptEntry]);
 
   const sendReferenceContext = useCallback((
     context: ResolvedReferenceModelContext,
@@ -656,7 +943,13 @@ export function MashalaChat({
       (currentWorkflow.phase === "failed" &&
         !("capabilityId" in currentWorkflow));
 
-    if (text === "" || pendingRef.current || !canSend) {
+    if (
+      text === "" ||
+      pendingRef.current ||
+      !canSend ||
+      !conversationReady ||
+      !conversationOperationalRef.current
+    ) {
       return;
     }
 
@@ -684,6 +977,15 @@ export function MashalaChat({
       conversationId: browserEvent.conversationId,
       kind: currentCapabilityId === undefined ? "route" : "extraction",
     };
+    if (!persistTranscriptEntry({
+      eventId: browserEvent.eventId,
+      role: "user",
+      text,
+    })) {
+      pendingRef.current = false;
+      setPending(false);
+      return;
+    }
     const accepted =
       currentCapabilityId === undefined
         ? commitWorkflow({ type: "route.requested", request })
@@ -746,22 +1048,58 @@ export function MashalaChat({
     }
   }
 
+  function clearConversation(): void {
+    if (store !== undefined) {
+      const cleared = store.clear();
+      if (!cleared.ok) {
+        handleStoreFailure(cleared);
+        return;
+      }
+      restoreConversation(cleared.value);
+    } else {
+      conversationIdRef.current = freshEphemeralConversationId();
+      eventSequenceRef.current = 0;
+      seenServerEventIdsRef.current.clear();
+      usedBrowserEventIdsRef.current.clear();
+      sentReferenceContextsRef.current.clear();
+      pendingChatEventIdRef.current = undefined;
+      pendingRef.current = false;
+      setPending(false);
+      setMessage("");
+      setEntries([]);
+      setRestorationPaused(false);
+      workflowRef.current = INITIAL_PAGE_CAPABILITY_WORKFLOW;
+      setWorkflow(INITIAL_PAGE_CAPABILITY_WORKFLOW);
+      setTransportFailure(undefined);
+    }
+    conversationOperationalRef.current = true;
+    setConversationOperational(true);
+    setConversationFailure(undefined);
+    setConversationNotice("Conversation cleared.");
+  }
+
   const canCompose =
-    workflow.phase === "idle" ||
-    workflow.phase === "filling" ||
-    workflow.phase === "collecting" ||
-    (workflow.phase === "failed" && !("capabilityId" in workflow));
+    conversationReady &&
+    conversationOperational &&
+    (workflow.phase === "idle" ||
+      workflow.phase === "filling" ||
+      workflow.phase === "collecting" ||
+      (workflow.phase === "failed" && !("capabilityId" in workflow)));
   const canCancel =
-    workflow.phase === "routing" ||
-    workflow.phase === "filling" ||
-    workflow.phase === "collecting" ||
-    workflow.phase === "fetching" ||
-    workflow.phase === "confirming";
+    conversationReady &&
+    conversationOperational &&
+    (workflow.phase === "routing" ||
+      workflow.phase === "filling" ||
+      workflow.phase === "collecting" ||
+      workflow.phase === "fetching" ||
+      workflow.phase === "confirming");
   const canReset =
-    workflow.phase === "completed" ||
-    workflow.phase === "presenting" ||
-    workflow.phase === "empty" ||
-    workflow.phase === "failed";
+    conversationReady &&
+    conversationOperational &&
+    (workflow.phase === "completed" ||
+      workflow.phase === "presenting" ||
+      workflow.phase === "empty" ||
+      workflow.phase === "failed");
 
   return (
     <main className={styles.page}>
@@ -780,6 +1118,35 @@ export function MashalaChat({
         >
           Workflow state: {workflow.phase.toUpperCase()}
         </p>
+        {!conversationReady ? (
+          <p className={styles.status} role="status" aria-live="polite">
+            Restoring this tab&apos;s conversation…
+          </p>
+        ) : null}
+        {conversationFailure === undefined ? null : (
+          <p className={styles.transportFailure} role="alert">
+            <strong>Conversation unavailable:</strong> {conversationFailure}
+          </p>
+        )}
+        {conversationNotice === undefined ? null : (
+          <p className={styles.status} role="status" aria-live="polite">
+            {conversationNotice}
+          </p>
+        )}
+        {restorationPaused ? (
+          <div>
+            <p className={styles.status}>
+              A safe draft was restored. No backend request has been made.
+            </p>
+            <button
+              className={styles.secondaryAction}
+              type="button"
+              onClick={() => setRestorationPaused(false)}
+            >
+              Resume saved draft
+            </button>
+          </div>
+        ) : null}
         {entries.length === 0 ? (
           <p className={styles.empty}>Describe what you want to do.</p>
         ) : (
@@ -850,9 +1217,21 @@ export function MashalaChat({
             Start another request
           </button>
         ) : null}
+
+        <button
+          className={styles.secondaryAction}
+          type="button"
+          disabled={!conversationReady || conversationFailure !== undefined}
+          onClick={clearConversation}
+        >
+          Clear conversation
+        </button>
       </section>
 
-      {activeWriteCapability === undefined ? null : (
+      {!conversationReady ||
+      !conversationOperational ||
+      restorationPaused ||
+      activeWriteCapability === undefined ? null : (
         <section
           className={styles.capability}
           aria-labelledby="active-capability-heading"
@@ -911,7 +1290,10 @@ export function MashalaChat({
         </section>
       )}
 
-      {activeReadCapability?.input === undefined ||
+      {!conversationReady ||
+      !conversationOperational ||
+      restorationPaused ||
+      activeReadCapability?.input === undefined ||
       workflow.phase !== "collecting" ? null : (
         <section
           className={styles.capability}

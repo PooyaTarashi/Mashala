@@ -988,22 +988,22 @@ the LLM provider and target-backend authentication mechanism.
 
 **Acceptance:**
 
-- [ ] a provider-neutral conversation store interface implements the lifecycle
+- [x] a provider-neutral conversation store interface implements the lifecycle
   selected by ISSUE-070;
-- [ ] new, load, append, update, expire, clear, and logout transitions are
+- [x] new, load, append, update, expire, clear, and logout transitions are
   explicit and deterministic;
-- [ ] conversation records are isolated by the accepted application/user/session
+- [x] conversation records are isolated by the accepted application/user/session
   identity keys without storing the target credential itself;
-- [ ] the transcript records user and assistant messages plus safe structured
+- [x] the transcript records user and assistant messages plus safe structured
   capability/read-result summaries;
-- [ ] active capability and workflow state cannot be restored into an illegal
+- [x] active capability and workflow state cannot be restored into an illegal
   transition or authorize an old confirmation snapshot;
-- [ ] storage failures produce sanitized UI behavior and no target-backend side
+- [x] storage failures produce sanitized UI behavior and no target-backend side
   effect;
-- [ ] retention and size limits are enforced;
-- [ ] tests cover refresh/reload when supported, expiry, clear conversation,
+- [x] retention and size limits are enforced;
+- [x] tests cover refresh/reload when supported, expiry, clear conversation,
   logout, identity change, isolation, corruption, and concurrent updates;
-- [ ] no provider-specific session object or target-backend credential enters
+- [x] no provider-specific session object or target-backend credential enters
   the storage interface.
 
 ---
