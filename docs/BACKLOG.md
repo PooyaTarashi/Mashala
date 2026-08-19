@@ -708,3 +708,433 @@ was added for the test harness.
 4. ISSUE-052 (orchestration robustness)
 5. ISSUE-051 (classifier) — complete
 6. ISSUE-054 (E2E tests) — complete
+
+---
+
+# P6 — Read capabilities and deterministic result views
+
+These issues add natural-language requests that read target-backend data, such
+as "What is my account balance?" and "Show me the products." Authenticated
+reads continue to execute in the user's browser through `TargetBackendRequest`.
+The Mashala server must not become a target-backend proxy.
+
+ADR-012 currently limits capability operations to JSON-body `POST`, `PUT`, and
+`PATCH` requests. ISSUE-060 must therefore be completed and accepted before any
+read-capability implementation changes the canonical contract.
+
+### ISSUE-060 — Define the canonical read-capability and result-view contract
+
+**Goal:** Propose and accept an ADR for developer-declared browser-executed
+`GET` capabilities and deterministic result presentation.
+
+The ADR should define the smallest authoring and compiled contracts needed for
+both of these examples:
+
+```text
+"What is my account balance?"
+  -> GET one object
+  -> render one developer-declared card
+
+"Show me the products"
+  -> GET an array of objects
+  -> render a developer-declared list of cards
+```
+
+It must also decide how an optional deterministic input form maps validated
+values to an allow-listed path placeholder and/or query parameter. This is
+needed for requests such as "Show product 42" or "Show products below 100"
+without allowing the LLM to construct URLs.
+
+**Acceptance:**
+
+- [ ] a new ADR explicitly supersedes or extends ADR-012's write-only operation
+  clauses and selects the next compatible `MashalaSpec` version;
+- [ ] the contract distinguishes write capabilities from read capabilities
+  without weakening existing write confirmation rules;
+- [ ] a read capability declares exactly one `GET` operation with a
+  root-relative developer-authored path;
+- [ ] a read capability may have no input fields or a deterministic compiled
+  input form for identifiers/filters;
+- [ ] any path-placeholder or query-parameter mapping is explicit,
+  allow-listed, and derived only from schema-valid form values;
+- [ ] the LLM may route to a declared read capability and propose declared
+  input values, but cannot invent a method, URL, parameter, response mapping,
+  or presentation;
+- [ ] the contract supports a developer-declared single-card result and a
+  developer-declared list-of-cards result;
+- [ ] the result declaration maps backend response properties to safe,
+  deterministic presentation fields and contains no arbitrary HTML,
+  JavaScript, React component, or executable transform;
+- [ ] the minimum supported response roots are specified: one JSON object for
+  a card and one JSON array of objects for a card list;
+- [ ] support or deferral of wrapped/paginated arrays such as `{ results: [] }`
+  is decided explicitly;
+- [ ] displaying a backend result in the browser does not automatically make
+  that result visible to the Mashala server or LLM;
+- [ ] ADR-016 remains authoritative whenever selected result data is needed for
+  later language interpretation;
+- [ ] target-backend credentials remain absent from the spec, runtime events,
+  model context, and persisted conversation data.
+
+**Out of scope:** arbitrary REST clients, model-generated URLs, generic
+response transformation languages, server-side target-backend proxying, and
+arbitrary model-generated UI.
+
+---
+
+### ISSUE-061 — Implement the read-capability DSL and browser fetch executor
+
+**Depends on:** ISSUE-060.
+
+**Goal:** Let a developer declare a typed read capability and let the browser
+execute its fixed `GET` operation using the target application's existing auth
+integration.
+
+The authoring API name should be chosen by ISSUE-060. A possible shape for
+discussion is `defineReadCapability` or `defineFetchCapability`; this backlog
+does not make that naming decision silently.
+
+**Acceptance:**
+
+- [ ] typed developer authoring supports a stable ID, routing description,
+  optional input fields, one declared `GET` operation, and one declared result
+  view;
+- [ ] compilation produces the accepted versioned canonical representation;
+- [ ] zero-input reads support an account-balance-style request;
+- [ ] parameterized reads accept only values validated by the compiled input
+  form;
+- [ ] validated values are mapped only through the operation's declared
+  placeholder/query bindings;
+- [ ] missing required input renders the deterministic form and does not
+  execute the request;
+- [ ] the request executes directly in the browser through the same
+  `TargetBackendRequest` used by reference reads and confirmed writes;
+- [ ] the executor sends no JSON body for `GET` and accepts no LLM-provided
+  method, URL, headers, or credentials;
+- [ ] target-backend success, non-2xx HTTP failure, malformed JSON, response
+  shape failure, and rejected fetch are distinct sanitized outcomes;
+- [ ] target-backend authorization remains authoritative;
+- [ ] focused tests cover no-input reads, validated parameters, URL encoding,
+  undeclared parameters, authentication integration, HTTP errors, network
+  errors, and absence of a Mashala-server proxy.
+
+---
+
+### ISSUE-062 — Implement a developer-defined result-card DSL and compiler
+
+**Depends on:** ISSUE-060.
+
+**Goal:** Give developers a deterministic output-authoring surface analogous
+to the form DSL, for describing how safe portions of a successful read response
+appear in the browser.
+
+The first version should cover cards such as:
+
+```text
+Product card
+  image       <- image_url
+  title       <- title
+  description <- description
+  price       <- price, formatted as currency
+
+Account card
+  title       <- fixed developer text such as "Account balance"
+  balance     <- balance, formatted as currency
+  status      <- status
+```
+
+**Acceptance:**
+
+- [ ] typed authoring supports one card and a list of repeated cards;
+- [ ] a card can declare a title, optional image, optional description, and
+  developer-labeled facts such as price, balance, status, or account number;
+- [ ] response values are selected only from explicit developer-declared
+  direct properties in the accepted first version;
+- [ ] supported formatters are a small deterministic allowlist, such as plain
+  text, number, currency, date/time, and safe image URL;
+- [ ] developer-authored fixed labels/text are distinguished from backend data;
+- [ ] the compiler emits isolated JSON-serializable metadata with no functions,
+  HTML, JSX, CSS injection, or provider-specific objects;
+- [ ] malformed mappings, duplicate field IDs, unsupported formatters, missing
+  required mappings, and incompatible card/list response roots fail clearly;
+- [ ] currency formatting requires explicit developer configuration and does
+  not let the model guess a currency;
+- [ ] card declarations are presentation authority only and cannot authorize a
+  backend operation or alter workflow state;
+- [ ] unit and type-level tests cover a balance card, product card, product-card
+  list, invalid declarations, and deterministic compiled output.
+
+---
+
+### ISSUE-063 — Render result cards and integrate the read workflow
+
+**Depends on:** ISSUE-061 and ISSUE-062.
+
+**Goal:** Complete the browser flow from a routed natural-language read request
+to a safe, accessible card or card-list result inside the conversation.
+
+**Acceptance:**
+
+- [ ] the page workflow has explicit states for routing, collecting any missing
+  read inputs, fetching, presenting, empty result, and failure;
+- [ ] a zero-input request such as "What is my account balance?" can execute the
+  developer-declared browser `GET` after a valid route without manufacturing a
+  form value;
+- [ ] a parameterized read renders the existing deterministic form system for
+  missing or editable inputs before execution;
+- [ ] a successful root object renders only through its declared single-card
+  view;
+- [ ] a successful root array renders only through its declared card-list view;
+- [ ] list loading, empty, partial/malformed, and large-result behavior are
+  deterministic and documented;
+- [ ] image URLs are validated and rendered with accessible developer-declared
+  alternative text/fallback behavior;
+- [ ] cards and lists are keyboard-accessible, responsive, and usable within
+  the conversation transcript;
+- [ ] full backend responses remain browser-local by default;
+- [ ] only an explicit ADR-016 projection may create model-visible context for
+  a later follow-up such as "Tell me more about the second product";
+- [ ] stale, superseded, cancelled, or duplicated read requests cannot update
+  the wrong conversation run;
+- [ ] component/integration tests cover balance, one product, a product list,
+  empty results, malformed data, HTTP failure, and overlapping requests.
+
+---
+
+### ISSUE-064 — Add read-capability end-to-end fixtures and examples
+
+**Depends on:** ISSUE-063.
+
+**Goal:** Prove the new read contract using realistic account and shop examples
+without live credentials, providers, or external services.
+
+**Acceptance:**
+
+- [ ] one documented example declares and renders an authenticated account
+  balance card;
+- [ ] one documented example declares and renders a single product card with
+  image URL, title, description, and price;
+- [ ] one documented example declares and renders a list of product cards;
+- [ ] Playwright proves that each target-backend `GET` goes directly from the
+  browser to the fixture backend;
+- [ ] tests prove that read responses and target-session credentials are absent
+  from `/api/runtime` traffic unless an explicit safe projection is declared;
+- [ ] tests cover routing, optional input-form completion, loading, success,
+  empty list, malformed result, authorization failure, and network failure;
+- [ ] no test requires a real LLM, target-backend credential, or external
+  network call.
+
+---
+
+# P7 — Multi-turn conversation and chatroom experience
+
+The desired experience is closer to a full chat application: it maintains the
+current conversation, understands follow-up messages, remembers the user's
+current goal and recent completed actions, and can still route to declared
+capabilities.
+
+"Knowing who the user is" must not mean giving the LLM a password, session
+cookie, access token, refresh token, or unrestricted user record. The target
+application continues to own authentication. Any display profile or model-
+visible identity data requires an explicit, minimal, non-credential contract.
+
+ADR-011 currently selects ephemeral in-memory conversation state for v0.1.
+ISSUE-070 must be decided before durable or cross-refresh memory is added.
+
+### ISSUE-070 — Decide the conversation identity, memory, and persistence model
+
+**Goal:** Write and accept an ADR defining what Mashala remembers, for whom,
+for how long, and where that state lives.
+
+**Acceptance:**
+
+- [ ] the ADR distinguishes target-app authentication, browser UI identity,
+  Mashala conversation identity, and model-visible user context;
+- [ ] target-backend credentials are forbidden from conversation records and
+  model context;
+- [ ] a minimal optional target-app-supplied display profile is defined, or
+  explicitly deferred, with developer allowlisting for any model-visible
+  properties;
+- [ ] conversation state includes a bounded transcript, active goal/capability,
+  current deterministic workflow state, and safe summaries of recent outcomes;
+- [ ] raw full backend responses are excluded from memory by default;
+- [ ] read/write outcome summaries retain only explicitly allowed information;
+- [ ] ephemeral, refresh-persistent, and durable/cross-device behavior are
+  compared, and the chosen first implementation is explicit;
+- [ ] storage ownership, user/session isolation, retention, deletion, expiry,
+  and logout behavior are defined;
+- [ ] prompt/context size is bounded through deterministic selection and/or
+  summarization rules;
+- [ ] summaries are treated as untrusted model-derived data and cannot become
+  execution authority;
+- [ ] concurrent tabs, stale conversations, signed-out users, and changed
+  target-app identity have safe behavior;
+- [ ] the ADR explains how it supersedes or extends ADR-011's v0.1 ephemeral
+  state without changing ADR-003, ADR-006, ADR-007, or ADR-016.
+
+---
+
+### ISSUE-071 — Implement isolated conversation storage and lifecycle
+
+**Depends on:** ISSUE-070.
+
+**Goal:** Implement the accepted conversation-state lifecycle independently of
+the LLM provider and target-backend authentication mechanism.
+
+**Acceptance:**
+
+- [ ] a provider-neutral conversation store interface implements the lifecycle
+  selected by ISSUE-070;
+- [ ] new, load, append, update, expire, clear, and logout transitions are
+  explicit and deterministic;
+- [ ] conversation records are isolated by the accepted application/user/session
+  identity keys without storing the target credential itself;
+- [ ] the transcript records user and assistant messages plus safe structured
+  capability/read-result summaries;
+- [ ] active capability and workflow state cannot be restored into an illegal
+  transition or authorize an old confirmation snapshot;
+- [ ] storage failures produce sanitized UI behavior and no target-backend side
+  effect;
+- [ ] retention and size limits are enforced;
+- [ ] tests cover refresh/reload when supported, expiry, clear conversation,
+  logout, identity change, isolation, corruption, and concurrent updates;
+- [ ] no provider-specific session object or target-backend credential enters
+  the storage interface.
+
+---
+
+### ISSUE-072 — Build bounded multi-turn context and follow-up capability routing
+
+**Depends on:** ISSUE-071.
+
+**Goal:** Let the conversational runtime understand safe follow-ups using the
+current goal, recent turns, and recent declared-capability outcomes while
+keeping all side effects deterministic.
+
+**Acceptance:**
+
+- [ ] each new message is classified and routed using a bounded, explicitly
+  assembled conversation context rather than the latest utterance alone;
+- [ ] context can include the current goal, active declared capability, valid
+  draft values, recent user/assistant turns, and safe recent outcome summaries;
+- [ ] optional model-visible user profile data is included only according to
+  ISSUE-070's explicit allowlist;
+- [ ] follow-ups such as "do it again," "use the second product," "change the
+  amount to 50," and "what did I just do?" have defined safe behavior;
+- [ ] references to backend results use only previously authorized ADR-016
+  projections, never a hidden full response;
+- [ ] the model may propose intent, capability, and field updates but cannot
+  restore an expired action, reuse confirmation, invent a capability, or
+  execute an operation;
+- [ ] switching goals invalidates incompatible pending workflow state;
+- [ ] completed actions are described as completed only from deterministic
+  browser-observed outcomes, not model assumption;
+- [ ] context truncation/summarization preserves correlation and safety-critical
+  workflow facts;
+- [ ] tests cover follow-up extraction, goal switching, recent-action questions,
+  ambiguous pronouns, stale context, malicious stored content, and provider
+  failure.
+
+---
+
+### ISSUE-073 — Evaluate reusable React chat UI systems
+
+**Goal:** Determine whether a maintained existing chat UI system reduces bugs
+and implementation time compared with extending Mashala's current components.
+
+This is an evaluation issue, not pre-approval to add a dependency.
+
+**Acceptance:**
+
+- [ ] evaluate a small shortlist of actively maintained React chat UI systems
+  against the repository's installed Next.js and React versions;
+- [ ] record license, maintenance activity, bundle/runtime cost, accessibility,
+  mobile behavior, theming, and server/client component constraints;
+- [ ] verify that custom deterministic forms, confirmation reviews, result
+  cards, errors, and loading states can render inline as message content;
+- [ ] reject libraries that require provider secrets in the browser, own target
+  authentication, assume arbitrary tool execution, or force a target-backend
+  proxy;
+- [ ] determine whether non-streaming operation is supported; streaming must not
+  be added merely because a library expects it;
+- [ ] compare adoption cost with improving the existing `MashalaChat` component;
+- [ ] document the decision to adopt one library or keep the current in-house
+  UI, including the smallest dependency change justified by the evidence;
+- [ ] no dependency is added until this issue records the decision.
+
+---
+
+### ISSUE-074 — Implement the full chatroom-style frontend
+
+**Depends on:** ISSUE-071, ISSUE-072, and ISSUE-073.
+
+**Goal:** Present the complete multi-turn Mashala experience as a polished,
+accessible chatroom while retaining deterministic forms, cards, confirmation,
+and browser execution.
+
+**Acceptance:**
+
+- [ ] the transcript displays ordered user messages, assistant messages,
+  capability forms, confirmation reviews, read-result cards/lists, outcomes,
+  and errors as coherent conversation items;
+- [ ] restored history is visibly distinguished from pending/current work and
+  cannot replay an operation;
+- [ ] the composer supports keyboard submission, multiline input, disabled and
+  pending states, retry where safe, and protection against duplicate sends;
+- [ ] focus management, live-region announcements, contrast, labels, and
+  keyboard navigation meet the project's accessibility expectations;
+- [ ] scroll behavior does not steal the user's position when reviewing an old
+  message and provides a deterministic way to return to the newest message;
+- [ ] responsive behavior is usable on mobile and desktop;
+- [ ] users can start a new conversation and clear history according to the
+  accepted lifecycle;
+- [ ] current target-app identity/session state is visible without exposing a
+  credential;
+- [ ] the selected third-party system, if any, remains a presentation layer and
+  cannot become routing, workflow, confirmation, or execution authority;
+- [ ] component tests cover long histories, embedded forms/cards, restored
+  history, pending messages, retry, clear/new conversation, accessibility, and
+  mobile layout.
+
+---
+
+### ISSUE-075 — Add multi-turn conversation end-to-end coverage
+
+**Depends on:** ISSUE-074.
+
+**Goal:** Prove that the ChatGPT-like experience remembers safe context and
+triggers only declared capabilities across multiple turns.
+
+**Acceptance:**
+
+- [ ] an end-to-end scenario identifies the signed-in user only through the
+  accepted non-credential profile/session boundary;
+- [ ] a multi-turn transaction collects values over several messages, renders
+  an editable form, requires confirmation, and performs one browser-direct
+  backend request;
+- [ ] a completed action can be discussed in a later turn using only its safe
+  recorded summary;
+- [ ] a read result can support a follow-up only when its model-visible
+  projection was explicitly declared;
+- [ ] reload/restoration behavior matches ISSUE-070 and cannot replay a write;
+- [ ] switching users or logging out prevents conversation leakage;
+- [ ] a malicious prior message, backend field, or stored summary cannot invent
+  an operation or bypass validation/confirmation;
+- [ ] tests run with fake providers, deterministic local persistence, and local
+  target-backend fixtures, with no real credentials or external network.
+
+---
+
+## Suggested execution order for P6 and P7
+
+1. ISSUE-060 — decide the read/result contract before changing the spec;
+2. ISSUE-061 and ISSUE-062 — implement read execution and result authoring as
+   separate focused changes;
+3. ISSUE-063 — integrate read workflow and rendering;
+4. ISSUE-064 — prove account and product examples end to end;
+5. ISSUE-070 — decide identity, memory, privacy, and persistence;
+6. ISSUE-071 — implement the accepted conversation lifecycle;
+7. ISSUE-072 — add bounded multi-turn context and safe follow-ups;
+8. ISSUE-073 — evaluate chat UI systems before selecting a dependency;
+9. ISSUE-074 — implement the chatroom experience;
+10. ISSUE-075 — prove multi-turn safety and behavior end to end.
