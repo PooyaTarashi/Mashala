@@ -125,7 +125,7 @@ describe("runtime message classification handoff", () => {
     );
     expect(routingRequest?.outputSchema).toHaveProperty(
       "properties.capabilityId.enum",
-      ["transfer_money"],
+      ["transfer_money", "account_balance", "show_product", "list_products"],
     );
     expect(routingRequest?.input).not.toContain("/transfers");
     expect(routingRequest?.input).not.toContain("confirmation");

@@ -2,6 +2,11 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 
 import mashalaBankDemo from "../mashala.config";
 import { defineCapability } from "./capabilities";
+import {
+  accountBalance,
+  productList,
+  singleProduct,
+} from "./examples/read-capabilities";
 import { transferMoney } from "./examples/transfer-money";
 import { f } from "./fields";
 import { compileForm } from "./forms";
@@ -179,7 +184,12 @@ describe("canonical executable example", () => {
       path: "/transfers",
     });
     expect(transferMoney.confirmation).toBe("required");
-    expect(mashalaBankDemo.capabilities).toEqual([transferMoney]);
+    expect(mashalaBankDemo.capabilities).toEqual([
+      transferMoney,
+      accountBalance,
+      singleProduct,
+      productList,
+    ]);
   });
 
   it("conforms to the canonical capability and top-level spec types", () => {

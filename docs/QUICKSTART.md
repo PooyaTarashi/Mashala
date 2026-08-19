@@ -1,6 +1,6 @@
 # Mashala Quickstart
 
-This guide describes the developer-facing pieces that exist through ISSUE-048.
+This guide describes the developer-facing pieces that exist through ISSUE-064.
 It uses a neutral transactional backend. The repository does not yet provide
 a project generator or one command that assembles a complete generated
 frontend, so some integration remains manual.
@@ -52,13 +52,18 @@ package export that creates an application. Create a TypeScript module in the
 application/source tree and import the current modules by repository path:
 
 ~~~ts
-import { defineCapability } from "../src/capabilities";
+import {
+  defineCapability,
+  defineReadCapability,
+  result,
+} from "../src/capabilities";
 import { f } from "../src/fields";
 import type { MashalaSpec } from "../src/spec";
 ~~~
 
-The current Next.js page is only a scaffold. Connecting a spec to a
-conversation page, transport, and target-backend origin is manual.
+The repository application definition in `mashala.config.ts` is connected to
+the current conversation page. Project generation and general target-app
+integration remain manual.
 
 ## 4. Define application metadata
 
@@ -68,7 +73,7 @@ The top-level contract is MashalaSpec in src/spec.ts:
 import type { MashalaSpec } from "../src/spec";
 
 export const appSpec: MashalaSpec = {
-  specVersion: "0.2",
+  specVersion: "0.3",
   app: {
     id: "service_portal",
     name: "Service Portal",
@@ -119,7 +124,7 @@ export const createRequest = defineCapability({
 });
 
 export const appSpec: MashalaSpec = {
-  specVersion: "0.2",
+  specVersion: "0.3",
   app: {
     id: "service_portal",
     name: "Service Portal",
@@ -132,6 +137,14 @@ export const appSpec: MashalaSpec = {
 The compiler binds form, operation, and policy into one serializable
 declaration. Headers, credentials, arbitrary functions, and absolute URLs are
 not part of this contract.
+
+### Read-capability examples
+
+Goal-level reads use `defineReadCapability` with one declared browser `GET`
+and one `result.card` or `result.cardList` view. The repository includes
+executable authenticated-balance, single-product, and product-list examples in
+`src/examples/read-capabilities.ts`; they are documented with their local E2E
+fixtures and privacy assertions in `docs/READ_CAPABILITY_EXAMPLES.md`.
 
 ## 6. Field DSL
 

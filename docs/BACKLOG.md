@@ -906,7 +906,7 @@ to a safe, accessible card or card-list result inside the conversation.
 
 ---
 
-### ISSUE-064 — Add read-capability end-to-end fixtures and examples
+### ISSUE-064 — Add read-capability end-to-end fixtures and examples — Complete
 
 **Depends on:** ISSUE-063.
 
@@ -915,18 +915,18 @@ without live credentials, providers, or external services.
 
 **Acceptance:**
 
-- [ ] one documented example declares and renders an authenticated account
+- [x] one documented example declares and renders an authenticated account
   balance card;
-- [ ] one documented example declares and renders a single product card with
+- [x] one documented example declares and renders a single product card with
   image URL, title, description, and price;
-- [ ] one documented example declares and renders a list of product cards;
-- [ ] Playwright proves that each target-backend `GET` goes directly from the
+- [x] one documented example declares and renders a list of product cards;
+- [x] Playwright proves that each target-backend `GET` goes directly from the
   browser to the fixture backend;
-- [ ] tests prove that read responses and target-session credentials are absent
+- [x] tests prove that read responses and target-session credentials are absent
   from `/api/runtime` traffic unless an explicit safe projection is declared;
-- [ ] tests cover routing, optional input-form completion, loading, success,
+- [x] tests cover routing, optional input-form completion, loading, success,
   empty list, malformed result, authorization failure, and network failure;
-- [ ] no test requires a real LLM, target-backend credential, or external
+- [x] no test requires a real LLM, target-backend credential, or external
   network call.
 
 ---

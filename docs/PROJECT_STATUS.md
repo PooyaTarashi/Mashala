@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**P6 read capabilities, browser execution, deterministic result rendering, and the integrated read workflow are implemented.**
+**P6 read capabilities, browser execution, deterministic result rendering, the integrated read workflow, and local end-to-end examples are implemented.**
 
 ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, a strict non-streaming HTTP boundary for canonical runtime events, and a minimal accessible chat/form page for one happy-path transaction.
 
@@ -20,6 +20,14 @@ execution. The deterministic result DSL/compiler now emits validated, isolated
 card or repeated-card metadata with the closed formatter allowlist. The page
 now executes routed reads, collects declared input when present, and renders
 validated results inline through those declarations.
+
+ISSUE-064 is complete. The assembled application now includes public-DSL
+examples for an authenticated balance card, an identifier-bound product card,
+and a product-card list. Playwright exercises them through a deterministic
+local target backend and fake runtime, including loading, success, empty,
+malformed, authorization, and network outcomes. Request recording proves the
+declared GETs originate in the browser and that target session data and full
+responses do not enter `/api/runtime` traffic.
 
 ## Accepted decisions
 
@@ -185,8 +193,11 @@ validated results inline through those declarations.
 
 ## P5 implementation
 
-- ISSUE-053 — `defineMashalaApplication` is the single application-level helper for canonical app metadata plus capabilities. It assigns spec version `0.2`, validates the complete compiled spec, rejects unknown configuration keys, and returns frozen isolated JSON data.
-- The repository application definition is `mashala.config.ts` and declares the existing `transfer_money` fixture. Its serializable output contains only `specVersion`, `app`, and `capabilities`.
+- ISSUE-053 — `defineMashalaApplication` is the single application-level helper for canonical app metadata plus capabilities. It assigns the current spec version `0.3`, validates the complete compiled spec, rejects unknown configuration keys, and returns frozen isolated JSON data.
+- The repository application definition is `mashala.config.ts` and declares
+  the existing `transfer_money` fixture plus the ISSUE-064 balance and product
+  reads. Its serializable output contains only `specVersion`, `app`, and
+  `capabilities`.
 - The server-only `assembleMashalaApplication` boundary requires the validated application plus `LlmProvider` and `DocumentationRetriever` instances. Missing definitions, malformed/incompatible specs, malformed capabilities, and missing dependencies use stable sanitized errors.
 - Runtime capability lookup returns only declarations from the validated spec. No target-backend credential, proxy setting, request transformation, transport, UI, classifier, workflow orchestration, or new RAG/auth behavior was added.
 - ISSUE-049 — `POST /api/runtime` accepts exactly one validated `user.message` or `backend.context.selected` in `{ "event": ... }` and returns validated canonical server events in the ordered `{ "events": [...] }` frame.
@@ -268,6 +279,16 @@ validated results inline through those declarations.
 - Each fetch carries its page run ID and an `AbortSignal`. Cancellation aborts
   cooperative request integrations, and late results are rejected by the
   transition table even when an integration ignores cancellation.
+- ISSUE-064 — `src/examples/read-capabilities.ts` declares the executable
+  balance, single-product, and product-list fixtures through the public read
+  and result APIs and includes them in the assembled application.
+- A local Playwright gateway supplies authenticated target responses, local
+  images, deterministic delay, empty/malformed/401/network-abort outcomes,
+  and separate runtime/target request records without live services.
+- End-to-end assertions prove each declared GET is a page fetch handled by the
+  fixture target backend, never a runtime proxy request. The browser sends no
+  target cookie, declared GET metadata, or full response sentinel to
+  `/api/runtime`; the examples deliberately declare no ADR-016 projection.
 
 ## Deliberately unresolved
 
@@ -279,4 +300,4 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-ISSUE-064 (read-capability end-to-end fixtures and examples).
+ISSUE-070 (conversation identity, memory, and persistence ADR).

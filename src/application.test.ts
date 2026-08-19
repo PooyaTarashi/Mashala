@@ -6,6 +6,11 @@ import {
   MashalaApplicationConfigurationError,
   validateMashalaSpec,
 } from "./application";
+import {
+  accountBalance,
+  productList,
+  singleProduct,
+} from "./examples/read-capabilities";
 import { transferMoney } from "./examples/transfer-money";
 import type { MashalaSpec } from "./spec";
 
@@ -19,7 +24,7 @@ describe("defineMashalaApplication", () => {
         description:
           "A demonstration application for common retail banking tasks.",
       },
-      capabilities: [transferMoney],
+      capabilities: [transferMoney, accountBalance, singleProduct, productList],
     });
     expectTypeOf(mashalaApplication).toMatchTypeOf<MashalaSpec>();
     expect(JSON.parse(JSON.stringify(mashalaApplication))).toEqual(
