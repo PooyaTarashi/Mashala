@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**P6 read-capability architecture is accepted; its executable implementation has not started.**
+**P6 read-capability authoring and browser execution are implemented; result-card rendering and workflow integration remain.**
 
 ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, a strict non-streaming HTTP boundary for canonical runtime events, and a minimal accessible chat/form page for one happy-path transaction.
 
@@ -12,11 +12,12 @@ against stale, cancelled, duplicate, and concurrent actions. Playwright now
 exercises the production page with deterministic local runtime and target-backend
 fixtures and no live provider, RAG, credential, or external-service dependency.
 
-ISSUE-060 is complete as an architecture-only task. ADR-017 and
+ISSUE-060 and ISSUE-061 are complete. ADR-017 and
 `CANONICAL_SPEC.md` v0.3 accept the read-capability and deterministic result-view
-contract. The executable TypeScript canonical spec remains v0.2, and no read
-DSL, read executor, result compiler/renderer, or read workflow from ISSUE-061,
-ISSUE-062, or ISSUE-063 has been implemented.
+contract. The executable TypeScript canonical spec is now v0.3, with typed read
+authoring, deterministic input/binding validation, and direct browser GET
+execution. Result-card rendering and the integrated read workflow from
+ISSUE-062 and ISSUE-063 have not been implemented.
 
 ## Accepted decisions
 
@@ -25,9 +26,8 @@ ISSUE-062, or ISSUE-063 has been implemented.
 - The typed field DSL exposes `f.text`, `f.longText`, `f.number`, `f.select`, `f.boolean`, and browser-resolved `f.reference` with deterministic JSON-serializable field-level output.
 - `compileForm` compiles those primitives into the canonical `FormDefinition` schema/metadata split. Fields are optional by default and opt into required status with `required: true`.
 - String length constraints, numeric limits, required names, primitive types, and select enum values exist only in JSON Schema; compiled field metadata retains presentation information only.
-- The accepted canonical artifact is the versioned JSON-serializable
-  `MashalaSpec` v0.3 in `CANONICAL_SPEC.md`. The current executable contract
-  remains v0.2 until the P6 implementation issues land.
+- The accepted and executable canonical artifact is the versioned
+  JSON-serializable `MashalaSpec` v0.3 in `CANONICAL_SPEC.md`.
 - JSON Schema Draft 2020-12 is the sole canonical form-validation representation; Mashala field metadata carries presentation/runtime information.
 - v0.1 static fields are `text`, `longText`, `number`, `select`, and `boolean`.
 - v0.1 capability writes declare `POST`, `PUT`, or `PATCH` plus a relative path. Form names map directly to same-named JSON body properties.
@@ -223,6 +223,19 @@ ISSUE-062, or ISSUE-063 has been implemented.
   handler while the fake target-session cookie is absent from `/api/runtime`.
   Tests invoke no Gemini, Ollama/RAG, real target backend, or external provider.
 
+## P6 implementation
+
+- ISSUE-061 — `defineReadCapability` compiles zero-input or form-backed reads
+  into the v0.3 `kind: "read"` branch with one declared `GET`, explicit
+  path/query bindings, and one `result.card` or `result.cardList` view.
+- `executeReadCapability` validates complete input through JSON Schema, returns
+  the compiled form contract when required input is missing, percent-encodes
+  declared scalar bindings, and calls the target backend directly through
+  `TargetBackendRequest` with no GET body.
+- Success, HTTP failure, malformed JSON, response-shape failure, and network
+  failure remain distinct. ISSUE-061 adds no result-card renderer, read page
+  workflow, or Mashala-server target-backend proxy.
+
 ## Deliberately unresolved
 
 - Durable conversation persistence beyond the v0.1 single-process proof.
@@ -233,6 +246,5 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-ISSUE-061 (read-capability DSL and browser fetch executor) or ISSUE-062
-(result-card DSL and compiler). Both depend on the now-complete ISSUE-060;
-neither has been started.
+ISSUE-062 (complete result-card authoring/compiler behavior), followed by
+ISSUE-063 (result rendering and integrated read workflow).

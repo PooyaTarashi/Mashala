@@ -787,7 +787,7 @@ arbitrary model-generated UI.
 
 ---
 
-### ISSUE-061 — Implement the read-capability DSL and browser fetch executor
+### ISSUE-061 — Implement the read-capability DSL and browser fetch executor — Complete
 
 **Depends on:** ISSUE-060.
 
@@ -801,25 +801,25 @@ helpers.
 
 **Acceptance:**
 
-- [ ] typed developer authoring supports a stable ID, routing description,
+- [x] typed developer authoring supports a stable ID, routing description,
   optional input fields, one declared `GET` operation, and one declared result
   view;
-- [ ] compilation produces the accepted versioned canonical representation;
-- [ ] zero-input reads support an account-balance-style request;
-- [ ] parameterized reads accept only values validated by the compiled input
+- [x] compilation produces the accepted versioned canonical representation;
+- [x] zero-input reads support an account-balance-style request;
+- [x] parameterized reads accept only values validated by the compiled input
   form;
-- [ ] validated values are mapped only through the operation's declared
+- [x] validated values are mapped only through the operation's declared
   placeholder/query bindings;
-- [ ] missing required input renders the deterministic form and does not
+- [x] missing required input renders the deterministic form and does not
   execute the request;
-- [ ] the request executes directly in the browser through the same
+- [x] the request executes directly in the browser through the same
   `TargetBackendRequest` used by reference reads and confirmed writes;
-- [ ] the executor sends no JSON body for `GET` and accepts no LLM-provided
+- [x] the executor sends no JSON body for `GET` and accepts no LLM-provided
   method, URL, headers, or credentials;
-- [ ] target-backend success, non-2xx HTTP failure, malformed JSON, response
+- [x] target-backend success, non-2xx HTTP failure, malformed JSON, response
   shape failure, and rejected fetch are distinct sanitized outcomes;
-- [ ] target-backend authorization remains authoritative;
-- [ ] focused tests cover no-input reads, validated parameters, URL encoding,
+- [x] target-backend authorization remains authoritative;
+- [x] focused tests cover no-input reads, validated parameters, URL encoding,
   undeclared parameters, authentication integration, HTTP errors, network
   errors, and absence of a Mashala-server proxy.
 

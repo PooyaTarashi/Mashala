@@ -14,7 +14,7 @@ import {
 import type { FieldMetadata, JsonValue } from "./forms";
 import {
   assertConfirmationPolicy,
-  type CapabilitySpec,
+  type WriteCapabilitySpec,
 } from "./spec";
 import type { TargetBackendRequest } from "./target-backend-request";
 import styles from "./confirmation-gate.module.css";
@@ -22,7 +22,7 @@ import styles from "./confirmation-gate.module.css";
 export type { ConfirmationPolicy } from "./spec";
 
 export interface ConfirmationGateProps<FieldName extends string = string> {
-  readonly capability: CapabilitySpec<FieldName>;
+  readonly capability: WriteCapabilitySpec<FieldName>;
   readonly baseUrl: string | URL;
   readonly initialValues?: FormValue<FieldName>;
   readonly request?: TargetBackendRequest;

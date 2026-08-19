@@ -428,6 +428,7 @@ describe("ConfirmationGate results and inputs", () => {
     const valuesBefore = JSON.stringify(initialValues);
     const fetchImpl = successfulFetch();
     const capability = Object.freeze({
+      kind: "write" as const,
       id: "transfer_money",
       description: "Transfer money to a recipient.",
       form,
@@ -468,6 +469,7 @@ describe("ConfirmationGate results and inputs", () => {
     const form = createForm();
     const props = {
       capability: {
+        kind: "write" as const,
         id: "transfer_money",
         description: "Transfer money to a recipient.",
         form,

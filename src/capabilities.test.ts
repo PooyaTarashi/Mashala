@@ -35,6 +35,7 @@ describe("defineCapability", () => {
     });
 
     expect(capability).toEqual({
+      kind: "write",
       id: "transfer_money",
       description: "Transfer money to another recipient",
       form: compileForm(fields),
@@ -67,6 +68,7 @@ describe("defineCapability", () => {
     expect(capability.operation.path).toBe("/transfers/selected");
     expect(serialized).toEqual(capability);
     expect(Object.keys(capability)).toEqual([
+      "kind",
       "id",
       "description",
       "form",
@@ -166,6 +168,7 @@ describe("defineCapability", () => {
 describe("canonical executable example", () => {
   it("binds the transfer form, operation, and policy in one object", () => {
     expect(transferMoney.id).toBe("transfer_money");
+    expect(transferMoney.kind).toBe("write");
     expect(transferMoney.form.fields.recipient).toEqual({
       kind: "text",
       label: "Recipient",

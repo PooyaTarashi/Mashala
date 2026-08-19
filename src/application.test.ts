@@ -12,7 +12,7 @@ import type { MashalaSpec } from "./spec";
 describe("defineMashalaApplication", () => {
   it("provides the canonical application metadata and declared capabilities", () => {
     expect(mashalaApplication).toEqual({
-      specVersion: "0.2",
+      specVersion: "0.3",
       app: {
         id: "mashala_bank_demo",
         name: "Mashala Bank Demo",
@@ -89,7 +89,7 @@ describe("defineMashalaApplication", () => {
       expect.objectContaining({
         code: "unsupported_spec_version",
         message:
-          "Mashala application configuration requires MashalaSpec version 0.2.",
+          "Mashala application configuration requires MashalaSpec version 0.3.",
       }),
     );
   });
@@ -111,4 +111,3 @@ describe("defineMashalaApplication", () => {
     );
   });
 });
-

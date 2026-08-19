@@ -152,8 +152,12 @@ describe("assembleMashalaApplication", () => {
       operation: { method: "POST", path: "/transfers" },
       confirmation: "required",
     });
-    expect(transfer?.form.schema.properties).toHaveProperty("recipient");
-    expect(transfer?.form.fields).toHaveProperty("amount");
+    expect(transfer?.kind).toBe("write");
+    if (transfer?.kind !== "write") {
+      throw new Error("Transfer fixture must be a write capability.");
+    }
+    expect(transfer.form.schema.properties).toHaveProperty("recipient");
+    expect(transfer.form.fields).toHaveProperty("amount");
     expect(runtime.resolveCapability("invented_capability")).toBeUndefined();
   });
 });
@@ -165,4 +169,3 @@ function transferFixture() {
   }
   return capability;
 }
-

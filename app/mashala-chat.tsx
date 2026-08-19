@@ -200,6 +200,8 @@ export function MashalaChat({
     activeCapabilityId === undefined
       ? undefined
       : capabilities.get(activeCapabilityId);
+  const activeWriteCapability =
+    activeCapability?.kind === "write" ? activeCapability : undefined;
   const proposedValues = workflowFormValues(workflow);
   const formRevision =
     "formRevision" in workflow ? workflow.formRevision : 0;
@@ -307,8 +309,24 @@ export function MashalaChat({
             break;
           }
 
+          const declaredForm =
+            declaredCapability.kind === "write"
+              ? declaredCapability.form
+              : declaredCapability.input;
+          if (declaredForm === undefined) {
+            if (Object.keys(event.payload.values).length > 0) {
+              nextEntries.push({
+                id: event.eventId,
+                kind: "protocol-error",
+                code: "invalid_model_output",
+                text: "A zero-input read cannot accept suggested values.",
+              });
+            }
+            break;
+          }
+
           const merge = mergeFormValueProposal(
-            declaredCapability.form,
+            declaredForm,
             currentWorkflow.values,
             event.payload.values,
           );
@@ -625,29 +643,29 @@ export function MashalaChat({
         ) : null}
       </section>
 
-      {activeCapability === undefined ? null : (
+      {activeWriteCapability === undefined ? null : (
         <section
           className={styles.capability}
           aria-labelledby="active-capability-heading"
         >
           <h2 id="active-capability-heading">Complete the request</h2>
-          <p>{activeCapability.description}</p>
+          <p>{activeWriteCapability.description}</p>
           <ConfirmationGate
-            key={`${String(workflow.runId)}-${activeCapability.id}-${String(formRevision)}`}
-            capability={activeCapability}
+            key={`${String(workflow.runId)}-${activeWriteCapability.id}-${String(formRevision)}`}
+            capability={activeWriteCapability}
             initialValues={proposedValues}
             baseUrl={backendBaseUrl}
             request={targetBackendRequest}
-            formId={`capability-${activeCapability.id}`}
+            formId={`capability-${activeWriteCapability.id}`}
             submitLabel={
-              activeCapability.confirmation === "required"
+              activeWriteCapability.confirmation === "required"
                 ? "Review request"
                 : "Submit request"
             }
             onDraftChange={(values) => {
               commitWorkflow({
                 type: "draft.changed",
-                capabilityId: activeCapability.id,
+                capabilityId: activeWriteCapability.id,
                 values,
               });
             }}
@@ -655,28 +673,28 @@ export function MashalaChat({
             onReview={(snapshot) =>
               commitWorkflow({
                 type: "review.requested",
-                capabilityId: activeCapability.id,
+                capabilityId: activeWriteCapability.id,
                 snapshot,
               })
             }
             onReviewCancel={() => {
               commitWorkflow({
                 type: "review.cancelled",
-                capabilityId: activeCapability.id,
+                capabilityId: activeWriteCapability.id,
               });
             }}
             onExecutionStart={(snapshot) =>
               commitWorkflow({
                 type: "execution.requested",
-                capabilityId: activeCapability.id,
+                capabilityId: activeWriteCapability.id,
                 snapshot,
-                confirmation: activeCapability.confirmation,
+                confirmation: activeWriteCapability.confirmation,
               })
             }
             onResult={(result: BackendOperationResult) => {
               commitWorkflow({
                 type: "execution.finished",
-                capabilityId: activeCapability.id,
+                capabilityId: activeWriteCapability.id,
                 result,
               });
             }}

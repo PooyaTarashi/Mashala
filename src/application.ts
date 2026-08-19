@@ -10,12 +10,17 @@ import { copyModelVisibleBackendProjection } from "./model-visible-backend-proje
 import {
   assertBackendOperation,
   assertConfirmationPolicy,
+  assertReadBackendOperation,
   type AppMetadata,
   type CapabilitySpec,
   type MashalaSpec,
+  type ReadBackendOperation,
+  type ReadCapabilitySpec,
+  type WriteCapabilitySpec,
 } from "./spec";
+import { copyResultView } from "./results";
 
-export const CURRENT_MASHALA_SPEC_VERSION = "0.2" as const;
+export const CURRENT_MASHALA_SPEC_VERSION = "0.3" as const;
 
 export interface MashalaApplicationDefinition<
   Capability extends CapabilitySpec = CapabilitySpec,
@@ -368,10 +373,12 @@ function copyForm(value: unknown): FormDefinition {
   return Object.freeze({ schema, fields });
 }
 
-function copyCapability(value: unknown): CapabilitySpec {
+function copyWriteCapability(
+  value: Record<string, unknown>,
+): WriteCapabilitySpec {
   if (
-    !isPlainRecord(value) ||
-    !hasExactKeys(value, ["id", "description", "form", "operation", "confirmation"]) ||
+    !hasExactKeys(value, ["kind", "id", "description", "form", "operation", "confirmation"]) ||
+    value.kind !== "write" ||
     typeof value.id !== "string" ||
     !STABLE_ID.test(value.id) ||
     typeof value.description !== "string"
@@ -387,6 +394,7 @@ function copyCapability(value: unknown): CapabilitySpec {
   }
 
   return Object.freeze({
+    kind: "write",
     id: value.id,
     description: value.description,
     form: copyForm(value.form),
@@ -396,6 +404,94 @@ function copyCapability(value: unknown): CapabilitySpec {
     }),
     confirmation: value.confirmation,
   });
+}
+
+function copyReadBindings(
+  value: ReadBackendOperation["bindings"],
+): ReadBackendOperation["bindings"] {
+  if (value === undefined) {
+    return undefined;
+  }
+  return Object.freeze({
+    ...(value.path === undefined
+      ? {}
+      : { path: Object.freeze({ ...value.path }) }),
+    ...(value.query === undefined
+      ? {}
+      : { query: Object.freeze({ ...value.query }) }),
+  });
+}
+
+function copyReadCapability(
+  value: Record<string, unknown>,
+): ReadCapabilitySpec {
+  if (
+    !hasExactKeys(
+      value,
+      ["kind", "id", "description", "input", "operation", "result"],
+      ["kind", "id", "description", "operation", "result"],
+    ) ||
+    value.kind !== "read" ||
+    typeof value.id !== "string" ||
+    !STABLE_ID.test(value.id) ||
+    typeof value.description !== "string"
+  ) {
+    malformedSpec();
+  }
+
+  const input = value.input === undefined ? undefined : copyForm(value.input);
+  try {
+    assertReadBackendOperation(value.operation, input);
+  } catch {
+    malformedSpec();
+  }
+
+  let modelContext;
+  if (value.operation.modelContext !== undefined) {
+    try {
+      modelContext = copyModelVisibleBackendProjection(
+        value.operation.modelContext,
+      );
+    } catch {
+      malformedSpec();
+    }
+  }
+
+  let result;
+  try {
+    result = copyResultView(value.result);
+  } catch {
+    malformedSpec();
+  }
+
+  const bindings = copyReadBindings(value.operation.bindings);
+  return Object.freeze({
+    kind: "read",
+    id: value.id,
+    description: value.description,
+    ...(input === undefined ? {} : { input }),
+    operation: Object.freeze({
+      method: "GET",
+      path: value.operation.path,
+      ...(bindings === undefined ? {} : { bindings }),
+      ...(modelContext === undefined ? {} : { modelContext }),
+    }),
+    result,
+  });
+}
+
+function copyCapability(value: unknown): CapabilitySpec {
+  if (!isPlainRecord(value)) {
+    malformedSpec();
+  }
+
+  if (value.kind === "write") {
+    return copyWriteCapability(value);
+  }
+  if (value.kind === "read") {
+    return copyReadCapability(value);
+  }
+  return malformedSpec();
 }
 
 function copyApplicationDefinition(

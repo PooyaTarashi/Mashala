@@ -149,7 +149,10 @@ export async function extractSlotCandidates<
 }: ExtractSlotCandidatesInput<FieldName>): Promise<
   SlotExtractionResult<FieldName>
 > {
-  const form = capability.form;
+  const form = capability.kind === "write" ? capability.form : capability.input;
+  if (form === undefined) {
+    return { outcome: "proposed", values: Object.freeze({}) };
+  }
   const declaredFieldNames = new Set(
     Object.keys(modelEligibleProperties(form)),
   );

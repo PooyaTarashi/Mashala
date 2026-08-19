@@ -308,8 +308,9 @@ The accepted machine-readable application contract is `CANONICAL_SPEC.md` v0.3,
 established by ADR-012 and extended by ADR-016 and ADR-017. It preserves the
 JSON Schema/presentation split, distinguishes writes from reads, and defines
 the minimal browser-executed request and deterministic result bindings. The
-current executable TypeScript contract remains v0.2 until ISSUE-061 and
-ISSUE-062 implement v0.3.
+executable TypeScript contract is v0.3. ISSUE-061 implements read authoring,
+binding validation, and browser execution; deterministic result-card rendering
+and page-workflow integration remain pending.
 
 The browser/server language-assistance contract is `RUNTIME_PROTOCOL.md`, accepted by ADR-013. Its logical events are independent of transport. In particular, the protocol has no event that asks the Mashala server to execute a target-backend request.
 

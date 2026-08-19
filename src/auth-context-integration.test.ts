@@ -183,7 +183,7 @@ describe("target-app auth-context integration", () => {
       confirmation: "required",
     });
     const spec: MashalaSpec = {
-      specVersion: "0.2",
+      specVersion: "0.3",
       app: {
         id: "demo_bank",
         name: "Demo Bank",
@@ -199,7 +199,7 @@ describe("target-app auth-context integration", () => {
     expect(keys.has("authorization")).toBe(false);
     expect(keys.has("token")).toBe(false);
     expectTypeOf<keyof CapabilitySpec>().toEqualTypeOf<
-      "id" | "description" | "form" | "operation" | "confirmation"
+      "kind" | "id" | "description" | "operation"
     >();
   });
 

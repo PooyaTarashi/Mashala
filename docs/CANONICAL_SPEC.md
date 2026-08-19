@@ -11,11 +11,10 @@ ADR-012 established the original write-capability shape, ADR-016 established
 explicit browser-side model-visible projection, and ADR-017 adds goal-level
 read capabilities and result views while preserving write behavior.
 
-This is an accepted architecture contract, not an implementation claim.
-`src/spec.ts` and `src/capabilities.ts` still implement `MashalaSpec` v0.2 and
-write capabilities only. ISSUE-061 and ISSUE-062 will implement the v0.3
-read-capability and result-view contracts; ISSUE-063 will integrate their
-workflow and rendering.
+`src/spec.ts`, `src/capabilities.ts`, and `src/application.ts` implement the
+v0.3 read/write capability union. ISSUE-061 adds read authoring, binding
+validation, and browser execution; result-card rendering and page-workflow
+integration remain in ISSUE-062 and ISSUE-063.
 
 ## TypeScript contract
 
