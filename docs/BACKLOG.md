@@ -1051,21 +1051,21 @@ This is an evaluation issue, not pre-approval to add a dependency.
 
 **Acceptance:**
 
-- [ ] evaluate a small shortlist of actively maintained React chat UI systems
+- [x] evaluate a small shortlist of actively maintained React chat UI systems
   against the repository's installed Next.js and React versions;
-- [ ] record license, maintenance activity, bundle/runtime cost, accessibility,
+- [x] record license, maintenance activity, bundle/runtime cost, accessibility,
   mobile behavior, theming, and server/client component constraints;
-- [ ] verify that custom deterministic forms, confirmation reviews, result
+- [x] verify that custom deterministic forms, confirmation reviews, result
   cards, errors, and loading states can render inline as message content;
-- [ ] reject libraries that require provider secrets in the browser, own target
+- [x] reject libraries that require provider secrets in the browser, own target
   authentication, assume arbitrary tool execution, or force a target-backend
   proxy;
-- [ ] determine whether non-streaming operation is supported; streaming must not
+- [x] determine whether non-streaming operation is supported; streaming must not
   be added merely because a library expects it;
-- [ ] compare adoption cost with improving the existing `MashalaChat` component;
-- [ ] document the decision to adopt one library or keep the current in-house
+- [x] compare adoption cost with improving the existing `MashalaChat` component;
+- [x] document the decision to adopt one library or keep the current in-house
   UI, including the smallest dependency change justified by the evidence;
-- [ ] no dependency is added until this issue records the decision.
+- [x] no dependency is added until this issue records the decision.
 
 ---
 
