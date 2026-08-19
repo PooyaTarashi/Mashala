@@ -825,7 +825,7 @@ helpers.
 
 ---
 
-### ISSUE-062 — Implement a developer-defined result-card DSL and compiler
+### ISSUE-062 — Implement a developer-defined result-card DSL and compiler — Complete
 
 **Depends on:** ISSUE-060.
 
@@ -850,23 +850,23 @@ Account card
 
 **Acceptance:**
 
-- [ ] typed authoring supports one card and a list of repeated cards;
-- [ ] a card can declare a title, optional image, optional description, and
+- [x] typed authoring supports one card and a list of repeated cards;
+- [x] a card can declare a title, optional image, optional description, and
   developer-labeled facts such as price, balance, status, or account number;
-- [ ] response values are selected only from explicit developer-declared
+- [x] response values are selected only from explicit developer-declared
   direct properties in the accepted first version;
-- [ ] supported formatters are a small deterministic allowlist, such as plain
+- [x] supported formatters are a small deterministic allowlist, such as plain
   text, number, currency, date/time, and safe image URL;
-- [ ] developer-authored fixed labels/text are distinguished from backend data;
-- [ ] the compiler emits isolated JSON-serializable metadata with no functions,
+- [x] developer-authored fixed labels/text are distinguished from backend data;
+- [x] the compiler emits isolated JSON-serializable metadata with no functions,
   HTML, JSX, CSS injection, or provider-specific objects;
-- [ ] malformed mappings, duplicate field IDs, unsupported formatters, missing
+- [x] malformed mappings, duplicate field IDs, unsupported formatters, missing
   required mappings, and incompatible card/list response roots fail clearly;
-- [ ] currency formatting requires explicit developer configuration and does
+- [x] currency formatting requires explicit developer configuration and does
   not let the model guess a currency;
-- [ ] card declarations are presentation authority only and cannot authorize a
+- [x] card declarations are presentation authority only and cannot authorize a
   backend operation or alter workflow state;
-- [ ] unit and type-level tests cover a balance card, product card, product-card
+- [x] unit and type-level tests cover a balance card, product card, product-card
   list, invalid declarations, and deterministic compiled output.
 
 ---

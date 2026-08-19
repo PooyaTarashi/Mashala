@@ -11,6 +11,7 @@ import type {
 } from "./spec";
 
 const STABLE_ID = /^[a-z][a-z0-9_]*$/;
+const ISO_4217_CURRENCY_CODE = /^[A-Z]{3}$/;
 
 function invalidResult(message: string): never {
   throw new TypeError(`Invalid result view: ${message}`);
@@ -85,6 +86,11 @@ function copyTextFormatter(value: unknown): TextResultFormatter {
       }
       assertLocale(value.locale);
       assertString(value.currency, "formatter currency");
+      if (!ISO_4217_CURRENCY_CODE.test(value.currency)) {
+        invalidResult(
+          "formatter currency must be an uppercase three-letter ISO 4217 code.",
+        );
+      }
       try {
         new Intl.NumberFormat(value.locale, {
           style: "currency",

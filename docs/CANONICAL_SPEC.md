@@ -13,8 +13,9 @@ read capabilities and result views while preserving write behavior.
 
 `src/spec.ts`, `src/capabilities.ts`, and `src/application.ts` implement the
 v0.3 read/write capability union. ISSUE-061 adds read authoring, binding
-validation, and browser execution; result-card rendering and page-workflow
-integration remain in ISSUE-062 and ISSUE-063.
+validation, and browser execution; ISSUE-062 adds result-card authoring and
+compilation. Result-card rendering and page-workflow integration remain in
+ISSUE-063.
 
 ## TypeScript contract
 
