@@ -718,14 +718,19 @@ as "What is my account balance?" and "Show me the products." Authenticated
 reads continue to execute in the user's browser through `TargetBackendRequest`.
 The Mashala server must not become a target-backend proxy.
 
-ADR-012 currently limits capability operations to JSON-body `POST`, `PUT`, and
-`PATCH` requests. ISSUE-060 must therefore be completed and accepted before any
-read-capability implementation changes the canonical contract.
+ADR-012 originally limited capability operations to JSON-body `POST`, `PUT`,
+and `PATCH` requests. The now-complete ISSUE-060 produced ADR-017 and canonical
+spec v0.3; read-capability implementation must conform to that accepted
+contract.
 
-### ISSUE-060 — Define the canonical read-capability and result-view contract
+### ISSUE-060 — Define the canonical read-capability and result-view contract — Complete
 
 **Goal:** Propose and accept an ADR for developer-declared browser-executed
 `GET` capabilities and deterministic result presentation.
+
+**Architecture:** ADR-017 and `CANONICAL_SPEC.md` v0.3. This issue changes
+documentation only; executable implementation remains in ISSUE-061 through
+ISSUE-063.
 
 The ADR should define the smallest authoring and compiled contracts needed for
 both of these examples:
@@ -747,33 +752,33 @@ without allowing the LLM to construct URLs.
 
 **Acceptance:**
 
-- [ ] a new ADR explicitly supersedes or extends ADR-012's write-only operation
+- [x] a new ADR explicitly supersedes or extends ADR-012's write-only operation
   clauses and selects the next compatible `MashalaSpec` version;
-- [ ] the contract distinguishes write capabilities from read capabilities
+- [x] the contract distinguishes write capabilities from read capabilities
   without weakening existing write confirmation rules;
-- [ ] a read capability declares exactly one `GET` operation with a
+- [x] a read capability declares exactly one `GET` operation with a
   root-relative developer-authored path;
-- [ ] a read capability may have no input fields or a deterministic compiled
+- [x] a read capability may have no input fields or a deterministic compiled
   input form for identifiers/filters;
-- [ ] any path-placeholder or query-parameter mapping is explicit,
+- [x] any path-placeholder or query-parameter mapping is explicit,
   allow-listed, and derived only from schema-valid form values;
-- [ ] the LLM may route to a declared read capability and propose declared
+- [x] the LLM may route to a declared read capability and propose declared
   input values, but cannot invent a method, URL, parameter, response mapping,
   or presentation;
-- [ ] the contract supports a developer-declared single-card result and a
+- [x] the contract supports a developer-declared single-card result and a
   developer-declared list-of-cards result;
-- [ ] the result declaration maps backend response properties to safe,
+- [x] the result declaration maps backend response properties to safe,
   deterministic presentation fields and contains no arbitrary HTML,
   JavaScript, React component, or executable transform;
-- [ ] the minimum supported response roots are specified: one JSON object for
+- [x] the minimum supported response roots are specified: one JSON object for
   a card and one JSON array of objects for a card list;
-- [ ] support or deferral of wrapped/paginated arrays such as `{ results: [] }`
+- [x] support or deferral of wrapped/paginated arrays such as `{ results: [] }`
   is decided explicitly;
-- [ ] displaying a backend result in the browser does not automatically make
+- [x] displaying a backend result in the browser does not automatically make
   that result visible to the Mashala server or LLM;
-- [ ] ADR-016 remains authoritative whenever selected result data is needed for
+- [x] ADR-016 remains authoritative whenever selected result data is needed for
   later language interpretation;
-- [ ] target-backend credentials remain absent from the spec, runtime events,
+- [x] target-backend credentials remain absent from the spec, runtime events,
   model context, and persisted conversation data.
 
 **Out of scope:** arbitrary REST clients, model-generated URLs, generic
@@ -790,9 +795,9 @@ arbitrary model-generated UI.
 execute its fixed `GET` operation using the target application's existing auth
 integration.
 
-The authoring API name should be chosen by ISSUE-060. A possible shape for
-discussion is `defineReadCapability` or `defineFetchCapability`; this backlog
-does not make that naming decision silently.
+ISSUE-060 selected `defineReadCapability` as the read authoring API. The result
+view is authored through the accepted `result.card` or `result.cardList`
+helpers.
 
 **Acceptance:**
 

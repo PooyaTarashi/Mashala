@@ -43,6 +43,7 @@ and supply:
 - capability descriptions,
 - typed form definitions,
 - target API bindings,
+- deterministic read-result card/list declarations,
 - authentication integration,
 - an LLM provider configuration.
 
@@ -51,7 +52,8 @@ Mashala then provides a full frontend application centered around conversational
 ## Core artifacts
 
 1. **Developer specification / DSL**
-   - describes application capabilities and forms;
+   - describes application capabilities, forms, and deterministic read-result
+     views;
    - compiles to the versioned representation in `CANONICAL_SPEC.md`: JSON Schema Draft 2020-12 plus Mashala metadata.
 
 2. **Generated frontend client**

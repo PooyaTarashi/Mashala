@@ -1,6 +1,9 @@
 # Open Questions
 
-These questions remain intentionally unresolved. P0 decisions removed from this list are recorded in ADR-011 through ADR-013 and their focused documents. Do not let an implementation silently choose the remaining items.
+These questions remain intentionally unresolved. Accepted decisions removed
+from this list are recorded in ADR-011 through ADR-013 and ADR-015 through
+ADR-017 with their focused documents. Do not let an implementation silently
+choose the remaining items.
 
 ## Thesis/research
 
@@ -35,7 +38,9 @@ These questions remain intentionally unresolved. P0 decisions removed from this 
 
 ## Resolved decisions
 
-- Canonical compiled spec format: ADR-012 and `CANONICAL_SPEC.md`.
+- Canonical compiled spec format: ADR-012, ADR-016, ADR-017, and
+  `CANONICAL_SPEC.md` v0.3. The executable implementation remains v0.2 until
+  ISSUE-061 and ISSUE-062.
 - Static v0.1 field types: `text`, `longText`, `number`, `select`, and `boolean`.
 - Browser/server logical event protocol: ADR-013 and `RUNTIME_PROTOCOL.md`; transport remains open.
 - Next.js/React/TypeScript and Node runtime structure: ADR-011 and `TECH_STACK.md`.
@@ -44,3 +49,9 @@ These questions remain intentionally unresolved. P0 decisions removed from this 
 - Reference response mapping: one root response array is projected through developer-declared direct `value` and `labelFrom` string properties; malformed items reject the complete option result, and cascading fields remain deferred.
 - Target-app auth integration: ISSUE-031 defines one fetch-like `TargetBackendRequest` browser behavior shared by writes and reference reads. The target app owns login, session lifecycle, refresh, and persistence; no credential is serialized into Mashala data or protocol events.
 - Model-visible backend projection: ADR-016 and ISSUE-032 define optional declarative output-to-source direct-property mappings on browser read sources. Projection fails closed in the browser, uses `backend.context.selected`, excludes credential-like data, and reaches the model only as untrusted context.
+- Goal-level reads and result views: ADR-017 and `CANONICAL_SPEC.md` v0.3
+  define `defineReadCapability`, optional compiled input, explicit scalar
+  path/query bindings, one browser-executed `GET`, and developer-declared root
+  object cards or root-array card lists. Wrapped/paginated arrays and arbitrary
+  transformations are explicitly deferred, not left for implementation to
+  choose silently.

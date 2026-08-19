@@ -230,6 +230,36 @@ LLM as untrusted contextual data
 
 Do not automatically forward every backend response to the LLM. ADR-016 resolves the minimization mechanism: an optional declarative descriptor on the browser read source maps explicitly allowed direct source properties to plain JSON output properties. No descriptor means no backend-result event. Projection and credential checks run in the browser before `backend.context.selected` is constructed; the server receives only the minimized result and treats it as untrusted contextual input.
 
+## Goal-level read capabilities and result views
+
+ADR-017 and `CANONICAL_SPEC.md` v0.3 define goal-level browser reads separately
+from writes. A read capability declares exactly one `GET`, may omit input or
+reuse the compiled deterministic form contract, and maps schema-valid scalar
+input values only through explicit path-placeholder or query-parameter
+bindings.
+
+```text
+user language
+  -> LLM proposes a declared read ID and declared input values only
+  -> browser validates the route and input
+  -> browser resolves the developer-authored GET URL
+  -> TargetBackendRequest calls the target backend directly
+  -> browser validates the response root
+  -> browser renders the developer-declared card or card list
+```
+
+The result contract supports a root object rendered as one card and a root
+array of objects rendered through one repeated card declaration. Result values
+come only from declared direct properties and a closed deterministic formatter
+allowlist. Fixed titles, labels, empty-state text, and image alternative text
+are developer-authored. Backend values are escaped data, never HTML or
+components. Wrapped/paginated arrays and general transformations are deferred.
+
+Browser presentation and model visibility are separate allowlists. Rendering a
+result does not send it to the Mashala server. Only an optional ADR-016
+projection on the read operation may create minimized
+`backend.context.selected` data for a later language task.
+
 ## Form execution model
 
 The LLM does not generate arbitrary HTML and does not directly execute target-backend operations.
@@ -272,9 +302,14 @@ Meaning:
 
 The workflow architecture must not depend on LangGraph. LangGraph may later implement this state machine if its persistence/interrupt features prove useful.
 
-## P0 normative contracts
+## Normative contracts
 
-The current machine-readable application contract is `CANONICAL_SPEC.md`, accepted by ADR-012. It fixes the v0.1 split between JSON Schema validation and Mashala presentation/runtime metadata, plus the minimal browser-executed API binding.
+The accepted machine-readable application contract is `CANONICAL_SPEC.md` v0.3,
+established by ADR-012 and extended by ADR-016 and ADR-017. It preserves the
+JSON Schema/presentation split, distinguishes writes from reads, and defines
+the minimal browser-executed request and deterministic result bindings. The
+current executable TypeScript contract remains v0.2 until ISSUE-061 and
+ISSUE-062 implement v0.3.
 
 The browser/server language-assistance contract is `RUNTIME_PROTOCOL.md`, accepted by ADR-013. Its logical events are independent of transport. In particular, the protocol has no event that asks the Mashala server to execute a target-backend request.
 

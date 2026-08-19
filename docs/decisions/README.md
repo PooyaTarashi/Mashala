@@ -17,6 +17,7 @@ Accepted decisions are authoritative.
 - ADR-013 — Transport-independent browser/server protocol v0.1
 - ADR-015 — Google Gemini is the first LLM provider (supersedes ADR-011's provider-specific clauses)
 - ADR-016 — Model-visible backend data uses explicit browser-side projection (resolves ADR-010's open mechanism)
+- ADR-017 — Canonical read capabilities and deterministic result views (extends ADR-012's write-only clauses)
 
 When a major architectural choice changes:
 

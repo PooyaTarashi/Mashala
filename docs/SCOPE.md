@@ -24,6 +24,8 @@ This document is intentionally strict. New ideas should be compared against it b
 - Allow users to edit AI-prefilled values.
 - Require explicit human confirmation for consequential writes.
 - Execute authenticated target-backend requests in the browser.
+- Execute developer-declared browser-side reads and present successful results
+  through deterministic developer-declared cards or card lists.
 - Support responsive/mobile-friendly UX.
 
 ### Dynamic application data
@@ -31,6 +33,10 @@ This document is intentionally strict. New ideas should be compared against it b
 - The request uses the user's existing client-side authentication context.
 - The model must not invent dynamic options.
 - The model must not receive the user's authentication credential.
+- Support zero-input and scalar-input read capabilities whose path/query values
+  come only from schema-valid inputs and explicit developer bindings.
+- Keep read results browser-local by default; browser display does not grant
+  model visibility.
 
 ### Server/runtime
 - Keep LLM API secrets server-side.
@@ -75,6 +81,7 @@ This document is intentionally strict. New ideas should be compared against it b
 - Defining OAuth/OIDC itself.
 - Storing user credentials on the Mashala server as a default architecture.
 - Proxying all target-backend API traffic through Mashala.
+- A generic REST client or arbitrary response/request transformation language.
 - General autonomous agents that freely decide which APIs to execute.
 - Arbitrary LLM-generated HTML/JavaScript.
 - A CMS/admin panel comparable to Payload.

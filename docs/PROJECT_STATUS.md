@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**P5 now has automated browser end-to-end coverage for the completed deterministic vertical slice and its major user-facing safety boundaries.**
+**P6 read-capability architecture is accepted; its executable implementation has not started.**
 
 ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, a strict non-streaming HTTP boundary for canonical runtime events, and a minimal accessible chat/form page for one happy-path transaction.
 
@@ -12,6 +12,12 @@ against stale, cancelled, duplicate, and concurrent actions. Playwright now
 exercises the production page with deterministic local runtime and target-backend
 fixtures and no live provider, RAG, credential, or external-service dependency.
 
+ISSUE-060 is complete as an architecture-only task. ADR-017 and
+`CANONICAL_SPEC.md` v0.3 accept the read-capability and deterministic result-view
+contract. The executable TypeScript canonical spec remains v0.2, and no read
+DSL, read executor, result compiler/renderer, or read workflow from ISSUE-061,
+ISSUE-062, or ISSUE-063 has been implemented.
+
 ## Accepted decisions
 
 - Project name: **Mashala**.
@@ -19,11 +25,29 @@ fixtures and no live provider, RAG, credential, or external-service dependency.
 - The typed field DSL exposes `f.text`, `f.longText`, `f.number`, `f.select`, `f.boolean`, and browser-resolved `f.reference` with deterministic JSON-serializable field-level output.
 - `compileForm` compiles those primitives into the canonical `FormDefinition` schema/metadata split. Fields are optional by default and opt into required status with `required: true`.
 - String length constraints, numeric limits, required names, primitive types, and select enum values exist only in JSON Schema; compiled field metadata retains presentation information only.
-- The canonical compiled artifact is the versioned JSON-serializable `MashalaSpec` v0.2 in `CANONICAL_SPEC.md`.
+- The accepted canonical artifact is the versioned JSON-serializable
+  `MashalaSpec` v0.3 in `CANONICAL_SPEC.md`. The current executable contract
+  remains v0.2 until the P6 implementation issues land.
 - JSON Schema Draft 2020-12 is the sole canonical form-validation representation; Mashala field metadata carries presentation/runtime information.
 - v0.1 static fields are `text`, `longText`, `number`, `select`, and `boolean`.
 - v0.1 capability writes declare `POST`, `PUT`, or `PATCH` plus a relative path. Form names map directly to same-named JSON body properties.
 - Confirmation policy is declared per capability.
+- ADR-017 makes v0.3 capabilities an explicit `kind: "write" | "read"` union.
+  Existing writes retain their form, JSON-body operation, and confirmation
+  behavior; reads declare exactly one browser-executed `GET`, optional compiled
+  input, and no confirmation property.
+- Read authoring is `defineReadCapability`; the existing `defineCapability`
+  remains the write authoring API. Result authoring is limited to
+  `result.card` and `result.cardList`.
+- Read input properties bind exactly once through explicit path-placeholder or
+  query-parameter maps. Only schema-valid scalar values are deterministically
+  serialized and percent-encoded; the LLM cannot supply any URL structure.
+- Read results support only a root object card or root array card list, direct
+  response properties, fixed developer text, and the closed `text`, `number`,
+  `currency`, `date`, `dateTime`, and `imageUrl` formatter allowlist.
+- Wrapped/paginated arrays, response unwrapping, arbitrary transformations,
+  and generated UI are deferred. Display mappings do not grant model
+  visibility; only ADR-016 projection may do so.
 - The canonical field metadata union includes a browser-resolved `reference` field with one GET source and direct string value/label property projections, without changing the top-level structure.
 - ADR-016 resolves ADR-010 with an optional declarative `modelContext` descriptor on browser read sources. Its output-to-source direct-property map is the only authorization for model-visible backend data; automatic forwarding remains forbidden.
 - ADR-013 and `RUNTIME_PROTOCOL.md` define the protocol design; `src/runtime-protocol.ts` now provides the corresponding executable versioned discriminated unions and strict runtime validators, independent of transport.
@@ -47,10 +71,12 @@ fixtures and no live provider, RAG, credential, or external-service dependency.
 - `mashala.config.ts` is the application-level configuration path. It calls `defineMashalaApplication` with `AppMetadata` and existing `CapabilitySpec` values and exports one validated, isolated `MashalaSpec`; it defines no parallel canonical schema.
 - `assembleMashalaApplication` lives in the `server-only` module `src/server/application-runtime.ts`. It validates the supplied spec, requires provider-neutral `LlmProvider` and `DocumentationRetriever` instances, keeps them outside serializable application data, and resolves capabilities only from the validated developer declaration.
 
-## P0 artifacts
+## Authoritative architecture artifacts
 
 - ADR-011, ADR-015, and `TECH_STACK.md` — frozen v0.1 implementation choices and the superseding first-provider decision.
-- ADR-012, ADR-016, and `CANONICAL_SPEC.md` — compiled spec types, explicit projection policy, invariants, limitations, and complete example.
+- ADR-012, ADR-016, ADR-017, and `CANONICAL_SPEC.md` — compiled spec types,
+  explicit projection policy, read/write capability contract, deterministic
+  result views, invariants, limitations, and complete examples.
 - ADR-013 and `RUNTIME_PROTOCOL.md` — normative browser/server protocol design, trust rules, and end-to-end flow. Its executable contracts live in `src/runtime-protocol.ts`.
 
 ## P1 implementation
@@ -207,4 +233,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-No next implementation issue is currently selected in the backlog.
+ISSUE-061 (read-capability DSL and browser fetch executor) or ISSUE-062
+(result-card DSL and compiler). Both depend on the now-complete ISSUE-060;
+neither has been started.

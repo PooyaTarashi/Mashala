@@ -328,6 +328,21 @@ Given the `transfer_money` capability from `CANONICAL_SPEC.md`:
 
 If the backend result can be displayed deterministically, it remains in the browser. Only a language-interpretation need governed by an explicit ADR-016 projection descriptor may produce `backend.context.selected`.
 
+## Read capabilities do not change this protocol
+
+ADR-017's goal-level `GET` execution and card/card-list presentation remain
+browser-local and introduce no runtime event. The server may propose only the
+declared read capability ID and values for its declared input fields through
+the existing route and value-proposal events. Deterministic browser code selects
+the declared `GET`, validates input, resolves only declared path/query bindings,
+executes through `TargetBackendRequest`, validates the response root, and
+renders the declared result view.
+
+Neither the resolved URL nor the complete response is sent through this
+protocol. A later interpretation task may use only the existing
+`backend.context.selected` event after ADR-016 projection succeeds in the
+browser. Consequently, the protocol remains v0.1.
+
 ## Deliberately absent from v0.1
 
 - a target-backend execution request or command;
