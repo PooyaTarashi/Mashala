@@ -1,8 +1,8 @@
 # Open Questions
 
 These questions remain intentionally unresolved. Accepted decisions removed
-from this list are recorded in ADR-011 through ADR-013 and ADR-015 through
-ADR-017 with their focused documents. Do not let an implementation silently
+from this list are recorded in ADR-011 through ADR-018 with their focused
+documents. Do not let an implementation silently
 choose the remaining items.
 
 ## Thesis/research
@@ -14,38 +14,50 @@ choose the remaining items.
 
 ## Architecture
 
-5. What durable conversation persistence, if any, follows the v0.1 in-memory proof? ADR-011 permits only ephemeral single-process state for v0.1.
-6. Which transport carries the v0.1 logical runtime events: ordinary HTTP, SSE, WebSocket, or a combination? ADR-013 defines event semantics independently of this choice.
-7. Which validation failures are handled exclusively in the browser, and how are target-backend validation errors normalized for display? JSON Schema is authoritative for pre-execution form validation, while the target backend remains authoritative for business validation.
+5. Which transport, if any, follows the initial ordinary HTTP request/response implementation: SSE, WebSocket, or a combination? ADR-013 defines event semantics independently of this choice.
+6. Which validation failures are handled exclusively in the browser, and how are target-backend validation errors normalized for display? JSON Schema is authoritative for pre-execution form validation, while the target backend remains authoritative for business validation.
 
 ## Authoring and forms
 
-8. What minimal application-level authoring helper, if any, should assemble app metadata and declared capabilities into `MashalaSpec`? `defineCapability` now fixes capability authoring, including reference fields.
-9. Are file uploads part of a later spec version or outside the project?
+7. Are file uploads part of a later spec version or outside the project?
 
 ## Technology
 
-10. Which browser end-to-end test runner should be adopted once browser interaction tests exist?
-11. What simple documentation/RAG indexing approach is sufficient when Phase 5 begins? No vector database is selected.
-12. After the deterministic state-machine requirements are implemented, does LangGraph materially improve persistence, interrupts, resumability, or branching? ADR-008 remains authoritative.
+8. After the deterministic state-machine requirements are implemented, does LangGraph materially improve persistence, interrupts, resumability, or branching? ADR-008 remains authoritative.
 
 ## Evaluation
 
-13. What participant count and recruitment plan are practical?
-14. What is the final task set?
-15. Which metrics are non-negotiable?
-16. Which safety/adversarial cases are required?
+9. What participant count and recruitment plan are practical?
+10. What is the final task set?
+11. Which metrics are non-negotiable?
+12. Which safety/adversarial cases are required?
 
 ## Resolved decisions
 
 - Canonical compiled spec format: ADR-012, ADR-016, ADR-017, and
-  `CANONICAL_SPEC.md` v0.3. The executable implementation remains v0.2 until
-  ISSUE-061 and ISSUE-062.
+  `CANONICAL_SPEC.md` v0.3. The executable implementation is v0.3.
 - Static v0.1 field types: `text`, `longText`, `number`, `select`, and `boolean`.
-- Browser/server logical event protocol: ADR-013 and `RUNTIME_PROTOCOL.md`; transport remains open.
+- Browser/server logical event protocol: ADR-013 and `RUNTIME_PROTOCOL.md`;
+  ordinary non-streaming HTTP is implemented first, while later streaming or
+  bidirectional transport remains open.
 - Next.js/React/TypeScript and Node runtime structure: ADR-011 and `TECH_STACK.md`.
-- Package manager, test runner, schema validator, and minimal persistence: ADR-011. First provider/API: ADR-015, which supersedes ADR-011's provider-specific clauses.
+- Package manager, test runner, and schema validator: ADR-011. First
+  provider/API: ADR-015. Conversation persistence: ADR-018, which supersedes
+  ADR-011's page-lifetime-only state clause.
 - Initial workflow implementation: a small custom deterministic state machine; LangGraph evaluation remains a later question under ADR-008.
+- Conversation identity and persistence: ADR-018 selects a browser-owned,
+  tab-local and target-auth-session-scoped `sessionStorage` record that survives
+  refresh, expires deterministically, restores only safe workflow/draft state,
+  and supplies only bounded allowlisted untrusted model context. Durable and
+  cross-device storage are deferred.
+- Application assembly: `defineMashalaApplication` produces the validated
+  `MashalaSpec`, and `assembleMashalaApplication` binds server-only runtime
+  dependencies outside serializable application data.
+- Browser end-to-end runner: Playwright exercises production-page flows through
+  deterministic local fixtures.
+- Documentation/RAG implementation: ADR-014 and the completed P4 work define
+  offline containerized Python/FAISS indexing, versioned artifacts, and a
+  retrieval-only runtime service behind a provider-neutral Node interface.
 - Reference response mapping: one root response array is projected through developer-declared direct `value` and `labelFrom` string properties; malformed items reject the complete option result, and cascading fields remain deferred.
 - Target-app auth integration: ISSUE-031 defines one fetch-like `TargetBackendRequest` browser behavior shared by writes and reference reads. The target app owns login, session lifecycle, refresh, and persistence; no credential is serialized into Mashala data or protocol events.
 - Model-visible backend projection: ADR-016 and ISSUE-032 define optional declarative output-to-source direct-property mappings on browser read sources. Projection fails closed in the browser, uses `backend.context.selected`, excludes credential-like data, and reaches the model only as untrusted context.

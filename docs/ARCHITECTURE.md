@@ -99,6 +99,35 @@ Mashala must not prescribe insecure persistence such as “always store access t
 Bearer tokens are therefore one possible target-app implementation detail, not
 the canonical Mashala integration model.
 
+## Conversation identity and memory
+
+ADR-018 selects browser-owned `sessionStorage` persistence for the first
+conversation-memory implementation. One record belongs to one Mashala
+application, browser tab, and target-auth session (or signed-out tab session),
+survives refresh, and expires after 30 minutes of inactivity or eight hours
+absolutely. It is not shared across tabs or devices, and the Mashala server
+remains stateless between runtime requests.
+
+The target app supplies only an opaque non-secret auth-scope tag so the browser
+can discard memory on logout, login, or identity change. That tag is not a
+credential or user profile. The Mashala conversation ID remains an independent
+opaque correlation/storage identifier and grants no authorization. A
+developer-supplied display profile is deferred, so v0.1 has no model-visible
+name, avatar, or personalization contract.
+
+Persistent state is a strict allowlist: a bounded user/assistant transcript, a
+safe active capability and resumable phase, revalidated partial static drafts,
+and normalized deterministic outcome summaries. Full backend responses,
+projected backend context, target credentials, confirmation snapshots, and
+in-flight execution authority are never persisted. Refresh cannot replay a
+request: confirming downgrades to filling, executing becomes an unknown
+interrupted outcome and idle state, and stale records are deleted.
+
+For later multi-turn language calls, the browser supplies only ADR-018's
+bounded model-context allowlist. Stored history is mutable browser data and is
+untrusted. ADR-016 projections remain transient one-request context and do not
+become conversation memory. No LLM-generated summarization is selected.
+
 ## LLM provider secret
 
 The developer's LLM API key is a deployment secret owned by the Mashala server runtime.

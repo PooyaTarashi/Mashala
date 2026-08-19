@@ -15,9 +15,11 @@ Accepted decisions are authoritative.
 - ADR-011 — Freeze the v0.1 technology stack
 - ADR-012 — Canonical compiled spec v0.1
 - ADR-013 — Transport-independent browser/server protocol v0.1
+- ADR-014 — Containerized Python RAG with offline indexing
 - ADR-015 — Google Gemini is the first LLM provider (supersedes ADR-011's provider-specific clauses)
 - ADR-016 — Model-visible backend data uses explicit browser-side projection (resolves ADR-010's open mechanism)
 - ADR-017 — Canonical read capabilities and deterministic result views (extends ADR-012's write-only clauses)
+- ADR-018 — Conversation memory is browser-owned and refresh-persistent (partially supersedes ADR-011's ephemeral-state clause)
 
 When a major architectural choice changes:
 

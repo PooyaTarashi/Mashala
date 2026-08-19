@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**P6 read capabilities, browser execution, deterministic result rendering, the integrated read workflow, and local end-to-end examples are implemented.**
+**P7 conversation identity, memory, and persistence architecture is accepted; storage implementation has not started.**
 
 ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, a strict non-streaming HTTP boundary for canonical runtime events, and a minimal accessible chat/form page for one happy-path transaction.
 
@@ -28,6 +28,15 @@ local target backend and fake runtime, including loading, success, empty,
 malformed, authorization, and network outcomes. Request recording proves the
 declared GETs originate in the browser and that target session data and full
 responses do not enter `/api/runtime` traffic.
+
+ISSUE-070 is complete as an ADR/design task. ADR-018 selects browser-owned,
+refresh-persistent `sessionStorage` scoped to one app, tab, and target-auth
+session (or signed-out tab session). It separates target authentication,
+browser display identity, Mashala conversation identity, and model-visible
+context; defers a developer-supplied display profile; defines strict stored and
+excluded fields, expiry/logout/identity-change behavior, safe restoration,
+concurrent-tab isolation, deterministic context bounds, and normalized safe
+read/write outcome summaries. No storage or runtime implementation was added.
 
 ## Accepted decisions
 
@@ -72,7 +81,21 @@ responses do not enter `/api/runtime` traffic.
 - The v0.1 implementation stack is TypeScript, Node.js 24.x LTS, npm, React, Next.js App Router, Vitest, and Ajv.
 - Google Gemini through the native non-streaming `generateContent` REST API is the first provider adapter under ADR-015; the exact model is server configuration.
 - Gemini-specific request/response shapes remain inside its adapter. Mashala code sees only provider-neutral structured request/result/error types, and callers remain responsible for deterministic output validation.
-- v0.1 uses ephemeral in-memory conversation state only and no persistent provider session. No database, ORM, or vector database is selected.
+- ADR-018 partially supersedes ADR-011's page-lifetime-only conversation state.
+  The first persistence implementation will use a strict browser-owned
+  `sessionStorage` record that survives refresh within one tab and target-auth
+  session. The Mashala server remains stateless; no database, ORM,
+  provider-managed conversation, cross-device history, or shared-tab state is
+  selected.
+- Target authentication identity, optional UI display identity, Mashala
+  conversation identity, and model-visible context are separate. v0.1 defers a
+  developer-supplied display profile. Target credentials, auth identities,
+  complete backend responses, confirmation snapshots, and in-flight execution
+  authority are excluded from records and model context.
+- Conversation records expire after 30 minutes of inactivity or eight hours
+  absolutely, clear on logout/identity change, and restore only safe idle or
+  draft-collection state. Model context is an explicit byte-bounded allowlist;
+  LLM-generated summarization is not selected.
 - ADR-014 places documentation indexing and retrieval behind an isolated Python container boundary. FAISS is the initial internal implementation and is not exposed to Node/Next.js.
 - The offline RAG artifact contract is plain JSON manifest version `1.0`; consumers accept only explicitly supported versions and require exact embedding provider/model/dimension/configuration compatibility.
 - The Python RAG runtime exposes only `POST /retrieve`, loads one compatible artifact/index state at startup, uses the recorded `search_query` Ollama embedding space, and returns plain chunk identity/content/provenance/score results.
@@ -88,6 +111,9 @@ responses do not enter `/api/runtime` traffic.
   explicit projection policy, read/write capability contract, deterministic
   result views, invariants, limitations, and complete examples.
 - ADR-013 and `RUNTIME_PROTOCOL.md` — normative browser/server protocol design, trust rules, and end-to-end flow. Its executable contracts live in `src/runtime-protocol.ts`.
+- ADR-018 — browser-owned refresh persistence, separated identity concepts,
+  safe conversation-record contents, restoration rules, retention, isolation,
+  and deterministic context bounds.
 
 ## P1 implementation
 
@@ -292,7 +318,9 @@ responses do not enter `/api/runtime` traffic.
 
 ## Deliberately unresolved
 
-- Durable conversation persistence beyond the v0.1 single-process proof.
+- Whether a later product requirement justifies durable/cross-device
+  conversation persistence; ADR-018 deliberately excludes it from the first
+  implementation.
 - The first reference/demo domain.
 - Primary thesis contribution wording and final research questions.
 
@@ -300,4 +328,6 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-ISSUE-070 (conversation identity, memory, and persistence ADR).
+Implement ADR-018's browser-owned record, safe hydration, auth lifecycle,
+clear/expiry behavior, and bounded versioned runtime context in a focused
+follow-up issue without adding durable server storage.
