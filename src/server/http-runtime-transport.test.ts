@@ -193,11 +193,15 @@ describe("HTTP runtime transport", () => {
     expect(providerRequest?.input).not.toContain("confirmation");
   });
 
-  it("uses an active declared capability without adding a routing step", async () => {
-    const generateStructured = queuedProvider({
-      outcome: "success",
-      output: { amount: 25 },
-    });
+  it("reclassifies and reroutes an active-capability follow-up", async () => {
+    const generateStructured = queuedProvider(
+      { outcome: "success", output: { classification: "transactional" } },
+      {
+        outcome: "success",
+        output: { outcome: "matched", capabilityId: "transfer_money" },
+      },
+      { outcome: "success", output: { amount: 25 } },
+    );
     const POST = transportWith(generateStructured);
 
     const response = await POST(
@@ -214,9 +218,10 @@ describe("HTTP runtime transport", () => {
     const frame = await parsed(response);
 
     expect(frame.events.map((event) => event.type)).toEqual([
+      "capability.route.result",
       "form.values.proposed",
     ]);
-    expect(generateStructured).toHaveBeenCalledTimes(1);
+    expect(generateStructured).toHaveBeenCalledTimes(3);
   });
 
   it("returns a canonical protocol error for malformed JSON", async () => {

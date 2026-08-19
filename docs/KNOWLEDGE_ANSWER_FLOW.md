@@ -65,6 +65,12 @@ operation, alter capability or confirmation configuration, control workflow,
 call tools, or reveal secrets. Documentation can describe application behavior
 for the answer, but it has no control-flow authority.
 
+ISSUE-072 may additionally supply the same already-validated bounded
+conversation context used by classification and routing. It remains labeled
+untrusted, may only clarify the question, and cannot establish an application
+fact that the selected documentation chunks do not support. Raw backend/read
+results are excluded; only a current-request ADR-016 projection can appear.
+
 The model is instructed to use only the supplied documentation for
 target-application facts. General model knowledge is not a fallback for absent
 application documentation.

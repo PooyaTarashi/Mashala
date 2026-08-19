@@ -299,7 +299,7 @@ describe("MashalaChat page capability workflow", () => {
     expect(workflowState()).toContain("FILLING");
   });
 
-  it("ignores stale extraction after review and executes the reviewed values", async () => {
+  it("invalidates the editable draft while a follow-up is rerouted and ignores it after cancellation", async () => {
     let resolveFollowUp:
       | ((events: readonly ServerToBrowserEvent[]) => void)
       | undefined;
@@ -325,25 +325,17 @@ describe("MashalaChat page capability workflow", () => {
     send("initial transfer");
     await screen.findByLabelText(/Recipient/);
     send("change it from stale language");
-    fireEvent.click(screen.getByRole("button", { name: "Review request" }));
-    expect(workflowState()).toContain("CONFIRMING");
+    expect(workflowState()).toContain("ROUTING");
+    expect(screen.queryByRole("button", { name: "Review request" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel current request" }));
 
     const followUpRequest = transport.mock.calls[1]?.[0];
     expect(followUpRequest).toBeDefined();
-    resolveFollowUp?.([
-      responseEvent(
-        followUpRequest!,
-        "form.values.proposed",
-        { capabilityId: "transfer_money", values: { recipient: "Stale" } },
-        "late_extraction",
-      ),
-    ]);
+    resolveFollowUp?.(routeAndProposal(followUpRequest!, { recipient: "Stale" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Confirm and send" }));
-    await screen.findByText("The target backend accepted the request.");
-    expect(JSON.parse(String(targetRequest.mock.calls[0]?.[1]?.body)).recipient).toBe(
-      "Reviewed",
-    );
+    await waitFor(() => expect(workflowState()).toContain("IDLE"));
+    expect(screen.queryByText("Complete the request")).toBeNull();
+    expect(targetRequest).not.toHaveBeenCalled();
   });
 
   it("guards duplicate confirmation while one browser write is pending", async () => {

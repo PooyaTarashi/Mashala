@@ -180,7 +180,7 @@ describe("routeCapability", () => {
     const request = generateStructured.mock.calls[0]?.[0];
     expect(request).toBeDefined();
     expect(JSON.parse(request?.input ?? "null")).toEqual({
-      utterance: "What can I do?",
+      utterance: { trust: "untrusted", text: "What can I do?" },
       capabilities: [
         {
           id: "transfer_money",

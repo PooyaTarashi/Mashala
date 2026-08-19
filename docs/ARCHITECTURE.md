@@ -123,10 +123,20 @@ in-flight execution authority are never persisted. Refresh cannot replay a
 request: confirming downgrades to filling, executing becomes an unknown
 interrupted outcome and idle state, and stale records are deleted.
 
-For later multi-turn language calls, the browser supplies only ADR-018's
-bounded model-context allowlist. Stored history is mutable browser data and is
-untrusted. ADR-016 projections remain transient one-request context and do not
-become conversation memory. No LLM-generated summarization is selected.
+For multi-turn language calls, `src/conversation-context.ts` deterministically
+selects ADR-018's allowlist into a separately versioned context snapshot. It
+prioritizes the active declared capability, valid static draft, and four newest
+safe outcomes, then admits only the newest whole transcript suffix fitting
+eight entries, 16 KiB of transcript, and the 32 KiB complete dynamic-context
+budget. The server revalidates age, bounds, capability membership, draft
+schemas, and outcome shapes before provider use.
+
+Stored history is mutable browser data and remains explicitly untrusted in
+classifier, routing, extraction, and knowledge-answer inputs. A successful
+ADR-016 read projection may be retained only in current page memory and
+attached to one later `user.message`; its declaration, purpose, output shape,
+credential exclusion, and 8 KiB limit are rechecked. It is consumed after that
+request and is never persisted. No LLM-generated summarization is selected.
 
 ## LLM provider secret
 

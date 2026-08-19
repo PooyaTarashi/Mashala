@@ -1018,25 +1018,25 @@ keeping all side effects deterministic.
 
 **Acceptance:**
 
-- [ ] each new message is classified and routed using a bounded, explicitly
+- [x] each new message is classified and routed using a bounded, explicitly
   assembled conversation context rather than the latest utterance alone;
-- [ ] context can include the current goal, active declared capability, valid
+- [x] context can include the current goal, active declared capability, valid
   draft values, recent user/assistant turns, and safe recent outcome summaries;
-- [ ] optional model-visible user profile data is included only according to
+- [x] optional model-visible user profile data is included only according to
   ISSUE-070's explicit allowlist;
-- [ ] follow-ups such as "do it again," "use the second product," "change the
+- [x] follow-ups such as "do it again," "use the second product," "change the
   amount to 50," and "what did I just do?" have defined safe behavior;
-- [ ] references to backend results use only previously authorized ADR-016
+- [x] references to backend results use only previously authorized ADR-016
   projections, never a hidden full response;
-- [ ] the model may propose intent, capability, and field updates but cannot
+- [x] the model may propose intent, capability, and field updates but cannot
   restore an expired action, reuse confirmation, invent a capability, or
   execute an operation;
-- [ ] switching goals invalidates incompatible pending workflow state;
-- [ ] completed actions are described as completed only from deterministic
+- [x] switching goals invalidates incompatible pending workflow state;
+- [x] completed actions are described as completed only from deterministic
   browser-observed outcomes, not model assumption;
-- [ ] context truncation/summarization preserves correlation and safety-critical
+- [x] context truncation/summarization preserves correlation and safety-critical
   workflow facts;
-- [ ] tests cover follow-up extraction, goal switching, recent-action questions,
+- [x] tests cover follow-up extraction, goal switching, recent-action questions,
   ambiguous pronouns, stale context, malicious stored content, and provider
   failure.
 

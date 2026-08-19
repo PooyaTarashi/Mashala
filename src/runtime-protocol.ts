@@ -1,6 +1,7 @@
 import Ajv2020 from "ajv/dist/2020.js";
 import type { ValidateFunction } from "ajv";
 
+import type { ConversationContextSnapshot } from "./conversation-context";
 import type { JsonSchema202012, JsonValue } from "./spec";
 import { containsCredentialLikeKey } from "./model-visible-backend-projection-policy";
 
@@ -38,6 +39,8 @@ export type UserMessageEvent = RuntimeEvent<
   {
     readonly text: string;
     readonly activeCapabilityId?: string;
+    /** ISSUE-072 bounded, untrusted browser-owned conversation context. */
+    readonly context?: ConversationContextSnapshot;
   }
 >;
 
@@ -172,6 +175,94 @@ const USER_MESSAGE_SCHEMA = eventSchema(
     {
       text: { type: "string" },
       activeCapabilityId: { type: "string" },
+      context: {
+        type: "object",
+        properties: {
+          contextVersion: { const: "0.1" },
+          createdAt: { type: "integer", minimum: 0 },
+          lastActivityAt: { type: "integer", minimum: 0 },
+          transcript: {
+            type: "array",
+            maxItems: 8,
+            items: {
+              type: "object",
+              properties: {
+                eventId: { type: "string" },
+                role: { type: "string", enum: ["user", "assistant"] },
+                text: { type: "string" },
+                timestamp: { type: "integer", minimum: 0 },
+              },
+              required: ["eventId", "role", "text", "timestamp"],
+              additionalProperties: false,
+            },
+          },
+          outcomes: {
+            type: "array",
+            maxItems: 4,
+            items: {
+              type: "object",
+              properties: {
+                capabilityId: { type: "string" },
+                capabilityKind: { type: "string", enum: ["read", "write"] },
+                completedAt: { type: "integer", minimum: 0 },
+                outcome: {
+                  type: "string",
+                  enum: [
+                    "succeeded",
+                    "target_http_error",
+                    "network_error",
+                    "invalid_response",
+                    "cancelled",
+                    "interrupted_unknown",
+                  ],
+                },
+                httpStatus: { type: "integer", minimum: 100, maximum: 599 },
+              },
+              required: [
+                "capabilityId",
+                "capabilityKind",
+                "completedAt",
+                "outcome",
+              ],
+              additionalProperties: false,
+            },
+          },
+          activeCapability: {
+            type: "object",
+            properties: {
+              capabilityId: { type: "string" },
+              capabilityKind: { type: "string", enum: ["read", "write"] },
+              draft: {
+                type: "object",
+                additionalProperties: { $ref: "#/$defs/jsonValue" },
+              },
+            },
+            required: ["capabilityId", "capabilityKind"],
+            additionalProperties: false,
+          },
+          selectedBackendContext: {
+            type: "object",
+            properties: {
+              sourceCapabilityId: { type: "string" },
+              purpose: {
+                type: "string",
+                enum: ["reference_resolution", "result_interpretation"],
+              },
+              data: { $ref: "#/$defs/jsonValue" },
+            },
+            required: ["sourceCapabilityId", "purpose", "data"],
+            additionalProperties: false,
+          },
+        },
+        required: [
+          "contextVersion",
+          "createdAt",
+          "lastActivityAt",
+          "transcript",
+          "outcomes",
+        ],
+        additionalProperties: false,
+      },
     },
     ["text"],
   ),
@@ -356,6 +447,12 @@ function containsCredentialLikeProtocolData(
 
   if (event.type === "form.values.proposed") {
     return containsCredentialLikeKey(event.payload.values);
+  }
+
+  if (event.type === "user.message" && event.payload.context !== undefined) {
+    return containsCredentialLikeKey(
+      event.payload.context as unknown as JsonValue,
+    );
   }
 
   return false;

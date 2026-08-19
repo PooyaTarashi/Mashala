@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**P7 conversation identity, memory, and persistence architecture plus the isolated browser lifecycle are implemented; bounded multi-turn context has not started.**
+**P7 browser-owned conversation memory and bounded safe multi-turn follow-up routing are implemented.**
 
 ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, a strict non-streaming HTTP boundary for canonical runtime events, and a minimal accessible chat/form page for one happy-path transaction.
 
@@ -49,6 +49,23 @@ drafts before any reference read, and blocks runtime/target-backend side
 effects when persistence fails. Focused store and browser integration tests
 cover refresh, expiry, clearing, logout/identity change, isolation, corruption,
 stale/concurrent state, tab-clone claims, size limits, and credential exclusion.
+
+ISSUE-072 is complete. `src/conversation-context.ts` assembles the separately
+versioned model snapshot from only the active declared capability, valid static
+draft, newest safe deterministic outcomes, bounded whole transcript entries,
+and an optional one-request ADR-016 projection. Browser and server both enforce
+the ADR-018 byte/count/expiry limits; the server revalidates declarations,
+schemas, projection shape, and credential exclusion before provider use.
+
+Every new user message is classified and rerouted with this untrusted context.
+Same-goal edits preserve only editable draft values, goal switches clear
+incompatible state, repeats start fresh, recent-action questions use only
+deterministic browser outcome summaries, and old confirmation/execution
+authority has no context representation. Focused tests cover field updates,
+amount changes, repeats, recent outcomes, projected/unprojected reads, goal
+switches, stale and ambiguous references, malicious history, provider failure,
+and confirmation non-reuse. No chatroom redesign or generated summarization was
+added.
 
 ## Accepted decisions
 
@@ -340,5 +357,5 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
 
-Implement ISSUE-072's bounded multi-turn context and follow-up capability
-routing without expanding conversation persistence beyond ADR-018.
+Evaluate reusable React chat UI systems under ISSUE-073 before selecting any
+new frontend dependency.

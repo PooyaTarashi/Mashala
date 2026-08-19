@@ -1,5 +1,10 @@
 import "server-only";
 
+import {
+  resolveConversationContext,
+  type ModelConversationContext,
+} from "../conversation-context";
+import { conversationOutcomeText } from "../conversation-store";
 import type {
   BrowserToServerEvent,
   ServerToBrowserEvent,
@@ -10,6 +15,7 @@ import { answerDocumentationQuestion } from "./knowledge-answer";
 import { classifyMessage } from "./message-classifier";
 import {
   capabilityRoutingResultToProtocolEvent,
+  createAssistantMessageEvent,
   createUnsupportedMessageEvent,
   createProtocolErrorEvent,
   knowledgeAnswerResultToProtocolEvent,
@@ -23,6 +29,7 @@ export interface ProcessRuntimeEventInput {
   readonly event: BrowserToServerEvent;
   readonly applicationRuntime: MashalaApplicationRuntime;
   readonly createEventId: () => string;
+  readonly now?: () => number;
 }
 
 function responseMetadata(
@@ -44,6 +51,7 @@ export async function processRuntimeEvent({
   event,
   applicationRuntime,
   createEventId,
+  now = Date.now,
 }: ProcessRuntimeEventInput): Promise<readonly ServerToBrowserEvent[]> {
   const provider = applicationRuntime.serverDependencies.llmProvider;
 
@@ -78,39 +86,61 @@ export async function processRuntimeEvent({
     ]);
   }
 
+  const contextResult = resolveConversationContext({
+    application: applicationRuntime.application,
+    snapshot: event.payload.context,
+    currentMessage: event.payload.text,
+    now: now(),
+  });
+  if (!contextResult.ok) {
+    return Object.freeze([
+      createProtocolErrorEvent(responseMetadata(event, createEventId), {
+        code: "invalid_event",
+        message: "The bounded conversation context is invalid or stale.",
+        retryable: false,
+      }),
+    ]);
+  }
+
+  let conversationContext: ModelConversationContext | undefined =
+    event.payload.context === undefined ? undefined : contextResult.value;
   if (event.payload.activeCapabilityId !== undefined) {
     const capability = applicationRuntime.resolveCapability(
       event.payload.activeCapabilityId,
     );
-
-    if (capability === undefined) {
+    if (
+      capability === undefined ||
+      (contextResult.value.activeCapability !== undefined &&
+        contextResult.value.activeCapability.capabilityId !== capability.id)
+    ) {
       return Object.freeze([
         createProtocolErrorEvent(responseMetadata(event, createEventId), {
           code: "invalid_event",
-          message: "The active capability ID is not declared by this application.",
+          message: "The active capability ID is not declared by this application or conflicts with context.",
           retryable: false,
         }),
       ]);
     }
-
-    const extractionResult = await extractSlotCandidates({
-      capability,
-      utterance: event.payload.text,
-      provider,
-    });
-
-    return Object.freeze([
-      slotExtractionResultToProtocolEvent(
-        extractionResult,
-        capability.id,
-        responseMetadata(event, createEventId),
-      ),
-    ]);
+    if (conversationContext === undefined) {
+      const active = Object.freeze({
+        capabilityId: capability.id,
+        capabilityKind: capability.kind,
+        description: capability.description,
+      });
+      conversationContext = Object.freeze({
+        trust: "untrusted",
+        currentGoal: active,
+        activeCapability: active,
+        recentTurns: Object.freeze([]),
+        recentOutcomes: Object.freeze([]),
+      });
+    }
   }
 
   const classificationResult = await classifyMessage({
     message: event.payload.text,
     provider,
+    ...(conversationContext === undefined ? {} : { conversationContext }),
   });
 
   if (classificationResult.outcome === "error") {
@@ -128,11 +158,27 @@ export async function processRuntimeEvent({
     ]);
   }
 
+  if (classificationResult.classification === "recent_activity") {
+    const outcome = event.payload.context?.outcomes.at(-1);
+    if (outcome === undefined) {
+      return Object.freeze([
+        createUnsupportedMessageEvent(responseMetadata(event, createEventId)),
+      ]);
+    }
+    return Object.freeze([
+      createAssistantMessageEvent(
+        responseMetadata(event, createEventId),
+        conversationOutcomeText(outcome, applicationRuntime.application),
+      ),
+    ]);
+  }
+
   if (classificationResult.classification === "documentation") {
     const answerResult = await answerDocumentationQuestion({
       question: event.payload.text,
       provider,
       retriever: applicationRuntime.serverDependencies.documentationRetriever,
+      ...(conversationContext === undefined ? {} : { conversationContext }),
     });
 
     return Object.freeze([
@@ -147,6 +193,7 @@ export async function processRuntimeEvent({
     utterance: event.payload.text,
     capabilities: applicationRuntime.application.capabilities,
     provider,
+    ...(conversationContext === undefined ? {} : { conversationContext }),
   });
   const routingEvent = capabilityRoutingResultToProtocolEvent(
     routingResult,
@@ -161,6 +208,7 @@ export async function processRuntimeEvent({
     capability: routingResult.capability,
     utterance: event.payload.text,
     provider,
+    ...(conversationContext === undefined ? {} : { conversationContext }),
   });
   const extractionEvent = slotExtractionResultToProtocolEvent(
     extractionResult,

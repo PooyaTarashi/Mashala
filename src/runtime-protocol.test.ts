@@ -49,6 +49,71 @@ describe("runtime protocol validation", () => {
     expect(validateServerToBrowserEvent(event).success).toBe(false);
   });
 
+  it("accepts a separately versioned bounded conversation snapshot", () => {
+    const event = {
+      ...baseEnvelope,
+      type: "user.message",
+      payload: {
+        text: "change the amount to 50",
+        context: {
+          contextVersion: "0.1",
+          createdAt: 1_000,
+          lastActivityAt: 1_500,
+          transcript: [{
+            eventId: "prior",
+            role: "user",
+            text: "send 40 to Sam",
+            timestamp: 1_400,
+          }],
+          outcomes: [],
+          activeCapability: {
+            capabilityId: "transfer_money",
+            capabilityKind: "write",
+            draft: { recipient: "Sam", amount: 40 },
+          },
+        },
+      },
+    } satisfies UserMessageEvent;
+
+    expect(validateBrowserToServerEvent(event).success).toBe(true);
+  });
+
+  it("rejects unknown summary authority and credential-bearing context fields", () => {
+    const baseContext = {
+      contextVersion: "0.1",
+      createdAt: 1_000,
+      lastActivityAt: 1_500,
+      transcript: [],
+      outcomes: [],
+    };
+    for (const context of [
+      {
+        ...baseContext,
+        outcomes: [{
+          capabilityId: "transfer_money",
+          capabilityKind: "write",
+          completedAt: 1_450,
+          outcome: "succeeded",
+          authorizeRepeat: true,
+        }],
+      },
+      {
+        ...baseContext,
+        activeCapability: {
+          capabilityId: "transfer_money",
+          capabilityKind: "write",
+          draft: { access_token: "secret" },
+        },
+      },
+    ]) {
+      expect(validateBrowserToServerEvent({
+        ...baseEnvelope,
+        type: "user.message",
+        payload: { text: "do it again", context },
+      })).toMatchObject({ success: false, error: { code: "invalid_event" } });
+    }
+  });
+
   it("accepts a valid route-result event", () => {
     const event = {
       ...baseEnvelope,

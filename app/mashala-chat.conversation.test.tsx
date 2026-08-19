@@ -101,6 +101,44 @@ function send(text: string): void {
 }
 
 describe("MashalaChat conversation lifecycle integration", () => {
+  it("assembles bounded store context into each follow-up before rerouting", async () => {
+    const storage = new MemoryStorage();
+    const transport = vi.fn<RuntimeTransport>(transferTransport());
+    render(
+      <MashalaChat
+        application={mashalaApplication}
+        conversationStore={storeFor(storage)}
+        transport={transport}
+      />,
+    );
+    await waitUntilReady();
+    send("transfer 40 to Sam");
+    await screen.findByLabelText(/Recipient/);
+    fireEvent.change(screen.getByLabelText(/Recipient/), {
+      target: { value: "Sam" },
+    });
+    send("change the amount to 50");
+    await waitFor(() => expect(transport).toHaveBeenCalledTimes(2));
+
+    const followUp = transport.mock.calls[1]?.[0];
+    expect(followUp?.type).toBe("user.message");
+    if (followUp?.type !== "user.message") return;
+    expect(followUp.payload.context).toMatchObject({
+      contextVersion: "0.1",
+      activeCapability: {
+        capabilityId: "transfer_money",
+        capabilityKind: "write",
+        draft: { recipient: "Sam", amount: 40 },
+      },
+      transcript: [expect.objectContaining({
+        role: "user",
+        text: "transfer 40 to Sam",
+      })],
+    });
+    expect(JSON.stringify(followUp.payload.context)).not.toContain("operation");
+    expect(JSON.stringify(followUp.payload.context)).not.toContain("confirmation");
+  });
+
   it("restores a bounded transcript and valid draft after refresh without a backend request", async () => {
     const storage = new MemoryStorage();
     const transport = transferTransport();

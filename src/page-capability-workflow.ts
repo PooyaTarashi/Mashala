@@ -50,6 +50,9 @@ export type PageCapabilityWorkflow =
       readonly phase: "routing";
       readonly runId: number;
       readonly request: PendingWorkflowRequest;
+      readonly previousInput?: Omit<CapabilityRun, "runId"> & {
+        readonly capabilityKind: "read" | "write";
+      };
     }
   | (CapabilityRun & {
       readonly phase: InputPhase;
@@ -266,6 +269,8 @@ export function transitionPageCapabilityWorkflow(
     case "route.requested":
       if (
         state.phase !== "idle" &&
+        state.phase !== "filling" &&
+        state.phase !== "collecting" &&
         state.phase !== "completed" &&
         state.phase !== "failed"
       ) {
@@ -275,6 +280,17 @@ export function transitionPageCapabilityWorkflow(
         phase: "routing",
         runId: state.runId + 1,
         request: action.request,
+        ...(state.phase === "filling" || state.phase === "collecting"
+          ? {
+              previousInput: Object.freeze({
+                capabilityId: state.capabilityId,
+                capabilityKind:
+                  state.phase === "filling" ? "write" as const : "read" as const,
+                values: state.values,
+                formRevision: state.formRevision,
+              }),
+            }
+          : {}),
       });
 
     case "route.matched":
@@ -284,6 +300,9 @@ export function transitionPageCapabilityWorkflow(
       ) {
         return state;
       }
+      const preservePrevious =
+        state.previousInput?.capabilityId === action.capabilityId &&
+        state.previousInput.capabilityKind === action.capabilityKind;
       return Object.freeze({
         phase:
           action.capabilityKind === "read"
@@ -293,8 +312,12 @@ export function transitionPageCapabilityWorkflow(
             : "filling",
         runId: state.runId,
         capabilityId: action.capabilityId,
-        values: Object.freeze({}),
-        formRevision: 0,
+        values: preservePrevious
+          ? state.previousInput?.values ?? Object.freeze({})
+          : Object.freeze({}),
+        formRevision: preservePrevious
+          ? state.previousInput?.formRevision ?? 0
+          : 0,
         pendingRequests: Object.freeze([state.request]),
       });
 

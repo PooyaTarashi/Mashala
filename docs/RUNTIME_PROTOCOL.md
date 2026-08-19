@@ -76,11 +76,14 @@ processing order and every member is a validated canonical server event:
 }
 ```
 
-For a new matched `user.message`, routing is returned before slot candidates.
-An active-capability message and a valid selected backend context use only the
-existing capability-bound extraction path. Out-of-scope or routing failure
-stops processing after the first event. The transport adds no page workflow or
-target-backend operation.
+Every `user.message`, including an active-capability follow-up, is classified
+and routed again. A matched declared route is returned before slot candidates.
+The browser transition table preserves editable values only when the new route
+matches the same active capability; switching goals clears incompatible state.
+A standalone valid selected-backend-context event retains its existing
+capability-bound extraction path. Out-of-scope or routing failure stops
+processing after the first event. The transport adds no target-backend
+operation.
 
 Accepted events preserve their `conversationId`; each response event uses its
 own Mashala event ID and names the accepted browser `eventId` in `inReplyTo`.
@@ -160,6 +163,9 @@ export type UserMessageEvent = RuntimeEvent<
 
     /** Present for a follow-up utterance within an already selected capability. */
     readonly activeCapabilityId?: string;
+
+    /** Separately versioned, bounded, untrusted ISSUE-072 snapshot. */
+    readonly context?: ConversationContextSnapshot;
   }
 >;
 
@@ -228,9 +234,31 @@ The discriminants and payload shapes are normative. The executable implementatio
 
 ### `user.message`
 
-The browser sends a user's utterance for initial routing or for language help in an already active capability. `activeCapabilityId` is a hint that must name a declared capability; the server must reject or ignore an undeclared ID.
+The browser sends a user's utterance for initial routing or for language help
+in an already active capability. `activeCapabilityId` is a hint that must name
+a declared capability; the server rejects an undeclared ID or one that
+conflicts with the bounded context.
 
-This event does not contain form state, target-backend session state, headers, cookies, or access tokens. The server may maintain the minimal ephemeral conversational context selected in ADR-011.
+`context`, when present, has its own `contextVersion: "0.1"` and strict shape.
+It may contain only timestamps needed for expiry, at most eight recent
+user/assistant text entries, at most four closed deterministic outcome
+summaries, an active declared capability with valid static draft values, and
+one transient selected backend context. The browser assembles it before adding
+the current message. The server independently checks expiry, declared
+capability/kind, partial form schema, ADR-016 source declaration and exact
+projected shape, credential exclusion, and the 32 KiB dynamic budget before
+any provider call.
+
+Classifier, router, extractor, and knowledge-answer prompts place this value
+only in explicitly untrusted model input. Recent-action answers are rendered
+deterministically from the newest closed outcome; the model cannot assert that
+an action completed. A repeat may propose the prior declared capability but
+starts a fresh workflow run with no old values, confirmation snapshot, or
+execution authority. Ambiguous references return out of scope.
+
+This event contains no target-backend session state, headers, cookies, access
+tokens, operation, confirmation, or execution state. Valid static draft values
+inside `context` remain editable language context only.
 
 ### `capability.route.result`
 
@@ -339,9 +367,13 @@ executes through `TargetBackendRequest`, validates the response root, and
 renders the declared result view.
 
 Neither the resolved URL nor the complete response is sent through this
-protocol. A later interpretation task may use only the existing
-`backend.context.selected` event after ADR-016 projection succeeds in the
-browser. Consequently, the protocol remains v0.1.
+protocol. A later interpretation task may use only ADR-016-projected data.
+ISSUE-072 allows the successful projection to be attached to one subsequent
+`user.message` so classification, routing, and extraction can interpret the
+follow-up together; it is then consumed and never persisted. The existing
+`backend.context.selected` event remains available for immediate
+capability-bound reference extraction. Consequently, the transport protocol
+remains v0.1 while the optional context snapshot is independently versioned.
 
 ## Deliberately absent from v0.1
 

@@ -13,6 +13,11 @@ import {
 import type { BackendOperationResult } from "../src/backend-executor";
 import { ConfirmationGate } from "../src/confirmation-gate";
 import {
+  assembleConversationContext,
+  type ConversationContextSelectedBackendData,
+  type ConversationContextSnapshot,
+} from "../src/conversation-context";
+import {
   ANONYMOUS_AUTH_SCOPE_TAG,
   conversationOutcomeText,
   createConversationStore,
@@ -375,6 +380,10 @@ export function MashalaChat({
   const conversationIdRef = useRef(
     conversationId ?? `pending_conversation_${reactId}`,
   );
+  const conversationRecordRef = useRef<ConversationRecord | undefined>(undefined);
+  const recentReadContextRef = useRef<
+    ConversationContextSelectedBackendData | undefined
+  >(undefined);
   const eventSequenceRef = useRef(0);
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
@@ -424,6 +433,7 @@ export function MashalaChat({
   }, [store]);
 
   const restoreConversation = useCallback((record: ConversationRecord): void => {
+    conversationRecordRef.current = record;
     conversationIdRef.current = record.conversationId;
     eventSequenceRef.current = 0;
     seenServerEventIdsRef.current.clear();
@@ -433,6 +443,7 @@ export function MashalaChat({
       else seenServerEventIdsRef.current.add(entry.eventId);
     }
     sentReferenceContextsRef.current.clear();
+    recentReadContextRef.current = undefined;
     pendingChatEventIdRef.current = undefined;
     pendingRef.current = false;
     setPending(false);
@@ -560,6 +571,7 @@ export function MashalaChat({
         handleStoreFailure(persisted);
         return false;
       }
+      conversationRecordRef.current = persisted.value;
     }
     workflowRef.current = next;
     setWorkflow(next);
@@ -591,6 +603,7 @@ export function MashalaChat({
       handleStoreFailure(persisted);
       return false;
     }
+    conversationRecordRef.current = persisted.value;
     return true;
   }, [handleStoreFailure, store]);
 
@@ -886,6 +899,15 @@ export function MashalaChat({
         return;
       }
 
+      recentReadContextRef.current =
+        result.outcome === "success" && result.modelContext !== undefined
+          ? Object.freeze({
+              sourceCapabilityId: activeReadCapability.id,
+              purpose: result.modelContext.purpose,
+              data: result.modelContext.data,
+            })
+          : undefined;
+
       setEntries((current) =>
         current.flatMap((entry): readonly ConversationEntry[] => {
           if (entry.id !== entryId) {
@@ -953,6 +975,30 @@ export function MashalaChat({
       return;
     }
 
+    let context: ConversationContextSnapshot | undefined;
+    if (conversationRecordRef.current !== undefined) {
+      const assembled = assembleConversationContext({
+        application,
+        record: conversationRecordRef.current,
+        currentMessage: text,
+        ...(recentReadContextRef.current === undefined
+          ? {}
+          : { selectedBackendContext: recentReadContextRef.current }),
+      });
+      if (!assembled.ok) {
+        if (assembled.code === "stale_context" && store !== undefined) {
+          const expired = store.expire();
+          if (!expired.ok) handleStoreFailure(expired);
+          else if (expired.value.expired) restoreConversation(expired.value.record);
+        }
+        setTransportFailure(
+          "The bounded conversation context could not be used. Please clear the conversation or try again.",
+        );
+        return;
+      }
+      context = assembled.value;
+    }
+
     pendingRef.current = true;
     setPending(true);
     setTransportFailure(undefined);
@@ -969,13 +1015,17 @@ export function MashalaChat({
         ...(currentCapabilityId === undefined
           ? {}
           : { activeCapabilityId: currentCapabilityId }),
+        ...(context === undefined ? {} : { context }),
       },
     };
+    if (context?.selectedBackendContext !== undefined) {
+      recentReadContextRef.current = undefined;
+    }
 
     const request: PendingWorkflowRequest = {
       eventId: browserEvent.eventId,
       conversationId: browserEvent.conversationId,
-      kind: currentCapabilityId === undefined ? "route" : "extraction",
+      kind: "route",
     };
     if (!persistTranscriptEntry({
       eventId: browserEvent.eventId,
@@ -986,15 +1036,7 @@ export function MashalaChat({
       setPending(false);
       return;
     }
-    const accepted =
-      currentCapabilityId === undefined
-        ? commitWorkflow({ type: "route.requested", request })
-        : commitWorkflow({
-            type: "extraction.requested",
-            request,
-            capabilityId: currentCapabilityId,
-            supersedePending: true,
-          });
+    const accepted = commitWorkflow({ type: "route.requested", request });
     if (!accepted) {
       pendingRef.current = false;
       setPending(false);
@@ -1062,6 +1104,8 @@ export function MashalaChat({
       seenServerEventIdsRef.current.clear();
       usedBrowserEventIdsRef.current.clear();
       sentReferenceContextsRef.current.clear();
+      conversationRecordRef.current = undefined;
+      recentReadContextRef.current = undefined;
       pendingChatEventIdRef.current = undefined;
       pendingRef.current = false;
       setPending(false);

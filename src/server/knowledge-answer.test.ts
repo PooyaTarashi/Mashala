@@ -386,7 +386,7 @@ describe("answerDocumentationQuestion", () => {
 
   it("has no target-backend, capability, confirmation, or operation input", () => {
     expectTypeOf<keyof AnswerDocumentationQuestionInput>().toEqualTypeOf<
-      "question" | "retriever" | "provider"
+      "question" | "retriever" | "provider" | "conversationContext"
     >();
   });
 });

@@ -31,6 +31,90 @@ function fillingState() {
 }
 
 describe("page capability workflow transition table", () => {
+  it("preserves a draft only for the same rerouted goal and clears it on a goal switch", () => {
+    const changed = transitionPageCapabilityWorkflow(fillingState(), {
+      type: "draft.changed",
+      capabilityId: "transfer_money",
+      values: { recipient: "Sam", amount: 40 },
+    });
+    const followUp: PendingWorkflowRequest = {
+      eventId: "message_2",
+      conversationId: "conversation_1",
+      kind: "route",
+    };
+    const routing = transitionPageCapabilityWorkflow(changed, {
+      type: "route.requested",
+      request: followUp,
+    });
+    const sameGoal = transitionPageCapabilityWorkflow(routing, {
+      type: "route.matched",
+      correlation: followUp,
+      capabilityId: "transfer_money",
+      capabilityKind: "write",
+    });
+    expect(sameGoal).toMatchObject({
+      phase: "filling",
+      values: { recipient: "Sam", amount: 40 },
+    });
+
+    const switched = transitionPageCapabilityWorkflow(routing, {
+      type: "route.matched",
+      correlation: followUp,
+      capabilityId: "show_product",
+      capabilityKind: "read",
+      readHasInput: true,
+    });
+    expect(switched).toMatchObject({
+      phase: "collecting",
+      capabilityId: "show_product",
+      values: {},
+    });
+  });
+
+  it("never reuses a completed run's reviewed snapshot or confirmation", () => {
+    const snapshot = { recipient: "Sam", amount: 25 } as const;
+    const confirming = transitionPageCapabilityWorkflow(fillingState(), {
+      type: "review.requested",
+      capabilityId: "transfer_money",
+      snapshot,
+    });
+    const executing = transitionPageCapabilityWorkflow(confirming, {
+      type: "execution.requested",
+      capabilityId: "transfer_money",
+      snapshot,
+      confirmation: "required",
+    });
+    const completed = transitionPageCapabilityWorkflow(executing, {
+      type: "execution.finished",
+      capabilityId: "transfer_money",
+      result: { outcome: "success", response: new Response(null, { status: 201 }) },
+    });
+    const repeatRequest: PendingWorkflowRequest = {
+      eventId: "message_repeat",
+      conversationId: "conversation_1",
+      kind: "route",
+    };
+    const repeatRouting = transitionPageCapabilityWorkflow(completed, {
+      type: "route.requested",
+      request: repeatRequest,
+    });
+    const repeated = transitionPageCapabilityWorkflow(repeatRouting, {
+      type: "route.matched",
+      correlation: repeatRequest,
+      capabilityId: "transfer_money",
+      capabilityKind: "write",
+    });
+
+    expect(repeated).toMatchObject({ phase: "filling", values: {} });
+    expect(repeated).not.toHaveProperty("reviewedSnapshot");
+    expect(transitionPageCapabilityWorkflow(repeated, {
+      type: "execution.requested",
+      capabilityId: "transfer_money",
+      snapshot,
+      confirmation: "required",
+    })).toBe(repeated);
+  });
+
   it("covers the legal success path with an exact reviewed snapshot", () => {
     const routing = transitionPageCapabilityWorkflow(
       INITIAL_PAGE_CAPABILITY_WORKFLOW,
