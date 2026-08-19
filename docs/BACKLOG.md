@@ -1079,25 +1079,25 @@ and browser execution.
 
 **Acceptance:**
 
-- [ ] the transcript displays ordered user messages, assistant messages,
+- [x] the transcript displays ordered user messages, assistant messages,
   capability forms, confirmation reviews, read-result cards/lists, outcomes,
   and errors as coherent conversation items;
-- [ ] restored history is visibly distinguished from pending/current work and
+- [x] restored history is visibly distinguished from pending/current work and
   cannot replay an operation;
-- [ ] the composer supports keyboard submission, multiline input, disabled and
+- [x] the composer supports keyboard submission, multiline input, disabled and
   pending states, retry where safe, and protection against duplicate sends;
-- [ ] focus management, live-region announcements, contrast, labels, and
+- [x] focus management, live-region announcements, contrast, labels, and
   keyboard navigation meet the project's accessibility expectations;
-- [ ] scroll behavior does not steal the user's position when reviewing an old
+- [x] scroll behavior does not steal the user's position when reviewing an old
   message and provides a deterministic way to return to the newest message;
-- [ ] responsive behavior is usable on mobile and desktop;
-- [ ] users can start a new conversation and clear history according to the
+- [x] responsive behavior is usable on mobile and desktop;
+- [x] users can start a new conversation and clear history according to the
   accepted lifecycle;
-- [ ] current target-app identity/session state is visible without exposing a
+- [x] current target-app identity/session state is visible without exposing a
   credential;
-- [ ] the selected third-party system, if any, remains a presentation layer and
+- [x] the selected third-party system, if any, remains a presentation layer and
   cannot become routing, workflow, confirmation, or execution authority;
-- [ ] component tests cover long histories, embedded forms/cards, restored
+- [x] component tests cover long histories, embedded forms/cards, restored
   history, pending messages, retry, clear/new conversation, accessibility, and
   mobile layout.
 

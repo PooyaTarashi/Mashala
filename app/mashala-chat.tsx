@@ -2,6 +2,7 @@
 
 import {
   type FormEvent,
+  type KeyboardEvent,
   useCallback,
   useEffect,
   useId,
@@ -86,7 +87,10 @@ export interface MashalaChatProps {
   readonly createEventId?: () => string;
 }
 
-type ConversationEntry =
+type ConversationEntry = {
+  readonly id: string;
+  readonly historical?: boolean;
+} & (
   | {
       readonly id: string;
       readonly kind: "user";
@@ -141,7 +145,13 @@ type ConversationEntry =
       readonly id: string;
       readonly kind: "read-failure";
       readonly text: string;
-    };
+    }
+  | {
+      readonly id: string;
+      readonly kind: "outcome";
+      readonly text: string;
+    }
+);
 
 const defaultTransport = createRuntimeHttpTransport();
 
@@ -191,17 +201,29 @@ function entriesFromRecord(
   application: MashalaSpec,
 ): readonly ConversationEntry[] {
   return [
-    ...record.transcript.map((entry): ConversationEntry => ({
-      id: entry.eventId,
-      kind: entry.role,
-      text: entry.text,
+    ...record.transcript.map((entry, index) => ({
+      timestamp: entry.timestamp,
+      index,
+      entry: {
+        id: entry.eventId,
+        kind: entry.role,
+        text: entry.text,
+        historical: true,
+      } satisfies ConversationEntry,
     })),
-    ...record.outcomes.map((summary, index): ConversationEntry => ({
-      id: `outcome-${String(summary.completedAt)}-${String(index)}`,
-      kind: "assistant",
-      text: conversationOutcomeText(summary, application),
+    ...record.outcomes.map((summary, index) => ({
+      timestamp: summary.completedAt,
+      index: record.transcript.length + index,
+      entry: {
+        id: `outcome-${String(summary.completedAt)}-${String(index)}`,
+        kind: "outcome",
+        text: conversationOutcomeText(summary, application),
+        historical: true,
+      } satisfies ConversationEntry,
     })),
-  ];
+  ]
+    .sort((left, right) => left.timestamp - right.timestamp || left.index - right.index)
+    .map(({ entry }) => entry);
 }
 
 function writeOutcomeSummary(
@@ -254,11 +276,14 @@ function persistedDraft(values: FormValue): Readonly<Record<string, JsonValue>> 
 }
 
 function renderEntry(entry: ConversationEntry) {
+  const restoredLabel = entry.historical
+    ? <span className={styles.restoredBadge}>Restored</span>
+    : null;
   switch (entry.kind) {
     case "user":
       return (
-        <article className={styles.userMessage} aria-label="Your message">
-          <strong>You</strong>
+        <article className={styles.userMessage} aria-label={entry.historical ? "Restored your message" : "Your message"}>
+          <div className={styles.itemMeta}><strong>You</strong>{restoredLabel}</div>
           <p>{entry.text}</p>
         </article>
       );
@@ -269,7 +294,7 @@ function renderEntry(entry: ConversationEntry) {
           aria-label="Matched capability"
           role="status"
         >
-          <strong>Matched capability</strong>
+          <div className={styles.itemMeta}><strong>Matched capability</strong>{restoredLabel}</div>
           <p>{entry.description}</p>
           <p className={styles.technicalLabel}>{entry.capabilityId}</p>
         </article>
@@ -281,7 +306,7 @@ function renderEntry(entry: ConversationEntry) {
           aria-label="Proposed form values"
           role="status"
         >
-          <strong>Suggested form values</strong>
+          <div className={styles.itemMeta}><strong>Suggested form values</strong>{restoredLabel}</div>
           <p>
             {entry.fieldCount === 0
               ? "No form values were suggested."
@@ -291,8 +316,8 @@ function renderEntry(entry: ConversationEntry) {
       );
     case "assistant":
       return (
-        <article className={styles.assistantMessage} aria-label="Assistant message">
-          <strong>Assistant</strong>
+        <article className={styles.assistantMessage} aria-label={entry.historical ? "Restored assistant message" : "Assistant message"}>
+          <div className={styles.itemMeta}><strong>Assistant</strong>{restoredLabel}</div>
           <p>{entry.text}</p>
         </article>
       );
@@ -303,7 +328,7 @@ function renderEntry(entry: ConversationEntry) {
           aria-label="Out of scope"
           role="status"
         >
-          <strong>Outside available capabilities</strong>
+          <div className={styles.itemMeta}><strong>Outside available capabilities</strong>{restoredLabel}</div>
           <p>{entry.text}</p>
         </article>
       );
@@ -314,7 +339,7 @@ function renderEntry(entry: ConversationEntry) {
           aria-label="Protocol error"
           role="alert"
         >
-          <strong>Protocol error{entry.code === undefined ? "" : ` (${entry.code})`}</strong>
+          <div className={styles.itemMeta}><strong>Protocol error{entry.code === undefined ? "" : ` (${entry.code})`}</strong>{restoredLabel}</div>
           <p>{entry.text}</p>
         </article>
       );
@@ -327,14 +352,14 @@ function renderEntry(entry: ConversationEntry) {
           aria-live="polite"
           aria-busy="true"
         >
-          <strong>Loading result</strong>
+          <div className={styles.itemMeta}><strong>Loading result</strong>{restoredLabel}</div>
           <p>The target backend request is in progress.</p>
         </article>
       );
     case "read-result":
       return (
         <article className={styles.readResult} aria-label="Read result">
-          <strong className={styles.resultHeading}>Result</strong>
+          <div className={styles.itemMeta}><strong className={styles.resultHeading}>Result</strong>{restoredLabel}</div>
           <ResultCardRenderer
             view={entry.capability.result}
             data={entry.result.data}
@@ -345,14 +370,21 @@ function renderEntry(entry: ConversationEntry) {
     case "read-empty":
       return (
         <article className={styles.readEmpty} aria-label="Empty read result" role="status">
-          <strong>No results</strong>
+          <div className={styles.itemMeta}><strong>No results</strong>{restoredLabel}</div>
           <p>{entry.text}</p>
         </article>
       );
     case "read-failure":
       return (
         <article className={styles.readFailure} aria-label="Read failure" role="alert">
-          <strong>Unable to load the result</strong>
+          <div className={styles.itemMeta}><strong>Unable to load the result</strong>{restoredLabel}</div>
+          <p>{entry.text}</p>
+        </article>
+      );
+    case "outcome":
+      return (
+        <article className={styles.completedOutcome} aria-label="Restored completed outcome" role="status">
+          <div className={styles.itemMeta}><strong>Completed outcome</strong>{restoredLabel}</div>
           <p>{entry.text}</p>
         </article>
       );
@@ -387,6 +419,13 @@ export function MashalaChat({
   const eventSequenceRef = useRef(0);
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [retryMessage, setRetryMessage] = useState<string>();
+  const [atLatest, setAtLatest] = useState(true);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const composerFormRef = useRef<HTMLFormElement | null>(null);
+  const transcriptRef = useRef<HTMLOListElement | null>(null);
+  const activeWorkflowItemRef = useRef<HTMLLIElement | null>(null);
+  const atLatestRef = useRef(true);
   const pendingRef = useRef(false);
   const pendingChatEventIdRef = useRef<string | undefined>(undefined);
   const [transportFailure, setTransportFailure] = useState<string>();
@@ -421,6 +460,42 @@ export function MashalaChat({
     targetBackendBaseUrl ??
     (typeof window === "undefined" ? "http://localhost" : window.location.origin);
 
+  const updateTranscriptPosition = useCallback(() => {
+    const transcript = transcriptRef.current;
+    if (transcript === null) return;
+    const isAtLatest =
+      transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight <= 32;
+    atLatestRef.current = isAtLatest;
+    setAtLatest(isAtLatest);
+  }, []);
+
+  const returnToLatest = useCallback(() => {
+    const transcript = transcriptRef.current;
+    if (transcript === null) return;
+    transcript.scrollTop = transcript.scrollHeight;
+    atLatestRef.current = true;
+    setAtLatest(true);
+  }, []);
+
+  useEffect(() => {
+    if (atLatestRef.current) returnToLatest();
+  }, [entries.length, restorationPaused, returnToLatest, workflow.phase, workflow.runId]);
+
+  useEffect(() => {
+    if (
+      restorationPaused ||
+      (workflow.phase !== "filling" && workflow.phase !== "collecting")
+    ) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      activeWorkflowItemRef.current?.querySelector<HTMLElement>(
+        "input:not([type='hidden']), select, textarea, button",
+      )?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [restorationPaused, workflow.phase, workflow.runId]);
+
   useEffect(() => {
     if (store === undefined) return;
     if (storeCloseTimerRef.current !== undefined) {
@@ -448,6 +523,7 @@ export function MashalaChat({
     pendingRef.current = false;
     setPending(false);
     setMessage("");
+    setRetryMessage(undefined);
     setTransportFailure(undefined);
     setEntries(entriesFromRecord(record, application));
     setRestorationPaused(record.workflow.phase !== "idle");
@@ -1001,6 +1077,7 @@ export function MashalaChat({
 
     pendingRef.current = true;
     setPending(true);
+    setRetryMessage(undefined);
     setTransportFailure(undefined);
     setMessage("");
 
@@ -1055,6 +1132,7 @@ export function MashalaChat({
       if (isCorrelatedWorkflowResponse(workflowRef.current, correlation)) {
         commitWorkflow({ type: "routing.failed", correlation });
         setTransportFailure(transportFailureMessage(error));
+        setRetryMessage(text);
       }
     } finally {
       if (pendingChatEventIdRef.current === browserEvent.eventId) {
@@ -1120,6 +1198,30 @@ export function MashalaChat({
     setConversationOperational(true);
     setConversationFailure(undefined);
     setConversationNotice("Conversation cleared.");
+    setRetryMessage(undefined);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  }
+
+  function startNewConversation(): void {
+    clearConversation();
+    setConversationNotice("New conversation started.");
+  }
+
+  function retryLastMessage(): void {
+    if (retryMessage === undefined || pendingRef.current || !canCompose) return;
+    setMessage(retryMessage);
+    requestAnimationFrame(() => composerFormRef.current?.requestSubmit());
+  }
+
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      composerFormRef.current?.requestSubmit();
+    }
   }
 
   const canCompose =
@@ -1144,23 +1246,43 @@ export function MashalaChat({
       workflow.phase === "presenting" ||
       workflow.phase === "empty" ||
       workflow.phase === "failed");
+  const liveAnnouncement = pending
+    ? "Sending message. Please wait."
+    : workflow.phase === "filling" || workflow.phase === "collecting"
+      ? "A deterministic form is ready to complete."
+      : workflow.phase === "confirming"
+        ? "Review the request before confirming it."
+        : workflow.phase === "executing" || workflow.phase === "fetching"
+          ? "The browser request is in progress."
+          : workflow.phase === "completed" ||
+              workflow.phase === "presenting" ||
+              workflow.phase === "empty"
+            ? "The current workflow has completed."
+            : workflow.phase === "failed"
+              ? "The current workflow needs attention."
+              : "";
 
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <p className={styles.eyebrow}>Mashala</p>
-        <h1>{application.app.name}</h1>
+        <div>
+          <p className={styles.eyebrow}>Mashala</p>
+          <h1>{application.app.name}</h1>
+        </div>
         <p>{application.app.description}</p>
+        <p className={styles.sessionStatus}>Session-local conversation</p>
       </header>
 
       <section className={styles.chat} aria-labelledby="conversation-heading">
-        <h2 id="conversation-heading">Conversation</h2>
-        <p
-          className={styles.workflowStatus}
-          data-testid="workflow-state"
-          aria-live="polite"
-        >
-          Workflow state: {workflow.phase.toUpperCase()}
+        <div className={styles.chatHeader}>
+          <div>
+            <p className={styles.eyebrow}>Chatroom</p>
+            <h2 id="conversation-heading">Conversation</h2>
+          </div>
+          <p className={styles.sessionStatus}>This browser tab only</p>
+        </div>
+        <p className={styles.workflowStatus} data-testid="workflow-state">
+          Current workflow: {workflow.phase.toUpperCase()}
         </p>
         {!conversationReady ? (
           <p className={styles.status} role="status" aria-live="polite">
@@ -1178,46 +1300,173 @@ export function MashalaChat({
           </p>
         )}
         {restorationPaused ? (
-          <div>
+          <div className={styles.restorationNotice}>
             <p className={styles.status}>
-              A safe draft was restored. No backend request has been made.
+              A safe draft was restored. It is paused and no backend request has been made.
             </p>
             <button
               className={styles.secondaryAction}
               type="button"
-              onClick={() => setRestorationPaused(false)}
+              onClick={() => {
+                setRestorationPaused(false);
+              }}
             >
               Resume saved draft
             </button>
           </div>
         ) : null}
-        {entries.length === 0 ? (
-          <p className={styles.empty}>Describe what you want to do.</p>
-        ) : (
+        <div className={styles.transcriptShell}>
           <ol
+            ref={transcriptRef}
             className={styles.messages}
-            aria-label="Conversation messages"
-            aria-live="polite"
-            aria-relevant="additions"
+            aria-label="Conversation transcript"
+            onScroll={updateTranscriptPosition}
           >
-            {entries.map((entry, index) => (
-              <li key={`${entry.id}-${String(index)}`}>{renderEntry(entry)}</li>
+            {entries.length === 0 ? (
+              <li className={styles.empty}>Describe what you want to do. You can also ask a question.</li>
+            ) : entries.map((entry, index) => (
+              <li
+                key={`${entry.id}-${String(index)}`}
+                className={entry.historical ? styles.historicalItem : undefined}
+              >
+                {renderEntry(entry)}
+              </li>
             ))}
+            {!conversationReady ||
+            !conversationOperational ||
+            restorationPaused ||
+            activeWriteCapability === undefined ? null : (
+              <li
+                ref={activeWorkflowItemRef}
+                className={styles.workflowItem}
+                data-workflow-phase={workflow.phase}
+              >
+                <article className={styles.capability} aria-labelledby="active-capability-heading">
+                  <div className={styles.itemMeta}><strong>Current request</strong></div>
+                  <h3 id="active-capability-heading">Complete the request</h3>
+                  <p>{activeWriteCapability.description}</p>
+                  <ConfirmationGate
+                    key={`${String(workflow.runId)}-${activeWriteCapability.id}-${String(formRevision)}`}
+                    capability={activeWriteCapability}
+                    initialValues={proposedValues}
+                    baseUrl={backendBaseUrl}
+                    request={targetBackendRequest}
+                    formId={`capability-${activeWriteCapability.id}`}
+                    submitLabel={
+                      activeWriteCapability.confirmation === "required"
+                        ? "Review request"
+                        : "Submit request"
+                    }
+                    onDraftChange={(values) => {
+                      commitWorkflow({
+                        type: "draft.changed",
+                        capabilityId: activeWriteCapability.id,
+                        values,
+                      });
+                    }}
+                    onReferenceModelContext={sendReferenceContext}
+                    onReview={(snapshot) =>
+                      commitWorkflow({
+                        type: "review.requested",
+                        capabilityId: activeWriteCapability.id,
+                        snapshot,
+                      })
+                    }
+                    onReviewCancel={() => {
+                      commitWorkflow({
+                        type: "review.cancelled",
+                        capabilityId: activeWriteCapability.id,
+                      });
+                    }}
+                    onExecutionStart={(snapshot) =>
+                      commitWorkflow({
+                        type: "execution.requested",
+                        capabilityId: activeWriteCapability.id,
+                        snapshot,
+                        confirmation: activeWriteCapability.confirmation,
+                      })
+                    }
+                    onResult={(result: BackendOperationResult) => {
+                      commitWorkflow({
+                        type: "execution.finished",
+                        capabilityId: activeWriteCapability.id,
+                        result,
+                      });
+                    }}
+                  />
+                </article>
+              </li>
+            )}
+            {!conversationReady ||
+            !conversationOperational ||
+            restorationPaused ||
+            activeReadCapability?.input === undefined ||
+            workflow.phase !== "collecting" ? null : (
+              <li ref={activeWorkflowItemRef} className={styles.workflowItem} data-workflow-phase={workflow.phase}>
+                <article className={styles.capability} aria-labelledby="active-read-capability-heading">
+                  <div className={styles.itemMeta}><strong>Current request</strong></div>
+                  <h3 id="active-read-capability-heading">Choose read inputs</h3>
+                  <p>{activeReadCapability.description}</p>
+                  <CompiledForm
+                    key={`${String(workflow.runId)}-${activeReadCapability.id}-${String(formRevision)}`}
+                    form={activeReadCapability.input}
+                    initialValues={proposedValues}
+                    baseUrl={backendBaseUrl}
+                    request={targetBackendRequest}
+                    formId={`read-${activeReadCapability.id}`}
+                    submitLabel="Fetch result"
+                    onChange={(values: FormValue) => {
+                      commitWorkflow({
+                        type: "draft.changed",
+                        capabilityId: activeReadCapability.id,
+                        values,
+                      });
+                    }}
+                    onReferenceModelContext={sendReferenceContext}
+                    onSubmit={(values: FormValue) => {
+                      const runId = workflow.runId;
+                      if (!commitWorkflow({
+                        type: "read.execution.requested",
+                        runId,
+                        capabilityId: activeReadCapability.id,
+                        values,
+                      })) return;
+                      setEntries((current) => [
+                        ...current,
+                        {
+                          id: readEntryId(runId, activeReadCapability.id),
+                          kind: "read-loading",
+                          runId,
+                          capabilityId: activeReadCapability.id,
+                        },
+                      ]);
+                    }}
+                  />
+                </article>
+              </li>
+            )}
           </ol>
-        )}
+          {!atLatest ? (
+            <button className={styles.latestAction} type="button" onClick={returnToLatest}>
+              Jump to latest message
+            </button>
+          ) : null}
+        </div>
 
-        <form className={styles.composer} onSubmit={handleSubmit}>
+        <form ref={composerFormRef} className={styles.composer} onSubmit={handleSubmit}>
           <label htmlFor="mashala-message">Message</label>
           <div className={styles.composerRow}>
-            <input
+            <textarea
+              ref={composerRef}
               id="mashala-message"
               name="message"
-              type="text"
               value={message}
               required
+              rows={3}
               disabled={pending || !canCompose}
               aria-describedby="mashala-message-status"
               onChange={(event) => setMessage(event.currentTarget.value)}
+              onKeyDown={handleComposerKeyDown}
             />
             <button
               type="submit"
@@ -1232,14 +1481,21 @@ export function MashalaChat({
             role="status"
             aria-live="polite"
           >
-            {pending ? "Sending message. Please wait." : ""}
+            {liveAnnouncement}
           </p>
+          <p className={styles.composerHint}>Press Enter to send. Use Shift + Enter for a new line.</p>
         </form>
 
         {transportFailure === undefined ? null : (
           <p className={styles.transportFailure} role="alert">
             <strong>Transport failure:</strong> {transportFailure}
           </p>
+        )}
+
+        {retryMessage === undefined ? null : (
+          <button className={styles.secondaryAction} type="button" onClick={retryLastMessage}>
+            Retry message
+          </button>
         )}
 
         {canCancel ? (
@@ -1262,128 +1518,26 @@ export function MashalaChat({
           </button>
         ) : null}
 
-        <button
-          className={styles.secondaryAction}
-          type="button"
-          disabled={!conversationReady || conversationFailure !== undefined}
-          onClick={clearConversation}
-        >
-          Clear conversation
-        </button>
+        <div className={styles.conversationActions}>
+          <button
+            className={styles.secondaryAction}
+            type="button"
+            disabled={!conversationReady || conversationFailure !== undefined}
+            onClick={startNewConversation}
+          >
+            New conversation
+          </button>
+          <button
+            className={styles.secondaryAction}
+            type="button"
+            disabled={!conversationReady || conversationFailure !== undefined}
+            onClick={clearConversation}
+          >
+            Clear conversation
+          </button>
+        </div>
       </section>
 
-      {!conversationReady ||
-      !conversationOperational ||
-      restorationPaused ||
-      activeWriteCapability === undefined ? null : (
-        <section
-          className={styles.capability}
-          aria-labelledby="active-capability-heading"
-        >
-          <h2 id="active-capability-heading">Complete the request</h2>
-          <p>{activeWriteCapability.description}</p>
-          <ConfirmationGate
-            key={`${String(workflow.runId)}-${activeWriteCapability.id}-${String(formRevision)}`}
-            capability={activeWriteCapability}
-            initialValues={proposedValues}
-            baseUrl={backendBaseUrl}
-            request={targetBackendRequest}
-            formId={`capability-${activeWriteCapability.id}`}
-            submitLabel={
-              activeWriteCapability.confirmation === "required"
-                ? "Review request"
-                : "Submit request"
-            }
-            onDraftChange={(values) => {
-              commitWorkflow({
-                type: "draft.changed",
-                capabilityId: activeWriteCapability.id,
-                values,
-              });
-            }}
-            onReferenceModelContext={sendReferenceContext}
-            onReview={(snapshot) =>
-              commitWorkflow({
-                type: "review.requested",
-                capabilityId: activeWriteCapability.id,
-                snapshot,
-              })
-            }
-            onReviewCancel={() => {
-              commitWorkflow({
-                type: "review.cancelled",
-                capabilityId: activeWriteCapability.id,
-              });
-            }}
-            onExecutionStart={(snapshot) =>
-              commitWorkflow({
-                type: "execution.requested",
-                capabilityId: activeWriteCapability.id,
-                snapshot,
-                confirmation: activeWriteCapability.confirmation,
-              })
-            }
-            onResult={(result: BackendOperationResult) => {
-              commitWorkflow({
-                type: "execution.finished",
-                capabilityId: activeWriteCapability.id,
-                result,
-              });
-            }}
-          />
-        </section>
-      )}
-
-      {!conversationReady ||
-      !conversationOperational ||
-      restorationPaused ||
-      activeReadCapability?.input === undefined ||
-      workflow.phase !== "collecting" ? null : (
-        <section
-          className={styles.capability}
-          aria-labelledby="active-read-capability-heading"
-        >
-          <h2 id="active-read-capability-heading">Choose read inputs</h2>
-          <p>{activeReadCapability.description}</p>
-          <CompiledForm
-            key={`${String(workflow.runId)}-${activeReadCapability.id}-${String(formRevision)}`}
-            form={activeReadCapability.input}
-            initialValues={proposedValues}
-            baseUrl={backendBaseUrl}
-            request={targetBackendRequest}
-            formId={`read-${activeReadCapability.id}`}
-            submitLabel="Fetch result"
-            onChange={(values: FormValue) => {
-              commitWorkflow({
-                type: "draft.changed",
-                capabilityId: activeReadCapability.id,
-                values,
-              });
-            }}
-            onReferenceModelContext={sendReferenceContext}
-            onSubmit={(values: FormValue) => {
-              const runId = workflow.runId;
-              if (!commitWorkflow({
-                type: "read.execution.requested",
-                runId,
-                capabilityId: activeReadCapability.id,
-                values,
-              })) {
-                return;
-              }
-              setEntries((current) => [
-                ...current,
-                {
-                  id: readEntryId(runId, activeReadCapability.id),
-                  kind: "read-loading",
-                  runId,
-                  capabilityId: activeReadCapability.id,
-                },
-              ]);
-            }}
-          />
-        </section>
-      )}
     </main>
   );
 }

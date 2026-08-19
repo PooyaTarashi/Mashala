@@ -100,6 +100,26 @@ describe("MashalaChat message transport", () => {
     );
   });
 
+  it("uses an accessible multiline composer and submits with Enter", async () => {
+    const transport = vi
+      .fn<RuntimeTransport>()
+      .mockResolvedValue([event("assistant.message", { text: "Received." }, 1)]);
+    renderChat(transport);
+
+    const composer = screen.getByLabelText("Message") as HTMLTextAreaElement;
+    expect(composer.tagName).toBe("TEXTAREA");
+    expect(composer.getAttribute("aria-describedby")).toBe("mashala-message-status");
+    fireEvent.change(composer, { target: { value: "First line\nSecond line" } });
+    fireEvent.keyDown(composer, { key: "Enter", shiftKey: true });
+    expect(transport).not.toHaveBeenCalled();
+    fireEvent.keyDown(composer, { key: "Enter" });
+
+    await waitFor(() => expect(transport).toHaveBeenCalledTimes(1));
+    expect(transport.mock.calls[0]?.[0].payload).toEqual({
+      text: "First line\nSecond line",
+    });
+  });
+
   it("announces pending state and prevents duplicate submissions", async () => {
     let resolveTransport:
       | ((events: readonly ServerToBrowserEvent[]) => void)
@@ -163,6 +183,18 @@ describe("MashalaChat canonical event handling", () => {
       screen.getByRole("heading", { name: "Complete the request" }),
     ).toBeInstanceOf(HTMLElement);
     expect(screen.getByLabelText(/Recipient/)).toBeInstanceOf(HTMLInputElement);
+  });
+
+  it("embeds a routed deterministic form in the transcript and moves focus to it", async () => {
+    const transport = vi.fn<RuntimeTransport>().mockResolvedValue([route()]);
+    renderChat(transport);
+
+    sendMessage("make a transfer");
+
+    const recipient = await screen.findByLabelText(/Recipient/);
+    const transcript = screen.getByRole("list", { name: "Conversation transcript" });
+    expect(transcript.contains(screen.getByRole("heading", { name: "Complete the request" }))).toBe(true);
+    await waitFor(() => expect(document.activeElement).toBe(recipient));
   });
 
   it("rejects an undeclared raw route ID without rendering a form", async () => {

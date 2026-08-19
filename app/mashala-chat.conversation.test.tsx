@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import mashalaApplication from "../mashala.config";
@@ -310,5 +310,79 @@ describe("MashalaChat conversation lifecycle integration", () => {
     expect(screen.getByTestId("workflow-state").textContent).toContain("IDLE");
     expect(transport).toHaveBeenCalledTimes(1);
     expect(targetRequest).not.toHaveBeenCalled();
+  });
+
+  it("renders a bounded restored history as display-only transcript items", async () => {
+    const storage = new MemoryStorage();
+    const store = storeFor(storage);
+    await store.load();
+    for (let index = 0; index < 12; index += 1) {
+      const appended = store.append({
+        eventId: `history_${String(index)}`,
+        role: index % 2 === 0 ? "user" : "assistant",
+        text: `Historical message ${String(index)}`,
+      });
+      expect(appended.ok).toBe(true);
+    }
+    const transport = vi.fn<RuntimeTransport>();
+    const targetRequest = vi.fn<TargetBackendRequest>();
+    render(
+      <MashalaChat
+        application={mashalaApplication}
+        conversationStore={store}
+        transport={transport}
+        targetBackendRequest={targetRequest}
+      />,
+    );
+
+    await waitUntilReady();
+    const transcript = screen.getByRole("list", { name: "Conversation transcript" });
+    expect(within(transcript).getByText("Historical message 11")).toBeInstanceOf(HTMLElement);
+    expect(within(transcript).getAllByText("Restored", { exact: true })).toHaveLength(12);
+    expect(transport).not.toHaveBeenCalled();
+    expect(targetRequest).not.toHaveBeenCalled();
+  });
+
+  it("retries only a failed runtime message and never retries a browser operation", async () => {
+    const transport = vi.fn<RuntimeTransport>()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce([]);
+    const targetRequest = vi.fn<TargetBackendRequest>();
+    render(
+      <MashalaChat
+        application={mashalaApplication}
+        transport={transport}
+        targetBackendRequest={targetRequest}
+        conversationId="retry_conversation"
+      />,
+    );
+
+    send("retry this safely");
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "Retry message" }));
+
+    await waitFor(() => expect(transport).toHaveBeenCalledTimes(2));
+    expect(targetRequest).not.toHaveBeenCalled();
+  });
+
+  it("starts a new conversation from the session-local transcript and returns focus to the composer", async () => {
+    const storage = new MemoryStorage();
+    const store = storeFor(storage);
+    render(
+      <MashalaChat
+        application={mashalaApplication}
+        conversationStore={store}
+        transport={transferTransport()}
+      />,
+    );
+    await waitUntilReady();
+    send("transfer 40");
+    await screen.findByLabelText(/Recipient/);
+
+    fireEvent.click(screen.getByRole("button", { name: "New conversation" }));
+
+    expect(screen.getByText("New conversation started.")).toBeInstanceOf(HTMLElement);
+    expect(screen.queryByText("transfer 40")).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Message")));
   });
 });

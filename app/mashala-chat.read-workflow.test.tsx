@@ -272,6 +272,8 @@ describe("MashalaChat integrated read workflow", () => {
 
     send("Show me the products");
     const list = await screen.findByRole("list", { name: "Read results" });
+    const transcript = screen.getByRole("list", { name: "Conversation transcript" });
+    expect(transcript.contains(list)).toBe(true);
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
     expect(within(list).getAllByRole("article")).toHaveLength(2);
     expect(workflowState()).toContain("PRESENTING");
