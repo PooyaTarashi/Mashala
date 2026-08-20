@@ -1,20 +1,18 @@
 import { defineMashalaApplication } from "./src/application";
 import {
-  accountBalance,
-  productList,
-  singleProduct,
-} from "./src/examples/read-capabilities";
-import { transferMoney } from "./src/examples/transfer-money";
+  payBill,
+  requestLoan,
+  transferMoney,
+} from "./src/examples/ai-wallet-capabilities";
 
-/** Browser-visible developer application definition; contains declarative data only. */
 const mashalaApplication = defineMashalaApplication({
   app: {
-    id: "mashala_bank_demo",
-    name: "Mashala Bank Demo",
+    id: "ai_wallet",
+    name: "AI Wallet",
     description:
-      "A demonstration application for common retail banking tasks.",
+      "A conversational frontend for account transfers, bill payments, and loan requests.",
   },
-  capabilities: [transferMoney, accountBalance, singleProduct, productList],
+  capabilities: [transferMoney, payBill, requestLoan],
 });
 
 export default mashalaApplication;

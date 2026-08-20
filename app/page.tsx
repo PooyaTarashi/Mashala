@@ -1,12 +1,13 @@
 import mashalaApplication from "../mashala.config";
-import { ANONYMOUS_AUTH_SCOPE_TAG } from "../src/conversation-store";
-import { MashalaChat } from "./mashala-chat";
+import { AiWalletClient } from "./ai-wallet-client";
+
+const AI_WALLET_BACKEND = "http://127.0.0.1:8000";
 
 export default function Home() {
   return (
-    <MashalaChat
+    <AiWalletClient
       application={mashalaApplication}
-      authScopeTag={ANONYMOUS_AUTH_SCOPE_TAG}
+      backendBaseUrl={AI_WALLET_BACKEND}
     />
   );
 }

@@ -2,12 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import mashalaApplication from "../../mashala.config";
+import mashalaApplication from "../test-application";
 import { defineMashalaApplication } from "../application";
 import { defineReadCapability } from "../capabilities";
 import type { ConversationContextSnapshot } from "../conversation-context";
 import type { BrowserToServerEvent } from "../runtime-protocol";
 import { productList, singleProduct } from "../examples/read-capabilities";
+import type { MashalaSpec } from "../spec";
 import { assembleMashalaApplication } from "./application-runtime";
 import type { LlmProvider, LlmProviderResult } from "./llm/provider";
 import { processRuntimeEvent } from "./runtime-event-processor";
@@ -72,7 +73,7 @@ function queuedProvider(...results: readonly LlmProviderResult[]) {
 
 function processor(
   provider: LlmProvider,
-  application = mashalaApplication,
+  application: MashalaSpec = mashalaApplication,
 ) {
   const runtime = assembleMashalaApplication({
     application,

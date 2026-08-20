@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import mashalaBankDemo from "../mashala.config";
+import mashalaBankDemo from "./test-application";
 import { defineCapability } from "./capabilities";
 import {
   accountBalance,

@@ -7,10 +7,10 @@ import {
   validateMashalaSpec,
 } from "./application";
 import {
-  accountBalance,
-  productList,
-  singleProduct,
-} from "./examples/read-capabilities";
+  payBill,
+  requestLoan,
+  transferMoney as aiWalletTransferMoney,
+} from "./examples/ai-wallet-capabilities";
 import { transferMoney } from "./examples/transfer-money";
 import type { MashalaSpec } from "./spec";
 
@@ -19,12 +19,12 @@ describe("defineMashalaApplication", () => {
     expect(mashalaApplication).toEqual({
       specVersion: "0.3",
       app: {
-        id: "mashala_bank_demo",
-        name: "Mashala Bank Demo",
+        id: "ai_wallet",
+        name: "AI Wallet",
         description:
-          "A demonstration application for common retail banking tasks.",
+          "A conversational frontend for account transfers, bill payments, and loan requests.",
       },
-      capabilities: [transferMoney, accountBalance, singleProduct, productList],
+      capabilities: [aiWalletTransferMoney, payBill, requestLoan],
     });
     expectTypeOf(mashalaApplication).toMatchTypeOf<MashalaSpec>();
     expect(JSON.parse(JSON.stringify(mashalaApplication))).toEqual(

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import mashalaApplication from "../../mashala.config";
+import mashalaApplication from "../test-application";
 import { MashalaApplicationConfigurationError } from "../application";
 import type { LlmProvider } from "./llm/provider";
 import {

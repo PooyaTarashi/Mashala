@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import mashalaApplication from "../mashala.config";
+import mashalaApplication from "./test-application";
 import { defineMashalaApplication } from "./application";
 import { defineCapability } from "./capabilities";
 import {

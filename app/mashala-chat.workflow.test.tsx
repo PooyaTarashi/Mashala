@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import mashalaApplication from "../mashala.config";
+import mashalaApplication from "../src/test-application";
 import { defineMashalaApplication } from "../src/application";
 import { defineCapability } from "../src/capabilities";
 import { f } from "../src/fields";

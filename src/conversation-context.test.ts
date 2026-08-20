@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import mashalaApplication from "../mashala.config";
+import mashalaApplication from "./test-application";
 import { defineMashalaApplication } from "./application";
 import { defineReadCapability } from "./capabilities";
 import { productList } from "./examples/read-capabilities";
@@ -15,12 +15,13 @@ import {
   fingerprintMashalaSpec,
   type ConversationRecord,
 } from "./conversation-store";
+import type { MashalaSpec } from "./spec";
 
 const NOW = 2_000_000;
 
 function record(
   overrides: Partial<ConversationRecord> = {},
-  application = mashalaApplication,
+  application: MashalaSpec = mashalaApplication,
 ): ConversationRecord {
   return {
     version: CONVERSATION_RECORD_VERSION,

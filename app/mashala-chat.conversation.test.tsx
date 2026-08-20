@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import mashalaApplication from "../mashala.config";
+import mashalaApplication from "../src/test-application";
 import {
   createConversationStore,
   type ConversationOwnershipCoordinator,
