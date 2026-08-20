@@ -1,4 +1,4 @@
-# Canonical Compiled Mashala Spec v0.3
+# Canonical Compiled Mashala Spec v0.4
 
 ## Purpose and authority
 
@@ -8,14 +8,14 @@ routing, deterministic input validation and rendering, browser-side
 target-backend execution, and deterministic read-result presentation.
 
 ADR-012 established the original write-capability shape, ADR-016 established
-explicit browser-side model-visible projection, and ADR-017 adds goal-level
-read capabilities and result views while preserving write behavior.
+explicit browser-side model-visible projection, ADR-017 added goal-level
+read capabilities and result views while preserving write behavior, and
+ADR-019 adds response envelope unwrapping via dot-separated `root` path
+traversal and decimal string coercion for numeric/currency formatters.
 
 `src/spec.ts`, `src/capabilities.ts`, and `src/application.ts` implement the
-v0.3 read/write capability union. ISSUE-061 adds read authoring, binding
-validation, and browser execution; ISSUE-062 adds result-card authoring and
-compilation. Result-card rendering and page-workflow integration remain in
-ISSUE-063.
+canonical spec types and validation. The executable TypeScript contract advances
+to v0.4 in ISSUE-081.
 
 ## TypeScript contract
 
@@ -35,7 +35,7 @@ export interface JsonObject {
 export type JsonSchema202012 = JsonObject;
 
 export interface MashalaSpec {
-  readonly specVersion: "0.3";
+  readonly specVersion: "0.4";
   readonly app: AppMetadata;
   readonly capabilities: readonly CapabilitySpec[];
 }
@@ -169,14 +169,22 @@ export type ResultView = CardResultView | CardListResultView;
 
 export interface CardResultView {
   readonly kind: "card";
+
+  /** Optional dot-delimited path to the target object inside a response envelope. */
+  readonly root?: string;
+
   readonly card: ResultCard;
 }
 
 export interface CardListResultView {
   readonly kind: "cardList";
+
+  /** Optional dot-delimited path to the target array inside a response envelope. */
+  readonly root?: string;
+
   readonly card: ResultCard;
 
-  /** Fixed developer-authored text for a successful empty root array. */
+  /** Fixed developer-authored text for a successful empty target array. */
   readonly emptyText: string;
 }
 
@@ -197,7 +205,7 @@ export interface FixedResultText {
 export interface ResultPropertyValue {
   readonly kind: "property";
 
-  /** Own enumerable direct property of the result object or list item. */
+  /** Own enumerable direct property of the target object or target list item. */
   readonly property: string;
 
   readonly formatter: TextResultFormatter;
@@ -283,10 +291,11 @@ Mashala relies on.
 The developer-facing distinction is explicit:
 
 - the existing `defineCapability` authors writes and compiles to
-  `kind: "write"` in v0.3;
+  `kind: "write"`;
 - `defineReadCapability` authors reads;
 - the existing `f.*` field DSL authors a write `form` or optional read `input`;
-- `result.card` and `result.cardList` author the only result-view kinds.
+- `result.card` and `result.cardList` author the only result-view kinds, with
+  an optional `root` path for response envelope unwrapping.
 
 Conceptually:
 
@@ -303,6 +312,7 @@ defineReadCapability({
     bindings: { query: { max_price: "maxPrice" } }
   },
   result: result.cardList({
+    root: "results",
     emptyText: "No products matched.",
     card: {
       title: {
@@ -335,9 +345,9 @@ The compiler emits only the isolated JSON data described by the contract.
 
 ## Normative invariants
 
-A compiled v0.3 spec is valid only when all of the following hold:
+A compiled v0.4 spec is valid only when all of the following hold:
 
-1. `specVersion` is exactly `"0.3"`.
+1. `specVersion` is exactly `"0.4"`.
 2. App, capability, and result-fact IDs match `^[a-z][a-z0-9_]*$` in their
    respective scopes. Capability IDs are unique and stable once published;
    fact IDs are unique within one card.
@@ -378,25 +388,51 @@ A compiled v0.3 spec is valid only when all of the following hold:
     lowercase `true` or `false`. UTF-8 text uses RFC 3986 percent encoding with
     spaces as `%20`. An absent optional query value omits its pair. Query pairs
     preserve binding declaration order.
-15. A `card` view accepts only a root plain JSON object. A `cardList` accepts
-    only a root JSON array whose items are plain objects. An empty array is a
-    successful empty result; root primitives and wrapped arrays are invalid.
-16. Result property descriptors name own enumerable direct properties only.
-    Nested paths, expressions, fallbacks, conditionals, filters, sorting,
-    joins, computed values, and executable transformations are invalid.
+15. `root`, when present on `CardResultView` or `CardListResultView`, is a
+    dot-separated string matching `^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*$`. It names
+    property segments to navigate from the response root JSON object.
+    - When `root` is omitted, `card` expects the HTTP response root to be a
+      plain JSON object and `cardList` expects the HTTP response root to be a
+      plain JSON array whose items are plain JSON objects.
+    - When `root` is specified, the executor navigates intermediate object
+      properties starting from the response root object. Each intermediate
+      property must resolve to a plain JSON object. For `card`, the resolved
+      target value must be a plain JSON object. For `cardList`, the resolved
+      target value must be a plain JSON array whose items are plain JSON
+      objects.
+    - Any missing intermediate property, non-object intermediate segment,
+      missing target key, or type-incompatible target value fails
+      deterministically with `response-shape-error`.
+    - Array indexing (e.g. `items[0]`), wildcards (`*`), slices, filters,
+      expressions, and non-object navigation are strictly forbidden.
+    - An empty target array (whether at response root or unwrapped target) is
+      a successful empty result and renders `emptyText`. Root primitives or
+      arrays of primitives are invalid.
+16. Result property descriptors name own enumerable direct properties of the
+    unwrapped target object or target list item only. Nested paths, expressions,
+    fallbacks, conditionals, filters, sorting, joins, computed values, and
+    executable transformations are invalid.
 17. A declared missing or type-incompatible property invalidates the complete
-    card or card-list result. Lists do not silently drop invalid items.
+    card or card-list result with `response-shape-error`. Lists do not
+    silently drop invalid items.
 18. `fixed` result text, fact labels, list `emptyText`, and image alternative
     text are developer-authored strings. They never select backend properties.
     Backend values always use an explicit `property` descriptor and formatter.
 19. Formatters are limited to `text`, `number`, `currency`, `date`, `dateTime`,
     and `imageUrl`. No default or inferred formatter exists. Locale, currency,
     and time-zone values are explicit where required.
-20. `text` requires a JSON string; `number` and `currency` require a finite JSON
-    number; `date` requires an ISO 8601 full-date string; `dateTime` requires an
-    RFC 3339 date-time string; and `imageUrl` requires a root-relative URL or an
-    absolute HTTP(S) URL without embedded credentials. Root-relative image URLs
-    resolve against the target-backend base URL. Other URL schemes are invalid.
+20. Formatter input validation and numeric string coercion:
+    - `text` requires a JSON string.
+    - `number` and `currency` accept either a finite JSON number
+      (`typeof value === "number" && Number.isFinite(value)`) or a finite
+      decimal string matching `/^-?\d+(?:\.\d+)?$/` (converted via
+      `Number(value)`). Non-numeric strings or unparseable formats (e.g. `""`,
+      `"abc"`, `"NaN"`, `"$10"`, `"1.2.3"`) fail with `response-shape-error`.
+    - `date` requires an ISO 8601 full-date string.
+    - `dateTime` requires an RFC 3339 date-time string.
+    - `imageUrl` requires a root-relative URL or an absolute HTTP(S) URL
+      without embedded credentials. Root-relative image URLs resolve against
+      the target-backend base URL. Other URL schemes are invalid.
 21. Result text is rendered as text, never HTML. The renderer—not backend data
     or the model—owns markup, component selection, image attributes, and
     fallback behavior.
@@ -405,7 +441,9 @@ A compiled v0.3 spec is valid only when all of the following hold:
     result view and confers no presentation authority.
 23. Absence or failure of `operation.modelContext` never authorizes forwarding
     read-result data. A presentation property is not model-visible merely
-    because the browser displays it.
+    because the browser displays it. Unwrapping happens purely on the client
+    side; raw envelope containers or metadata are never forwarded to the
+    Mashala server or LLM unless explicitly projected under ADR-016.
 24. Operations, bindings, result declarations, and model-context declarations
     contain no functions, arbitrary code, headers, credentials, cookies,
     tokens, provider settings, or model instructions.
@@ -443,37 +481,50 @@ only that query pair.
 
 There are no fixed or dynamic headers, query fragments embedded in `path`,
 repeated parameters, arrays, object serialization, custom encoders, request
-chaining, or generic request transformations in v0.3.
+chaining, or generic request transformations in v0.4.
 
 ## Result cards and lists
 
-`card` maps one root response object. `cardList` applies one card declaration to
-each root-array object in backend order. It does not filter, sort, group, join,
-or paginate.
+`card` maps one target response object. `cardList` applies one card declaration
+to each target-array object in backend order. It does not filter, sort, group,
+join, or paginate.
 
-The browser reads only declared direct properties for presentation. For
-example, this balance response:
+When `root` is specified (e.g., `root: "balance"` or `root: "data.account"` for
+`card`, or `root: "results"` or `root: "data.items"` for `cardList`), the
+executor traverses the dot-separated property path starting from the HTTP
+response root object. Intermediate segments must be plain JSON objects. The
+resolved value must be a plain JSON object for `card` or a plain JSON array of
+objects for `cardList`. Missing segments or type mismatches fail
+deterministically with `response-shape-error`. No arbitrary expressions, array
+indexing, slicing, or filtering are permitted.
+
+The browser reads only declared direct properties of the target object for
+presentation. For example, this balance response envelope:
 
 ```json
 {
-  "balance": 1250.5,
-  "status": "available",
-  "internal_note": "not presented"
+  "balance": {
+    "balance": "1250.50",
+    "status": "available",
+    "internal_note": "not presented"
+  },
+  "message": "Balance retrieved successfully"
 }
 ```
 
-may use a fixed title, currency-formatted `balance`, and text-formatted
-`status`. `internal_note` is not rendered because the result declaration does
-not select it. All selected backend text is escaped as data. Result metadata
-contains no HTML, JSX, React component, CSS, expression, or callback.
+declared with `root: "balance"`, may use a fixed title, currency-formatted
+`balance`, and text-formatted `status`. `internal_note` and `message` are not
+rendered because the result declaration does not select them. All selected
+backend text is escaped as data. Result metadata contains no HTML, JSX, React
+component, CSS, expression, or callback.
 
 The formatter allowlist has these deterministic inputs:
 
 | Formatter | Accepted backend value | Required developer configuration |
 | --- | --- | --- |
 | `text` | string | none |
-| `number` | finite number | BCP 47 `locale` |
-| `currency` | finite number | BCP 47 `locale`, ISO 4217 `currency` |
+| `number` | finite number or decimal string matching `/^-?\d+(?:\.\d+)?$/` | BCP 47 `locale` |
+| `currency` | finite number or decimal string matching `/^-?\d+(?:\.\d+)?$/` | BCP 47 `locale`, ISO 4217 `currency` |
 | `date` | ISO 8601 full-date string | BCP 47 `locale` |
 | `dateTime` | RFC 3339 date-time string | BCP 47 `locale`, IANA `timeZone` |
 | `imageUrl` | root-relative or absolute HTTP(S) URL string without credentials | fixed developer `alt` on the image declaration |
@@ -489,17 +540,25 @@ currency, and IANA time-zone identifiers are compiler-validated developer
 configuration. The model and runtime do not infer them or accept custom format
 strings.
 
+`number` and `currency` formatters accept both JSON numbers (e.g. `1250.5`) and
+strict decimal strings (e.g. `"1250.50"` or `"-45.00"`). Valid decimal strings
+matching `/^-?\d+(?:\.\d+)?$/` are coerced to finite numbers via
+`Number(value)` and formatted according to the declared `Intl.NumberFormat`
+locale and options. Strings with non-numeric characters, currency symbols,
+exponential notation, multiple decimal points, or whitespace fail with
+`response-shape-error`.
+
 Malformed selected data fails the response rather than falling back to model
 text or an inferred formatter.
 
 ## Complete compiled example
 
-This compiled v0.3 example includes an unchanged write, a zero-input object
-read, and a query-bound array read:
+This compiled v0.4 example includes an unchanged write, a zero-input wrapped
+object read with string decimal currency, and a query-bound wrapped array read:
 
 ```json
 {
-  "specVersion": "0.3",
+  "specVersion": "0.4",
   "app": {
     "id": "mashala_demo",
     "name": "Mashala Demo",
@@ -536,6 +595,7 @@ read, and a query-bound array read:
       "operation": { "method": "GET", "path": "/account/balance" },
       "result": {
         "kind": "card",
+        "root": "balance",
         "card": {
           "title": { "kind": "fixed", "text": "Account balance" },
           "facts": [
@@ -594,6 +654,7 @@ read, and a query-bound array read:
       },
       "result": {
         "kind": "cardList",
+        "root": "results",
         "emptyText": "No products matched.",
         "card": {
           "title": {
@@ -664,13 +725,12 @@ validation, confirmation, workflow, authorization, or rendering.
 
 ## Explicit limitations
 
-v0.3 does not support:
+v0.4 does not support:
 
-- wrapped arrays such as `{ "results": [...] }`;
 - pagination metadata, cursors, automatic next-page requests, or incremental
   loading;
-- nested response paths, aliases beyond ADR-016 output renaming, response
-  unwrapping, filtering, sorting, joins, aggregation, or computed fields;
+- arbitrary expressions, array indexing, slicing, filtering, sorting, joins,
+  aggregation, computed fields, or JQ-like transformation languages;
 - arrays, objects, nulls, repeated query parameters, or custom serialization as
   URL-bound input values;
 - fixed query fragments, custom headers, credentials, non-GET read methods, or
@@ -684,9 +744,10 @@ new compatible contract rather than adding a generic transformation language.
 
 ## Versioning
 
-ADR-017 changes the required capability shape and adds read operations, URL
-bindings, and result views, so the canonical artifact advances from v0.2 to
-v0.3. Consumers must reject unsupported versions rather than guessing. The
-runtime protocol remains v0.1 because no new browser/server event is required
-to execute or display a read; the browser-direct request and browser-local
-result are outside that protocol.
+ADR-019 adds optional `root` path envelope unwrapping on result views and
+decimal string coercion on `number` and `currency` formatters, advancing the
+canonical artifact from v0.3 to v0.4. Consumers must reject unsupported
+versions rather than guessing. The runtime protocol remains v0.1 because no new
+browser/server event is required to execute or display a read; the
+browser-direct request and browser-local result are outside that protocol.
+

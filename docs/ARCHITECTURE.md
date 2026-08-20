@@ -271,10 +271,10 @@ Do not automatically forward every backend response to the LLM. ADR-016 resolves
 
 ## Goal-level read capabilities and result views
 
-ADR-017 and `CANONICAL_SPEC.md` v0.3 define goal-level browser reads separately
-from writes. A read capability declares exactly one `GET`, may omit input or
-reuse the compiled deterministic form contract, and maps schema-valid scalar
-input values only through explicit path-placeholder or query-parameter
+ADR-017, ADR-019, and `CANONICAL_SPEC.md` v0.4 define goal-level browser reads
+separately from writes. A read capability declares exactly one `GET`, may omit
+input or reuse the compiled deterministic form contract, and maps schema-valid
+scalar input values only through explicit path-placeholder or query-parameter
 bindings.
 
 ```text
@@ -283,16 +283,20 @@ user language
   -> browser validates the route and input
   -> browser resolves the developer-authored GET URL
   -> TargetBackendRequest calls the target backend directly
-  -> browser validates the response root
+  -> browser navigates optional dot-path root and validates the target shape
   -> browser renders the developer-declared card or card list
 ```
 
-The result contract supports a root object rendered as one card and a root
-array of objects rendered through one repeated card declaration. Result values
-come only from declared direct properties and a closed deterministic formatter
-allowlist. Fixed titles, labels, empty-state text, and image alternative text
-are developer-authored. Backend values are escaped data, never HTML or
-components. Wrapped/paginated arrays and general transformations are deferred.
+The result contract supports a root object (or unwrapped object via an optional
+dot-separated `root` path) rendered as one card and a root array of objects (or
+unwrapped array via `root`) rendered through one repeated card declaration.
+Result values come only from declared direct properties and a closed
+deterministic formatter allowlist. Formatters for `number` and `currency`
+accept finite JSON numbers and strict decimal strings (`/^-?\d+(?:\.\d+)?$/`).
+Fixed titles, labels, empty-state text, and image alternative text are
+developer-authored. Backend values are escaped data, never HTML or components.
+Arbitrary transformation languages, expressions, and link traversal are
+deferred.
 
 Browser presentation and model visibility are separate allowlists. Rendering a
 result does not send it to the Mashala server. Only an optional ADR-016
@@ -343,13 +347,15 @@ The workflow architecture must not depend on LangGraph. LangGraph may later impl
 
 ## Normative contracts
 
-The accepted machine-readable application contract is `CANONICAL_SPEC.md` v0.3,
-established by ADR-012 and extended by ADR-016 and ADR-017. It preserves the
-JSON Schema/presentation split, distinguishes writes from reads, and defines
-the minimal browser-executed request and deterministic result bindings. The
-executable TypeScript contract is v0.3. ISSUE-061 implements read authoring,
-binding validation, and browser execution; deterministic result-card rendering
-and page-workflow integration remain pending.
+The accepted machine-readable application contract is `CANONICAL_SPEC.md` v0.4,
+established by ADR-012 and extended by ADR-016, ADR-017, and ADR-019. It preserves
+the JSON Schema/presentation split, distinguishes writes from reads, defines the
+minimal browser-executed request and deterministic result bindings, and supports
+deterministic envelope unwrapping and numeric string coercion. The executable
+TypeScript contract is v0.3 (advancing to v0.4 in ISSUE-081). ISSUE-061
+implements read authoring, binding validation, and browser execution;
+deterministic result-card rendering and page-workflow integration remain
+pending.
 
 The browser/server language-assistance contract is `RUNTIME_PROTOCOL.md`, accepted by ADR-013. Its logical events are independent of transport. In particular, the protocol has no event that asks the Mashala server to execute a target-backend request.
 

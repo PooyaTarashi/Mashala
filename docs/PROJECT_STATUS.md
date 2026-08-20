@@ -107,13 +107,14 @@ and a declared projection capability.
 - The typed field DSL exposes `f.text`, `f.longText`, `f.number`, `f.select`, `f.boolean`, and browser-resolved `f.reference` with deterministic JSON-serializable field-level output.
 - `compileForm` compiles those primitives into the canonical `FormDefinition` schema/metadata split. Fields are optional by default and opt into required status with `required: true`.
 - String length constraints, numeric limits, required names, primitive types, and select enum values exist only in JSON Schema; compiled field metadata retains presentation information only.
-- The accepted and executable canonical artifact is the versioned
-  JSON-serializable `MashalaSpec` v0.3 in `CANONICAL_SPEC.md`.
+- The accepted canonical artifact is the versioned
+  JSON-serializable `MashalaSpec` v0.4 in `CANONICAL_SPEC.md` (executable
+  contract is v0.3, advancing to v0.4 in ISSUE-081).
 - JSON Schema Draft 2020-12 is the sole canonical form-validation representation; Mashala field metadata carries presentation/runtime information.
 - v0.1 static fields are `text`, `longText`, `number`, `select`, and `boolean`.
 - v0.1 capability writes declare `POST`, `PUT`, or `PATCH` plus a relative path. Form names map directly to same-named JSON body properties.
 - Confirmation policy is declared per capability.
-- ADR-017 makes v0.3 capabilities an explicit `kind: "write" | "read"` union.
+- ADR-017 makes capabilities an explicit `kind: "write" | "read"` union.
   Existing writes retain their form, JSON-body operation, and confirmation
   behavior; reads declare exactly one browser-executed `GET`, optional compiled
   input, and no confirmation property.
@@ -123,12 +124,16 @@ and a declared projection capability.
 - Read input properties bind exactly once through explicit path-placeholder or
   query-parameter maps. Only schema-valid scalar values are deterministically
   serialized and percent-encoded; the LLM cannot supply any URL structure.
-- Read results support only a root object card or root array card list, direct
-  response properties, fixed developer text, and the closed `text`, `number`,
-  `currency`, `date`, `dateTime`, and `imageUrl` formatter allowlist.
-- Wrapped/paginated arrays, response unwrapping, arbitrary transformations,
-  and generated UI are deferred. Display mappings do not grant model
-  visibility; only ADR-016 projection may do so.
+- Read results support a root or envelope-unwrapped object card or collection
+  card list, direct response properties, fixed developer text, and the closed
+  `text`, `number`, `currency`, `date`, `dateTime`, and `imageUrl` formatter
+  allowlist.
+- ADR-019 advances the canonical spec to v0.4, adding optional dot-path `root`
+  envelope unwrapping to `card` and `cardList` result views and strict decimal
+  string coercion (`/^-?\d+(?:\.\d+)?$/`) for `number` and `currency` formatters
+  without introducing a general transformation language.
+- Display mappings do not grant model visibility; only ADR-016 projection may do
+  so.
 - The canonical field metadata union includes a browser-resolved `reference` field with one GET source and direct string value/label property projections, without changing the top-level structure.
 - ADR-016 resolves ADR-010 with an optional declarative `modelContext` descriptor on browser read sources. Its output-to-source direct-property map is the only authorization for model-visible backend data; automatic forwarding remains forbidden.
 - ADR-013 and `RUNTIME_PROTOCOL.md` define the protocol design; `src/runtime-protocol.ts` now provides the corresponding executable versioned discriminated unions and strict runtime validators, independent of transport.
@@ -169,9 +174,10 @@ and a declared projection capability.
 ## Authoritative architecture artifacts
 
 - ADR-011, ADR-015, and `TECH_STACK.md` — frozen v0.1 implementation choices and the superseding first-provider decision.
-- ADR-012, ADR-016, ADR-017, and `CANONICAL_SPEC.md` — compiled spec types,
-  explicit projection policy, read/write capability contract, deterministic
-  result views, invariants, limitations, and complete examples.
+- ADR-012, ADR-016, ADR-017, ADR-019, and `CANONICAL_SPEC.md` — compiled spec
+  types, explicit projection policy, read/write capability contract,
+  deterministic result views, response envelope unwrapping, numeric coercion,
+  invariants, limitations, and complete examples.
 - ADR-013 and `RUNTIME_PROTOCOL.md` — normative browser/server protocol design, trust rules, and end-to-end flow. Its executable contracts live in `src/runtime-protocol.ts`.
 - ADR-018 — browser-owned refresh persistence, separated identity concepts,
   safe conversation-record contents, restoration rules, retention, isolation,
@@ -389,6 +395,5 @@ and a declared projection capability.
 See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
-
-Implement the full accessible, responsive chatroom-style frontend under
-ISSUE-074 without adding a chat UI dependency.
+ 
+Implement ISSUE-081 — result DSL compiler, read executor unwrapping, and numeric coercion.

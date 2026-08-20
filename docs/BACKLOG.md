@@ -1172,12 +1172,12 @@ and the expanded `number`/`currency` formatter decimal string acceptance rules.
 **Architecture:** ADR-019 and `CANONICAL_SPEC.md` v0.4.
 
 **Acceptance:**
-- [ ] `MashalaSpec` advances to `specVersion: "0.4"`;
-- [ ] `CardResultView` and `CardListResultView` gain optional `root?: string`;
-- [ ] `root` path syntax is specified as dot-separated property names matching `^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*$`;
-- [ ] normative invariants specify that `root` traversal is deterministic property-based navigation on plain JSON objects;
-- [ ] formatters for `number` and `currency` accept finite JSON numbers and strict decimal strings matching `/^-?\d+(?:\.\d+)?$/`;
-- [ ] `docs/CANONICAL_SPEC.md` contains normative types, invariants, and a complete example of wrapped card and cardList results.
+- [x] `MashalaSpec` advances to `specVersion: "0.4"`;
+- [x] `CardResultView` and `CardListResultView` gain optional `root?: string`;
+- [x] `root` path syntax is specified as dot-separated property names matching `^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*$`;
+- [x] normative invariants specify that `root` traversal is deterministic property-based navigation on plain JSON objects;
+- [x] formatters for `number` and `currency` accept finite JSON numbers and strict decimal strings matching `/^-?\d+(?:\.\d+)?$/`;
+- [x] `docs/CANONICAL_SPEC.md` contains normative types, invariants, and a complete example of wrapped card and cardList results.
 
 ---
 
