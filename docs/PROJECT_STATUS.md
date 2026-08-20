@@ -90,6 +90,16 @@ responsive mobile styles are covered by focused component tests. The only
 visible session information is tab-local/non-credential state; no target
 identity or credential profile contract was introduced.
 
+ISSUE-075 supported E2E coverage is complete in `e2e/multi-turn.spec.ts`.
+Playwright proves multi-message editable transactions with required
+confirmation and exactly one browser-direct write, outcome-summary follow-ups,
+rejection of unprojected read references, non-replaying restoration, malicious
+history/backend/summary resistance, and sanitized provider failure. The tests
+reuse ISSUE-054's local deterministic gateway and anonymous auth scope only.
+Identity switching/logout and positive ADR-016 projection follow-ups remain
+out of scope until the production page exposes the corresponding auth boundary
+and a declared projection capability.
+
 ## Accepted decisions
 
 - Project name: **Mashala**.

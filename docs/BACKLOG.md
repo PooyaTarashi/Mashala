@@ -1114,19 +1114,26 @@ triggers only declared capabilities across multiple turns.
 
 - [ ] an end-to-end scenario identifies the signed-in user only through the
   accepted non-credential profile/session boundary;
-- [ ] a multi-turn transaction collects values over several messages, renders
+- [x] a multi-turn transaction collects values over several messages, renders
   an editable form, requires confirmation, and performs one browser-direct
   backend request;
-- [ ] a completed action can be discussed in a later turn using only its safe
+- [x] a completed action can be discussed in a later turn using only its safe
   recorded summary;
 - [ ] a read result can support a follow-up only when its model-visible
   projection was explicitly declared;
-- [ ] reload/restoration behavior matches ISSUE-070 and cannot replay a write;
+- [x] reload/restoration behavior matches ISSUE-070 and cannot replay a write;
 - [ ] switching users or logging out prevents conversation leakage;
-- [ ] a malicious prior message, backend field, or stored summary cannot invent
+- [x] a malicious prior message, backend field, or stored summary cannot invent
   an operation or bypass validation/confirmation;
-- [ ] tests run with fake providers, deterministic local persistence, and local
+- [x] provider/context failures render sanitized errors without guessing an action;
+- [x] tests run with fake providers, deterministic local persistence, and local
   target-backend fixtures, with no real credentials or external network.
+
+Supported ISSUE-075 coverage is implemented in `e2e/multi-turn.spec.ts` using
+the ISSUE-054 Playwright runner and local gateway. Identity switching/logout
+and the positive ADR-016 projection follow-up remain deferred because the
+production page currently exposes only the anonymous auth scope and the
+assembled read examples declare no model-visible projection.
 
 ---
 

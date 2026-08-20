@@ -1,191 +1,132 @@
 # Build an AI Wallet conversational frontend with Mashala
 
-This is a step-by-step integration guide for the banking backend documented in
-[`description.md`](./description.md) and [`openapi.yaml`](./openapi.yaml). It
-assumes that backend is already running at `http://127.0.0.1:8000` and that you
-are working in the Mashala repository.
+This guide integrates the AI Wallet backend documented in
+[`description.md`](./description.md) and [`openapi.yaml`](./openapi.yaml) with
+the current Mashala application. It assumes the banking backend is available
+at `http://127.0.0.1:8000` and that you are working from the Mashala repository
+root.
 
-The result is a separate frontend at `http://localhost:3000` where a signed-in
-user can type requests such as:
+The result is a complete browser frontend with a chatroom, deterministic forms,
+required confirmation for banking writes, browser-direct backend requests,
+bounded multi-turn memory, and optional documentation answers through the local
+RAG service.
 
-> Transfer 250 to account IR123 and use "rent" as the description.
+## Architecture First
 
-Mashala asks the LLM to select one of your declared capabilities and propose
-form values. Mashala then displays an editable, validated form, asks the user
-to confirm, and makes the declared banking request directly from the browser.
-
-## First understand the safety boundary
-
-The phrase "the LLM calls my functions" is a useful product description, but
-it is not the literal implementation:
+Mashala separates language interpretation from workflow authority:
 
 ```text
-user's natural-language request
-        |
-        v
-Mashala server: classify, route, and propose field values with the LLM
-        |
-        v
-browser: render form, allow edits, validate, and require confirmation
-        |
-        v
-browser: call one developer-declared banking endpoint
-        |
-        v
-AI Wallet backend: authenticate, authorize, and apply business rules
+user message
+    |
+    v
+browser -> POST /api/runtime -> Mashala server/provider
+    |                                  |
+    |                                  +--> declared route or field proposal
+    v
+deterministic browser workflow
+    |
+    +--> editable form -> review -> explicit confirmation
+    |
+    +--> browser-direct request -> AI Wallet backend
 ```
 
-The LLM never chooses an arbitrary URL and never receives the user's password,
-JWT, or Gemini key. The AI Wallet backend remains authoritative for balances,
-ownership, account state, sufficient funds, and every other business rule.
+The Mashala server does not proxy AI Wallet requests. It never receives the
+banking credential, target-backend cookies, full backend responses, or the
+provider secret. The browser and AI Wallet remain responsible for target
+authentication and authorization. LLM output is an untrusted proposal only;
+declared capability metadata, JSON Schema validation, confirmation, and the
+browser workflow remain authoritative.
 
-## How to follow this walkthrough
+Conversation memory follows ADR-018:
 
-Run every command from the Mashala repository root:
+- it is browser-owned `sessionStorage`, scoped to the app, tab, and opaque
+  target-authentication scope;
+- it contains bounded transcript text, valid resumable drafts, and normalized
+  read/write outcome summaries;
+- it does not contain credentials, full backend responses, confirmation
+  snapshots, or provider state;
+- refresh restores only safe display state or a paused draft and never replays a
+  write; and
+- an auth-scope change must discard the old conversation.
 
-```text
-C:\UNI_4042\FP\Mashala
-```
+There is no standard display profile in the current contract. Do not send a
+username, account identity, JWT, cookie, or token to the model as "user
+context."
 
-This is not pseudocode. The walkthrough names every Mashala file that must be
-created or replaced. When it says **create**, create that exact path relative
-to the repository root. When it says **replace**, erase the current contents
-of that file and paste the complete shown contents.
-
-You will make exactly these manual source/configuration changes:
-
-| Order | Action | Exact path |
-| --- | --- | --- |
-| 1 | Create | `src/examples/ai-wallet-capabilities.ts` |
-| 2 | Replace | `mashala.config.ts` |
-| 3 | Create locally | `.env.local` |
-| 4 | Create | `app/ai-wallet-client.tsx` |
-| 5 | Replace | `app/page.tsx` |
-
-Do not edit `app/api/runtime/route.ts`: the current route already connects the
-browser chat to Mashala's server runtime. Do not create an API route that
-proxies port 8000.
-
-## What this guide can integrate today
-
-The current Mashala capability contract supports JSON-body `POST`, `PUT`, and
-`PATCH` operations. It does not yet support arbitrary `GET` capabilities or
-query-parameter mappings.
-
-| AI Wallet operation | Integration in this guide |
-| --- | --- |
-| `POST /api/v1/users/token/` | Deterministic login UI, outside the LLM flow |
-| `POST /api/v1/banking/transfer/` | Conversational Mashala capability |
-| `POST /api/v1/banking/bills/pay/` | Conversational Mashala capability |
-| `POST /api/v1/banking/loans/request/` | Conversational Mashala capability |
-| Balance, transaction, bill, and loan-plan `GET` endpoints | Not bindable as conversational capabilities yet |
-| `POST /api/v1/chat/process/` | Do not use; it is a separate assistant, not Mashala |
-
-The bill-list endpoint is paginated, while the current `f.reference` field
-requires a root JSON array. Therefore the first version asks for a bill UUID.
-Do not invent a bill-options endpoint that the supplied OpenAPI file does not
-declare.
-
-## Step 1: check the prerequisites
+## Prerequisites
 
 Use the versions pinned by this repository:
 
 - Node.js 24.x;
 - npm 11.x;
-- the AI Wallet backend running on port 8000;
-- a Gemini API key for language routing and field extraction;
-- Docker and Ollama only if you want documentation question answering.
+- the AI Wallet backend on port 8000;
+- a server-side Gemini API key for live language routing; and
+- Docker and Ollama only when enabling documentation answers.
 
-1. Open PowerShell.
-
-2. Move to the Mashala repository:
+From PowerShell:
 
 ```powershell
 Set-Location C:\UNI_4042\FP\Mashala
-```
-
-3. Check Node.js. The first number must be `24`:
-
-```powershell
-node --version
-```
-
-4. Check npm. The first number must be `11`:
-
-```powershell
-npm --version
-```
-
-5. Install the exact locked dependencies:
-
-```powershell
 npm ci
-```
-
-6. Confirm that the banking backend responds. This protected endpoint will
-normally return `401 Unauthorized` before login; that is acceptable and proves
-the process is reachable:
-
-```powershell
+node --version
+npm --version
 curl.exe -i http://127.0.0.1:8000/api/v1/banking/balance/
 ```
 
-Do not continue if the connection itself is refused. Start the banking backend
-first, still on port 8000.
+The protected balance request may return `401 Unauthorized`; connection
+refused means the banking backend is not running.
 
-Keep these three applications on different ports:
+Use separate ports:
 
-| Process | Local address |
+| Service | Address |
 | --- | --- |
 | AI Wallet backend | `http://127.0.0.1:8000` |
-| Mashala frontend/server | `http://localhost:3000` |
-| Optional RAG retrieval service | `http://127.0.0.1:8765` |
+| Mashala frontend/server | `http://127.0.0.1:3100` |
+| Optional RAG service | `http://127.0.0.1:8765` |
 
-## Step 2: allow browser requests in the banking backend
+## Configure Browser Authentication
 
-The final transfer, bill-payment, and loan requests originate in the user's
-browser, not in the Mashala server. Your backend must therefore accept browser
-requests from the Mashala frontend origin.
+Authentication belongs to the target application, not to the LLM flow. The
+integration supplies Mashala with two separate browser-side concerns:
 
-The banking source code is not contained in this repository, so Mashala cannot
-name its Django settings package. In that banking repository:
+1. a `TargetBackendRequest` function that uses the target app's existing
+   cookie, token, or session mechanism when calling AI Wallet; and
+2. an opaque, non-secret `authScopeTag` that changes on login, logout, account
+   switch, or target-session replacement.
 
-1. Open the Django settings module used by the running development server. It
-is normally a file named `settings.py` inside the Django project package.
+The scope tag must not be a JWT, cookie value, session ID, authorization header,
+or reversible credential. It is used only to prevent conversation leakage and
+is never sent to `/api/runtime` or the provider.
 
-2. Find the backend's existing CORS allowlist or CORS middleware configuration.
+A target application may keep its credential in its own reviewed auth layer.
+Mashala must receive only the request function, not the credential itself. A
+minimal integration shape is:
 
-3. Add the exact development frontend origin:
-
-```text
-http://localhost:3000
+```tsx
+<MashalaChat
+  application={application}
+  targetBackendBaseUrl="http://127.0.0.1:8000"
+  targetBackendRequest={targetBackendRequest}
+  authScopeTag={opaqueWalletSessionScope}
+/>
 ```
 
-4. Ensure that preflight requests allow:
+On logout or account change, stop rendering the old authenticated integration
+and provide the new scope tag. The conversation store then starts a fresh
+conversation. Do not promote anonymous history into an authenticated session.
 
-- methods `GET`, `POST`, and `OPTIONS`;
-- request headers `Authorization` and `Content-Type`.
+The current repository demo uses the anonymous scope because it is a standalone
+fixture page. A production AI Wallet host should supply the target app's opaque
+scope boundary and request integration around `MashalaChat`.
 
-5. Restart the Django development server after changing its settings.
+## Declare AI Wallet Capabilities
 
-Do not use a permissive production CORS wildcard. In production, replace the
-development origin with the deployed Mashala frontend origin and use HTTPS.
+The canonical contract is `MashalaSpec` v0.3. Writes use
+`defineCapability`; reads use `defineReadCapability`. Operations are always
+developer-authored. The model cannot choose a method, URL, headers, query
+parameters, response mapping, or confirmation policy.
 
-You can verify the browser-facing route before adding Mashala. A request to a
-protected endpoint without a JWT should reach the backend and return its normal
-authentication failure; it should not fail as a browser CORS error.
-
-## Step 3: declare the banking capabilities
-
-1. In the Mashala repository, open the existing `src/examples` directory.
-
-2. Create a file named exactly:
-
-```text
-src/examples/ai-wallet-capabilities.ts
-```
-
-3. Paste the following complete contents into that new file and save it:
+Create `src/examples/ai-wallet-capabilities.ts`:
 
 ```ts
 import { defineCapability } from "../capabilities";
@@ -201,20 +142,13 @@ export const transferMoney = defineCapability({
       required: true,
       minLength: 1,
     }),
-    amount: f.number({
-      label: "Amount",
-      required: true,
-      minimum: 0.01,
-    }),
+    amount: f.number({ label: "Amount", required: true, minimum: 0.01 }),
     description: f.longText({
       label: "Transfer description",
       helpText: "Optional description for the transfer.",
     }),
   },
-  operation: {
-    method: "POST",
-    path: "/api/v1/banking/transfer/",
-  },
+  operation: { method: "POST", path: "/api/v1/banking/transfer/" },
   confirmation: "required",
 });
 
@@ -229,10 +163,7 @@ export const payBill = defineCapability({
       required: true,
     }),
   },
-  operation: {
-    method: "POST",
-    path: "/api/v1/banking/bills/pay/",
-  },
+  operation: { method: "POST", path: "/api/v1/banking/bills/pay/" },
   confirmation: "required",
 });
 
@@ -255,53 +186,23 @@ export const requestLoan = defineCapability({
       required: true,
       minimum: 0.01,
     }),
-    salary: f.number({
-      label: "Salary",
-      required: true,
-      minimum: 0.01,
-    }),
+    salary: f.number({ label: "Salary", required: true, minimum: 0.01 }),
     description: f.longText({
       label: "Loan request description",
       helpText: "Optional information to include with the request.",
     }),
   },
-  operation: {
-    method: "POST",
-    path: "/api/v1/banking/loans/request/",
-  },
+  operation: { method: "POST", path: "/api/v1/banking/loans/request/" },
   confirmation: "required",
 });
 ```
 
-Why the field names matter: Mashala sends the validated object without
-renaming its properties. Names such as `recipient_account`, `bill_id`, and
-`loan_type` must therefore match the OpenAPI request bodies exactly.
+Field names must match the banking request bodies because Mashala sends the
+validated form object without arbitrary model-controlled renaming. Financial
+writes should remain confirmation-gated. Never change them to `"none"` merely
+to shorten a demo.
 
-All three operations require confirmation because they have financial or
-financially consequential side effects. Never change these policies to
-`"none"` merely to shorten the demo.
-
-4. Check this new TypeScript file before changing the application config:
-
-```powershell
-npm run typecheck
-```
-
-The command should exit successfully. If it reports an error in
-`ai-wallet-capabilities.ts`, compare the entire file with the snippet above,
-including underscores and trailing slashes in endpoint paths.
-
-## Step 4: make these capabilities the Mashala application
-
-1. Open the existing root-level file:
-
-```text
-mashala.config.ts
-```
-
-2. Delete its current demo contents.
-
-3. Paste the following complete replacement and save it:
+Assemble the application in `mashala.config.ts`:
 
 ```ts
 import { defineMashalaApplication } from "./src/application";
@@ -324,34 +225,16 @@ const mashalaApplication = defineMashalaApplication({
 export default mashalaApplication;
 ```
 
-This file contains browser-visible declarative data only. Do not put a JWT,
-Gemini key, custom header, or authentication function in it.
-
-4. Check that the application definition compiles:
+Validate the spec before wiring the page:
 
 ```powershell
 npm run typecheck
 ```
 
-At this point, Mashala knows which three banking operations exist, their exact
-form shapes, and their fixed confirmation policies. It still does not know how
-the browser authenticates; that is added in Step 6.
+## Configure the Server Provider
 
-## Step 5: configure the server-side LLM
-
-1. Create the local environment file by copying the provided example:
-
-```powershell
-Copy-Item .env.example .env.local
-```
-
-If `.env.local` already exists, do not overwrite it. Open the existing file
-instead.
-
-2. Open `.env.local` in your editor.
-
-3. Make sure it contains these three names, replacing only the key placeholder
-with your real Gemini key:
+Create `.env.local` from the repository's example when available, then set
+server-only values:
 
 ```dotenv
 GEMINI_API_KEY=replace-with-your-real-key
@@ -359,395 +242,97 @@ GEMINI_MODEL=gemini-3.6-flash
 MASHALA_RAG_SERVICE_URL=http://127.0.0.1:8765
 ```
 
-`.env.local` must not be committed. Do not prefix the Gemini variables with
-`NEXT_PUBLIC_`; a `NEXT_PUBLIC_` secret would be bundled for the browser.
+Never use `NEXT_PUBLIC_` for the Gemini key. The key is consumed by the
+server-only provider behind `app/api/runtime/route.ts`; no target-backend proxy
+route is needed or allowed.
 
-The existing `app/api/runtime/route.ts` and
-`src/server/assembled-application.ts` already connect `mashala.config.ts` to
-the server-only Gemini provider and the Mashala runtime. You do not need to
-create a target-backend proxy route.
-
-4. Save `.env.local`. The Next.js process reads it at startup, so restart
-`npm run dev` whenever these values change.
-
-## Step 6: add a minimal deterministic login screen
-
-Authentication is deliberately not an LLM capability. A user should not type
-a password into the conversation, and the password or resulting JWT must not
-become model input.
-
-For this local proof, keep the access JWT only in React memory. A page reload
-logs the user out. This avoids prescribing persistent token storage. In a real
-banking application, replace this small example with the backend application's
-reviewed login, refresh, expiry, and logout implementation.
-
-1. Open the existing `app` directory.
-
-2. Create a file named exactly:
+The runtime endpoint is same-origin and non-streaming:
 
 ```text
-app/ai-wallet-client.tsx
+POST /api/runtime
+Content-Type: application/json
 ```
 
-The `.tsx` extension is required because this file renders React elements.
+It accepts language events and optional bounded conversation context. It does
+not accept target credentials or target-backend execution commands.
 
-3. Paste the following complete contents into the new file and save it:
+## Optional Documentation Answers
 
-```tsx
-"use client";
-
-import { type FormEvent, useCallback, useState } from "react";
-
-import type { MashalaSpec } from "../src/spec";
-import type { TargetBackendRequest } from "../src/target-backend-request";
-import { MashalaChat } from "./mashala-chat";
-
-interface AiWalletClientProps {
-  readonly application: MashalaSpec;
-  readonly backendBaseUrl: string;
-}
-
-interface TokenResponse {
-  readonly access: string;
-}
-
-function isTokenResponse(value: unknown): value is TokenResponse {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof Reflect.get(value, "access") === "string" &&
-    Reflect.get(value, "access") !== ""
-  );
-}
-
-export function AiWalletClient({
-  application,
-  backendBaseUrl,
-}: AiWalletClientProps) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [accessToken, setAccessToken] = useState<string>();
-  const [loginError, setLoginError] = useState<string>();
-  const [loginPending, setLoginPending] = useState(false);
-
-  const login = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoginPending(true);
-    setLoginError(undefined);
-
-    try {
-      const response = await fetch(
-        new URL("/api/v1/users/token/", backendBaseUrl),
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        },
-      );
-
-      const payload: unknown = await response.json();
-
-      if (!response.ok || !isTokenResponse(payload)) {
-        setLoginError("The username or password was not accepted.");
-        return;
-      }
-
-      setAccessToken(payload.access);
-      setPassword("");
-    } catch {
-      setLoginError("The banking backend could not be reached.");
-    } finally {
-      setLoginPending(false);
-    }
-  };
-
-  const authenticatedRequest = useCallback<TargetBackendRequest>(
-    async (input, init) => {
-      if (accessToken === undefined) {
-        throw new Error("The user is not authenticated.");
-      }
-
-      const headers = new Headers(init?.headers);
-      headers.set("Authorization", `Bearer ${accessToken}`);
-
-      return fetch(input, { ...init, headers });
-    },
-    [accessToken],
-  );
-
-  if (accessToken === undefined) {
-    return (
-      <main>
-        <h1>Sign in to AI Wallet</h1>
-        <form onSubmit={login}>
-          <label>
-            Username
-            <input
-              autoComplete="username"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </label>
-          <button type="submit" disabled={loginPending}>
-            {loginPending ? "Signing in..." : "Sign in"}
-          </button>
-          {loginError === undefined ? null : <p role="alert">{loginError}</p>}
-        </form>
-      </main>
-    );
-  }
-
-  return (
-    <>
-      <button type="button" onClick={() => setAccessToken(undefined)}>
-        Sign out
-      </button>
-      <MashalaChat
-        application={application}
-        targetBackendBaseUrl={backendBaseUrl}
-        targetBackendRequest={authenticatedRequest}
-      />
-    </>
-  );
-}
-```
-
-This request function is behavior passed only to browser components. The JWT
-is attached only when the browser contacts the banking backend. It is not part
-of `MashalaSpec`, `/api/runtime` events, RAG requests, or LLM prompts.
-
-The sample intentionally does not guess the backend's refresh-token rotation
-or expiry policy. Add refresh behavior only according to the actual banking
-backend configuration.
-
-4. Run the type checker again:
-
-```powershell
-npm run typecheck
-```
-
-If this step passes, the login form and authenticated browser request wrapper
-are valid against the current Mashala `TargetBackendRequest` interface.
-
-## Step 7: connect the page to the banking backend
-
-1. Open the existing file:
-
-```text
-app/page.tsx
-```
-
-2. Delete its current contents.
-
-3. Paste the following complete replacement and save it:
-
-```tsx
-import mashalaApplication from "../mashala.config";
-import { AiWalletClient } from "./ai-wallet-client";
-
-const AI_WALLET_BACKEND = "http://127.0.0.1:8000";
-
-export default function Home() {
-  return (
-    <AiWalletClient
-      application={mashalaApplication}
-      backendBaseUrl={AI_WALLET_BACKEND}
-    />
-  );
-}
-```
-
-The backend origin is public connection information, not a secret. For a
-deployment, put it in deployment configuration and validate it before passing
-it to the client. Do not let the user or LLM supply this origin.
-
-At this point, transactional natural-language flows are wired. The existing
-Mashala page sends language events only to same-origin `/api/runtime`, while
-confirmed banking operations go from the browser directly to port 8000.
-
-4. Run the full static checks for the files edited so far:
-
-```powershell
-npm run lint
-npm run typecheck
-```
-
-Both commands must finish successfully before starting the UI.
-
-## Step 8: optionally enable answers from the banking documentation
-
-Skip this step if you only need transactional forms. Without the RAG service,
-transaction routing can still use Gemini, but documentation questions cannot
-be answered from the local banking guide.
-
-1. Install and start Ollama if it is not already running.
-
-2. In a PowerShell terminal, install the exact embedding model:
-
-```powershell
-ollama pull nomic-embed-text:v1.5
-```
-
-3. From the Mashala repository root, build an index containing only the
-banking user guide:
+Without RAG, transactional routing still works, but documentation questions
+cannot be grounded in the banking guide. To build the local artifact from only
+the banking description:
 
 ```powershell
 node .\bin\mashala.mjs rag build --input .\docs\bank_example --source description.md --output .\.mashala\rag
-```
-
-4. Wait for the build to finish. Verify that this file now exists:
-
-```text
-.mashala/rag/manifest.json
-```
-
-The command builds the pinned `mashala-rag-builder:0.1.0` Docker image and
-writes a manifest plus its private retrieval artifact.
-
-5. In a second PowerShell terminal, return to the Mashala repository and run
-the retrieval service:
-
-```powershell
 $artifactDir = (Resolve-Path .\.mashala\rag).Path
 docker run --rm -p 8765:8765 --mount "type=bind,src=$artifactDir,dst=/workspace/artifacts,readonly" mashala-rag-builder:0.1.0 serve --artifact-directory /workspace/artifacts --ollama-base-url http://host.docker.internal:11434
 ```
 
-6. Keep that terminal running. The Mashala server reads its origin from
-`MASHALA_RAG_SERVICE_URL`.
+The retrieval service is retrieval-only. It does not execute banking
+operations, and retrieved text remains untrusted context. Questions outside
+the indexed documentation must produce an insufficient-information response,
+not an invented banking rule.
 
-The OpenAPI YAML is a developer reference, but the current RAG ingestion
-pipeline accepts Markdown. This command intentionally selects only
-`description.md`.
+## Run the Frontend
 
-## Step 9: run the frontend
-
-1. Confirm the AI Wallet backend terminal is still serving
-`http://127.0.0.1:8000`.
-
-2. If you completed Step 8, confirm the RAG Docker terminal is still running
-on `http://127.0.0.1:8765`.
-
-3. Open another PowerShell terminal and run:
+Start the development server:
 
 ```powershell
-Set-Location C:\UNI_4042\FP\Mashala
-npm run dev
+npm run dev -- --hostname 127.0.0.1 --port 3100
 ```
 
-The complete set of running services is:
+Open `http://127.0.0.1:3100`. In a host application, render `MashalaChat` with
+the AI Wallet application, browser request integration, backend base URL, and
+opaque auth scope described above.
 
-| Service | Address | Required? |
-| --- | --- | --- |
-| AI Wallet backend | `http://127.0.0.1:8000` | Yes |
-| Mashala | `http://localhost:3000` | Yes |
-| RAG retrieval | `http://127.0.0.1:8765` | Only for documentation answers |
+The visible workflow is a chatroom. A normal write proceeds as follows:
 
-4. Wait until Next.js prints that it is ready.
+1. the user sends a natural-language request;
+2. the server classifies and routes only to a declared capability;
+3. proposed values are merged only into that capability's deterministic form;
+4. the user can continue the request over several messages and edit fields;
+5. the form validates against its compiled JSON Schema;
+6. **Review request** enters confirmation without a backend request; and
+7. **Confirm and send** executes the exact reviewed snapshot once in the
+   browser.
 
-5. Open `http://localhost:3000` in a browser.
+Follow-up messages use bounded context containing only safe transcript text,
+the active declared capability and valid draft, normalized outcome summaries,
+and an explicitly authorized ADR-016 projection when one exists. A completed
+action such as "what did I just do?" is answered from its deterministic outcome
+summary, not from the original request or full backend response.
 
-6. Sign in with an AI Wallet username and password and submit one request at a
-time.
+The current AI Wallet guide does not declare a positive result projection. A
+follow-up referring to a previous balance, bill, or product result must not
+assume that the full response is available to the model. Add an explicit
+`operation.modelContext` declaration and browser-side projection only when the
+use case justifies it and the projected shape is safe.
 
-The first live Gemini request needs external network access. If a message
-returns a provider configuration error, first check `GEMINI_API_KEY` and
-`GEMINI_MODEL`, then restart `npm run dev` after changing `.env.local`.
+## Current AI Wallet Read Support
 
-## Step 10: try the four main flows
+Mashala now supports declared browser-executed `GET` capabilities with optional
+validated input bindings and deterministic card/list result views. The supplied
+AI Wallet OpenAPI contract still uses paginated or wrapped read shapes for many
+resources, so those endpoints are not automatically bindable as v0.3 result
+cards.
 
-### Transfer money
+| AI Wallet operation | Current guidance |
+| --- | --- |
+| `POST /api/v1/users/token/` | Keep login in the target app, outside chat |
+| `POST /api/v1/banking/transfer/` | Declare as a confirmation-gated write |
+| `POST /api/v1/banking/bills/pay/` | Declare as a confirmation-gated write |
+| `POST /api/v1/banking/loans/request/` | Declare as a confirmation-gated write |
+| Balance, transactions, bills, and loan plans | Use deterministic browser UI or add a declared v0.3 read with a compatible response shape |
+| `POST /api/v1/chat/process/` | Do not use; it is a separate assistant, not Mashala |
 
-Type:
+Do not ask Gemini to construct banking URLs, invent pagination mappings, or
+call the backend through `/api/runtime`. Any new read integration must declare
+its fixed `GET` path, input bindings, result view, and optional ADR-016
+projection in the application spec.
 
-```text
-Transfer 250.50 to account IR123 and add the description rent.
-```
+## Verification
 
-Expected behavior:
-
-1. Mashala routes to `transfer_money`.
-2. It proposes `recipient_account`, `amount`, and `description`.
-3. The editable transfer form appears.
-4. The user selects **Review request**.
-5. The user verifies the immutable review and selects **Confirm and send**.
-6. The browser sends one authenticated request to
-   `POST /api/v1/banking/transfer/`.
-
-### Pay a bill
-
-Type a real bill UUID from the banking system:
-
-```text
-Pay bill 11111111-2222-3333-4444-555555555555.
-```
-
-Mashala must still show the form and confirmation. The backend decides whether
-the bill exists, belongs to this user, is unpaid, and is affordable.
-
-### Request a loan
-
-Type:
-
-```text
-Request a personal loan for 10000. My salary is 2500.
-```
-
-The backend decides whether an active matching plan exists. A successful
-submission is pending; the UI and assistant must not claim it is approved.
-
-### Ask a documentation question
-
-With RAG running, type:
-
-```text
-Why can a transfer fail?
-```
-
-Mashala should answer from `description.md`. Ask "What is the daily transfer
-limit?" as a negative test: the documentation does not define one, so the
-assistant should report insufficient information instead of inventing a bank
-policy.
-
-## Step 11: understand the current read-operation limitation
-
-Requests such as these cannot yet execute through a declared Mashala
-capability:
-
-- "Show my balance";
-- "List my failed transactions";
-- "Show my unpaid bills";
-- "List home-loan plans".
-
-Those APIs use `GET`, pagination, filters, and query parameters that the current
-capability contract does not represent. There are two safe choices:
-
-1. add conventional deterministic browser UI for these reads, using the same
-   `authenticatedRequest`; or
-2. propose and implement a focused Mashala read-capability extension, including
-   an ADR if the canonical contract must change.
-
-Do not work around this by asking Gemini to generate URLs or by proxying the
-banking APIs through `app/api/runtime`. Either workaround would conflict with
-Mashala's accepted architecture.
-
-If the banking backend later exposes a root-array endpoint such as a genuine
-`GET /api/v1/banking/bills/options/`, a bill field could use `f.reference`.
-That endpoint does not exist in the supplied OpenAPI file today.
-
-## Step 12: verify before considering the integration complete
-
-Run the repository checks:
+Run the repository checks after integration:
 
 ```powershell
 npm run lint
@@ -756,59 +341,59 @@ npm test
 npm run build
 ```
 
-Then manually verify:
+For the local deterministic E2E harness, run:
 
-- an amount below `0.01` is rejected before execution;
-- an unknown loan type cannot be submitted;
-- every proposed value remains editable;
-- cancelling the confirmation makes no banking request;
-- repeated confirmation does not create duplicate requests;
-- `400`, `401`, `403`, and `404` backend results are shown as failures;
-- an expired access token never gets sent to the Mashala runtime or LLM;
-- JWTs do not appear in `/api/runtime` request bodies;
-- Gemini credentials do not appear in browser source or browser network calls;
-- a prompt cannot change the declared method, path, or confirmation policy;
-- undocumented banking rules produce an insufficient-information answer.
-
-Use the browser network inspector to confirm the two separate paths:
-
-```text
-natural-language event -> POST http://localhost:3000/api/runtime
-confirmed bank action  -> POST http://127.0.0.1:8000/api/v1/banking/...
+```powershell
+npm run test:e2e
 ```
 
-The second request must not pass through the Mashala runtime.
+The current E2E suite uses fake runtime/provider behavior and local target
+fixtures. It proves browser-direct execution, confirmation, bounded multi-turn
+context, outcome-only follow-ups, no-projection reference rejection,
+non-replaying restoration, malicious-content resistance, and sanitized provider
+failure without real credentials or external network access.
 
-## Production follow-up checklist
+Use the browser network inspector to verify the two paths:
 
-The code above is a small local integration proof. Before production, also:
+```text
+language/context -> POST http://127.0.0.1:3100/api/runtime
+confirmed write  -> POST http://127.0.0.1:8000/api/v1/banking/...
+```
 
-- replace the in-memory login example with the bank's security-reviewed auth
-  and refresh implementation;
-- use HTTPS for both frontend and backend;
-- restrict production CORS to exact frontend origins;
-- decide how users obtain or select bill IDs;
-- sanitize user-visible backend failures without hiding useful validation;
-- add integration tests against a non-production banking environment;
-- configure secrets through the deployment platform's server-side secret
-  manager;
-- keep target-backend authorization authoritative even when the UI validates
-  the same input.
+The confirmed banking request must originate in the browser and must not pass
+through the Mashala runtime. `/api/runtime` requests must not contain JWTs,
+cookies, authorization headers, full backend responses, or Gemini credentials.
 
-## Files changed by this walkthrough
+## Production Checklist
 
-After following the guide, the relevant frontend files are:
+Before production:
+
+- use the banking application's security-reviewed authentication and refresh
+  implementation;
+- derive and rotate an opaque auth scope on login, logout, account switch, and
+  session replacement;
+- use HTTPS and exact CORS origins;
+- keep Gemini and RAG service secrets server-side;
+- provide deterministic UI or declared read capabilities for balance, bills,
+  transactions, and loan-plan data;
+- add an ADR-016 projection only for explicitly justified, minimized data;
+- preserve backend authorization as the final business-rule boundary;
+- test HTTP, authorization, malformed-response, and network failures; and
+- never accept model-generated URLs, methods, headers, HTML, or execution
+  authority.
+
+The guide's current repository touchpoints are:
 
 ```text
 mashala.config.ts
 src/examples/ai-wallet-capabilities.ts
-app/ai-wallet-client.tsx
-app/page.tsx
+app/page.tsx or the host application's MashalaChat integration
 .env.local                         # local secret; never commit
 .mashala/rag/                      # generated, optional
 ```
 
-Mashala currently has no `create-mashala-app` or `mashala init` generator, so
-this repository-level wiring is manual. The steps above use only capabilities
-that are implemented in the current repository and preserve the accepted
-browser/server, credential, validation, and confirmation boundaries.
+For the architectural source of truth, see
+[`ARCHITECTURE.md`](../ARCHITECTURE.md),
+[`CANONICAL_SPEC.md`](../CANONICAL_SPEC.md),
+[`RUNTIME_PROTOCOL.md`](../RUNTIME_PROTOCOL.md), and
+[`ADR-018`](../decisions/018-browser-session-scoped-conversation-memory.md).
