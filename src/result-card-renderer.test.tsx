@@ -125,6 +125,69 @@ describe("ResultCardRenderer", () => {
     expect(screen.queryByRole("list")).toBeNull();
   });
 
+  it("formats decimal strings seamlessly for currency and numbers", () => {
+    render(
+      <ResultCardRenderer
+        view={result.card({
+          title: { kind: "fixed", text: "Financial Statement" },
+          facts: [
+            {
+              id: "balance",
+              label: "Available Balance",
+              value: {
+                kind: "property",
+                property: "balance",
+                formatter: {
+                  kind: "currency",
+                  locale: "en-US",
+                  currency: "USD",
+                },
+              },
+            },
+            {
+              id: "negative_balance",
+              label: "Overdraft",
+              value: {
+                kind: "property",
+                property: "overdraft",
+                formatter: {
+                  kind: "currency",
+                  locale: "en-US",
+                  currency: "USD",
+                },
+              },
+            },
+            {
+              id: "credit_score",
+              label: "Credit Score",
+              value: {
+                kind: "property",
+                property: "score",
+                formatter: {
+                  kind: "number",
+                  locale: "en-US",
+                },
+              },
+            },
+          ],
+        })}
+        data={{
+          balance: "1000.00",
+          overdraft: "-12.50",
+          score: "750",
+        }}
+        baseUrl="https://target.example"
+      />,
+    );
+
+    expect(screen.getByText("Available Balance")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("$1,000.00")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("Overdraft")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("-$12.50")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("Credit Score")).toBeInstanceOf(HTMLElement);
+    expect(screen.getByText("750")).toBeInstanceOf(HTMLElement);
+  });
+
   it("fails the complete presentation instead of partially rendering malformed data", () => {
     render(
       <ResultCardRenderer

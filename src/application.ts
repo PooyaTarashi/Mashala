@@ -20,7 +20,7 @@ import {
 } from "./spec";
 import { copyResultView } from "./results";
 
-export const CURRENT_MASHALA_SPEC_VERSION = "0.3" as const;
+export const CURRENT_MASHALA_SPEC_VERSION = "0.4" as const;
 
 export interface MashalaApplicationDefinition<
   Capability extends CapabilitySpec = CapabilitySpec,

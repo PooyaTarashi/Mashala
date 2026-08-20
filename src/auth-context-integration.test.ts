@@ -183,7 +183,7 @@ describe("target-app auth-context integration", () => {
       confirmation: "required",
     });
     const spec: MashalaSpec = {
-      specVersion: "0.3",
+      specVersion: "0.4",
       app: {
         id: "demo_bank",
         name: "Demo Bank",

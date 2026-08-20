@@ -7,6 +7,7 @@ import {
   validateMashalaSpec,
 } from "./application";
 import {
+  accountBalance,
   payBill,
   requestLoan,
   transferMoney as aiWalletTransferMoney,
@@ -17,14 +18,14 @@ import type { MashalaSpec } from "./spec";
 describe("defineMashalaApplication", () => {
   it("provides the canonical application metadata and declared capabilities", () => {
     expect(mashalaApplication).toEqual({
-      specVersion: "0.3",
+      specVersion: "0.4",
       app: {
         id: "ai_wallet",
         name: "AI Wallet",
         description:
           "A conversational frontend for account transfers, bill payments, and loan requests.",
       },
-      capabilities: [aiWalletTransferMoney, payBill, requestLoan],
+      capabilities: [aiWalletTransferMoney, payBill, requestLoan, accountBalance],
     });
     expectTypeOf(mashalaApplication).toMatchTypeOf<MashalaSpec>();
     expect(JSON.parse(JSON.stringify(mashalaApplication))).toEqual(
@@ -94,7 +95,7 @@ describe("defineMashalaApplication", () => {
       expect.objectContaining({
         code: "unsupported_spec_version",
         message:
-          "Mashala application configuration requires MashalaSpec version 0.3.",
+          "Mashala application configuration requires MashalaSpec version 0.4.",
       }),
     );
   });

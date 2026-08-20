@@ -11,13 +11,15 @@ import {
   executeReadCapability,
   type ReadCapabilityResult,
 } from "./read-capability-executor";
-import type { ReadCapabilitySpec } from "./spec";
+import type { ReadCapabilitySpec, ResultCard } from "./spec";
 import type { TargetBackendRequest } from "./target-backend-request";
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
+
+const fixedTitle = { kind: "fixed", text: "Title" } as const;
 
 const objectView = result.card({
   title: { kind: "fixed", text: "Result" },
@@ -297,6 +299,322 @@ describe("executeReadCapability", () => {
     expect(wrongShape).toEqual({
       outcome: "response-shape-error",
       response: wrongShapeResponse,
+    });
+  });
+
+  it("unwraps a single-segment response envelope for a card", async () => {
+    const capability = defineReadCapability({
+      id: "account_balance",
+      description: "Show account balance.",
+      operation: { method: "GET", path: "/api/v1/banking/balance/" },
+      result: result.card({
+        root: "balance",
+        card: {
+          title: { kind: "fixed", text: "Account Balance" },
+          facts: [
+            {
+              id: "balance",
+              label: "Balance",
+              value: {
+                kind: "property",
+                property: "balance",
+                formatter: {
+                  kind: "currency",
+                  locale: "en-US",
+                  currency: "USD",
+                },
+              },
+            },
+          ],
+        },
+      }),
+    });
+    const request = responseRequest({
+      balance: {
+        account_number: "ACC123",
+        balance: "3.50",
+        status: "active",
+      },
+      message: "Balance retrieved successfully",
+    });
+
+    const execution = await executeReadCapability({
+      baseUrl: "https://target.example",
+      capability,
+      request,
+    });
+
+    expect(execution).toEqual({
+      outcome: "success",
+      response: expect.any(Response),
+      data: {
+        account_number: "ACC123",
+        balance: "3.50",
+        status: "active",
+      },
+    });
+  });
+
+  it("unwraps a multi-segment response envelope for a card", async () => {
+    const capability = defineReadCapability({
+      id: "account_balance",
+      description: "Show account balance.",
+      operation: { method: "GET", path: "/balance" },
+      result: result.card({
+        root: "data.account.balance",
+        card: {
+          title: { kind: "fixed", text: "Account Balance" },
+          facts: [
+            {
+              id: "balance",
+              label: "Balance",
+              value: {
+                kind: "property",
+                property: "amount",
+                formatter: {
+                  kind: "currency",
+                  locale: "en-US",
+                  currency: "USD",
+                },
+              },
+            },
+          ],
+        },
+      }),
+    });
+    const request = responseRequest({
+      data: {
+        account: {
+          balance: { amount: "1000.00" },
+        },
+      },
+    });
+
+    const execution = await executeReadCapability({
+      baseUrl: "https://target.example",
+      capability,
+      request,
+    });
+
+    expect(execution).toEqual({
+      outcome: "success",
+      response: expect.any(Response),
+      data: { amount: "1000.00" },
+    });
+  });
+
+  it("unwraps a wrapped collection response envelope for a cardList", async () => {
+    const capability = defineReadCapability({
+      id: "list_bills",
+      description: "List bills.",
+      operation: { method: "GET", path: "/bills" },
+      result: result.cardList({
+        root: "results",
+        emptyText: "No bills found.",
+        card: {
+          title: {
+            kind: "property",
+            property: "id",
+            formatter: { kind: "text" },
+          },
+          facts: [
+            {
+              id: "amount",
+              label: "Amount",
+              value: {
+                kind: "property",
+                property: "amount",
+                formatter: {
+                  kind: "currency",
+                  locale: "en-US",
+                  currency: "USD",
+                },
+              },
+            },
+          ],
+        },
+      }),
+    });
+    const request = responseRequest({
+      count: 2,
+      results: [
+        { id: "bill_1", amount: "45.00" },
+        { id: "bill_2", amount: "-12.50" },
+      ],
+    });
+
+    const execution = await executeReadCapability({
+      baseUrl: "https://target.example",
+      capability,
+      request,
+    });
+
+    expect(execution).toEqual({
+      outcome: "success",
+      response: expect.any(Response),
+      data: [
+        { id: "bill_1", amount: "45.00" },
+        { id: "bill_2", amount: "-12.50" },
+      ],
+    });
+  });
+
+  it("unwraps an empty wrapped collection cleanly", async () => {
+    const capability = defineReadCapability({
+      id: "list_bills",
+      description: "List bills.",
+      operation: { method: "GET", path: "/bills" },
+      result: result.cardList({
+        root: "data.items",
+        emptyText: "No bills found.",
+        card: {
+          title: {
+            kind: "property",
+            property: "id",
+            formatter: { kind: "text" },
+          },
+        },
+      }),
+    });
+    const request = responseRequest({
+      data: { items: [] },
+    });
+
+    const execution = await executeReadCapability({
+      baseUrl: "https://target.example",
+      capability,
+      request,
+    });
+
+    expect(execution).toEqual({
+      outcome: "success",
+      response: expect.any(Response),
+      data: [],
+    });
+  });
+
+  it.each([
+    ["currency", { kind: "currency" as const, locale: "en-US", currency: "USD" }, "3.50"],
+    ["negative currency", { kind: "currency" as const, locale: "en-US", currency: "USD" }, "-12.50"],
+    ["integer string currency", { kind: "currency" as const, locale: "en-US", currency: "USD" }, "1000"],
+    ["number", { kind: "number" as const, locale: "en-US" }, "42.50"],
+    ["negative number", { kind: "number" as const, locale: "en-US" }, "-100"],
+    ["zero number", { kind: "number" as const, locale: "en-US" }, "0"],
+    ["finite JSON number", { kind: "number" as const, locale: "en-US" }, 1250.5],
+  ])("accepts valid decimal strings and numbers for %s formatter (%s)", async (_case, formatter, value) => {
+    const capability = defineReadCapability({
+      id: "test_stat",
+      description: "Show numeric stat.",
+      operation: { method: "GET", path: "/stat" },
+      result: result.card({
+        title: { kind: "fixed", text: "Stat" },
+        facts: [
+          {
+            id: "val",
+            label: "Value",
+            value: {
+              kind: "property",
+              property: "val",
+              formatter,
+            },
+          },
+        ],
+      }),
+    });
+    const request = responseRequest({ val: value });
+
+    const execution = await executeReadCapability({
+      baseUrl: "https://target.example",
+      capability,
+      request,
+    });
+
+    expect(execution).toEqual({
+      outcome: "success",
+      response: expect.any(Response),
+      data: { val: value },
+    });
+  });
+
+  it.each([
+    ["non-numeric letters", "abc"],
+    ["currency symbols", "$3.50"],
+    ["empty string", ""],
+    ["multiple decimal points", "12.34.56"],
+    ["comma thousands separators", "1,000.00"],
+    ["whitespace prefix/suffix", " 3.50 "],
+    ["scientific notation", "1e5"],
+    ["NaN string", "NaN"],
+    ["Infinity string", "Infinity"],
+  ])("rejects invalid numeric string %s with response-shape-error", async (_case, invalidValue) => {
+    const capability = defineReadCapability({
+      id: "test_stat",
+      description: "Show numeric stat.",
+      operation: { method: "GET", path: "/stat" },
+      result: result.card({
+        title: { kind: "fixed", text: "Stat" },
+        facts: [
+          {
+            id: "val",
+            label: "Value",
+            value: {
+              kind: "property",
+              property: "val",
+              formatter: {
+                kind: "currency",
+                locale: "en-US",
+                currency: "USD",
+              },
+            },
+          },
+        ],
+      }),
+    });
+    const request = responseRequest({ val: invalidValue });
+
+    const execution = await executeReadCapability({
+      baseUrl: "https://target.example",
+      capability,
+      request,
+    });
+
+    expect(execution).toEqual({
+      outcome: "response-shape-error",
+      response: expect.any(Response),
+    });
+  });
+
+  it.each([
+    ["missing root envelope key", { root: "balance", card: { title: fixedTitle } }, { other: {} }],
+    ["non-object intermediate segment (null)", { root: "data.balance", card: { title: fixedTitle } }, { data: null }],
+    ["non-object intermediate segment (string)", { root: "data.balance", card: { title: fixedTitle } }, { data: "string" }],
+    ["non-object intermediate segment (array)", { root: "data.balance", card: { title: fixedTitle } }, { data: [1, 2] }],
+    ["card target is an array", { root: "balance", card: { title: fixedTitle } }, { balance: [{ title: "Account" }] }],
+    ["card target is a primitive", { root: "balance", card: { title: fixedTitle } }, { balance: "primitive" }],
+    ["card target is null", { root: "balance", card: { title: fixedTitle } }, { balance: null }],
+    ["cardList target is an object", { root: "results", emptyText: "Empty", card: { title: { kind: "property", property: "title", formatter: { kind: "text" } } } }, { results: { id: 1 } }],
+    ["cardList target is null", { root: "results", emptyText: "Empty", card: { title: { kind: "property", property: "title", formatter: { kind: "text" } } } }, { results: null }],
+    ["cardList target is a string", { root: "results", emptyText: "Empty", card: { title: { kind: "property", property: "title", formatter: { kind: "text" } } } }, { results: "items" }],
+  ])("returns response-shape-error when unwrapping fails due to %s", async (_case, resultDeclaration, responseBody) => {
+    const capability = defineReadCapability({
+      id: "test_unwrapping_failure",
+      description: "Test unwrapping failure.",
+      operation: { method: "GET", path: "/test" },
+      result: "emptyText" in resultDeclaration
+        ? result.cardList(resultDeclaration as { root: string; emptyText: string; card: ResultCard })
+        : result.card(resultDeclaration as { root: string; card: ResultCard }),
+    });
+    const request = responseRequest(responseBody);
+
+    const execution = await executeReadCapability({
+      baseUrl: "https://target.example",
+      capability,
+      request,
+    });
+
+    expect(execution).toEqual({
+      outcome: "response-shape-error",
+      response: expect.any(Response),
     });
   });
 

@@ -39,6 +39,19 @@ function directProperty(item: JsonObject, property: string): unknown {
     : undefined;
 }
 
+const DECIMAL_STRING = /^-?\d+(?:\.\d+)?$/;
+
+function coerceNumericValue(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && DECIMAL_STRING.test(value)) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : undefined;
+  }
+  return undefined;
+}
+
 function formatProperty(
   descriptor: ResultPropertyValue,
   item: JsonObject,
@@ -48,17 +61,21 @@ function formatProperty(
     switch (descriptor.formatter.kind) {
       case "text":
         return typeof value === "string" ? value : undefined;
-      case "number":
-        return typeof value === "number" && Number.isFinite(value)
-          ? new Intl.NumberFormat(descriptor.formatter.locale).format(value)
+      case "number": {
+        const numeric = coerceNumericValue(value);
+        return numeric !== undefined
+          ? new Intl.NumberFormat(descriptor.formatter.locale).format(numeric)
           : undefined;
-      case "currency":
-        return typeof value === "number" && Number.isFinite(value)
+      }
+      case "currency": {
+        const numeric = coerceNumericValue(value);
+        return numeric !== undefined
           ? new Intl.NumberFormat(descriptor.formatter.locale, {
               style: "currency",
               currency: descriptor.formatter.currency,
-            }).format(value)
+            }).format(numeric)
           : undefined;
+      }
       case "date":
         return typeof value === "string"
           ? new Intl.DateTimeFormat(descriptor.formatter.locale, {

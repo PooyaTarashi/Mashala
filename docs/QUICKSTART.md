@@ -73,7 +73,7 @@ The top-level contract is MashalaSpec in src/spec.ts:
 import type { MashalaSpec } from "../src/spec";
 
 export const appSpec: MashalaSpec = {
-  specVersion: "0.3",
+  specVersion: "0.4",
   app: {
     id: "service_portal",
     name: "Service Portal",
@@ -124,7 +124,7 @@ export const createRequest = defineCapability({
 });
 
 export const appSpec: MashalaSpec = {
-  specVersion: "0.3",
+  specVersion: "0.4",
   app: {
     id: "service_portal",
     name: "Service Portal",

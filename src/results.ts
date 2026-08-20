@@ -12,6 +12,7 @@ import type {
 
 const STABLE_ID = /^[a-z][a-z0-9_]*$/;
 const ISO_4217_CURRENCY_CODE = /^[A-Z]{3}$/;
+const ROOT_PATH = /^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*$/;
 
 function invalidResult(message: string): never {
   throw new TypeError(`Invalid result view: ${message}`);
@@ -40,6 +41,14 @@ function hasExactKeys(
 function assertString(value: unknown, description: string): asserts value is string {
   if (typeof value !== "string") {
     invalidResult(`${description} must be a string.`);
+  }
+}
+
+function assertRootPath(root: unknown): asserts root is string {
+  if (typeof root !== "string" || !ROOT_PATH.test(root)) {
+    invalidResult(
+      "root must be a dot-separated property path matching ^[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)*$.",
+    );
   }
 }
 
@@ -235,18 +244,37 @@ export function copyResultView(value: unknown): ResultView {
     invalidResult("expected a card or cardList declaration.");
   }
   if (value.kind === "card") {
-    if (!hasExactKeys(value, ["kind", "card"])) {
-      invalidResult("card views contain only kind and card.");
+    if (!hasExactKeys(value, ["kind", "card", "root"], ["kind", "card"])) {
+      invalidResult("card views contain only kind, card, and optional root.");
     }
-    return Object.freeze({ kind: "card", card: copyCard(value.card) });
+    if (value.root !== undefined) {
+      assertRootPath(value.root);
+    }
+    return Object.freeze({
+      kind: "card",
+      ...(value.root === undefined ? {} : { root: value.root }),
+      card: copyCard(value.card),
+    });
   }
   if (value.kind === "cardList") {
-    if (!hasExactKeys(value, ["kind", "card", "emptyText"])) {
-      invalidResult("cardList views contain only kind, card, and emptyText.");
+    if (
+      !hasExactKeys(
+        value,
+        ["kind", "card", "emptyText", "root"],
+        ["kind", "card", "emptyText"],
+      )
+    ) {
+      invalidResult(
+        "cardList views contain only kind, card, emptyText, and optional root.",
+      );
+    }
+    if (value.root !== undefined) {
+      assertRootPath(value.root);
     }
     assertString(value.emptyText, "card-list empty text");
     return Object.freeze({
       kind: "cardList",
+      ...(value.root === undefined ? {} : { root: value.root }),
       card: copyCard(value.card),
       emptyText: value.emptyText,
     });
@@ -254,19 +282,35 @@ export function copyResultView(value: unknown): ResultView {
   return invalidResult("result kind must be card or cardList.");
 }
 
+export type CardConfig =
+  | ResultCard
+  | {
+      readonly root?: string;
+      readonly card: ResultCard;
+    };
+
 export const result = Object.freeze({
-  card(card: ResultCard): CardResultView {
-    return copyResultView({ kind: "card", card }) as CardResultView;
+  card(config: CardConfig): CardResultView {
+    if (isPlainRecord(config) && ("card" in config || "root" in config)) {
+      return copyResultView({
+        kind: "card",
+        ...config,
+      }) as CardResultView;
+    }
+    return copyResultView({
+      kind: "card",
+      card: config,
+    }) as CardResultView;
   },
 
   cardList(config: {
+    readonly root?: string;
     readonly card: ResultCard;
     readonly emptyText: string;
   }): CardListResultView {
     return copyResultView({
       kind: "cardList",
-      card: config.card,
-      emptyText: config.emptyText,
+      ...config,
     }) as CardListResultView;
   },
 });

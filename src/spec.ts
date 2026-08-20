@@ -24,7 +24,7 @@ import type { ModelVisibleBackendProjection as ModelVisibleBackendProjectionCont
 import { copyModelVisibleBackendProjection } from "./model-visible-backend-projection-policy";
 
 export interface MashalaSpec {
-  readonly specVersion: "0.3";
+  readonly specVersion: "0.4";
   readonly app: AppMetadata;
   readonly capabilities: readonly CapabilitySpec[];
 }
@@ -95,11 +95,15 @@ export type ResultView = CardResultView | CardListResultView;
 
 export interface CardResultView {
   readonly kind: "card";
+  /** Optional dot-delimited path to the target object inside a response envelope. */
+  readonly root?: string;
   readonly card: ResultCard;
 }
 
 export interface CardListResultView {
   readonly kind: "cardList";
+  /** Optional dot-delimited path to the target array inside a response envelope. */
+  readonly root?: string;
   readonly card: ResultCard;
   readonly emptyText: string;
 }

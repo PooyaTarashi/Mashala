@@ -1190,13 +1190,13 @@ and the expanded `number`/`currency` formatter decimal string acceptance rules.
 `validPropertyValue` decimal string parsing.
 
 **Acceptance:**
-- [ ] `src/spec.ts` defines `MashalaSpec` v0.4 and updated `CardResultView` / `CardListResultView`;
-- [ ] `src/results.ts` compiler accepts optional `root` parameter in `result.card({ root, card })` and `result.cardList({ root, card, emptyText })` and validates dot-path syntax;
-- [ ] `src/read-capability-executor.ts` extracts unwrapped target objects/arrays along the declared `root` path before validating card items;
-- [ ] missing or invalid intermediate path segments fail deterministically with `response-shape-error`;
-- [ ] `validPropertyValue` accepts finite numbers and decimal strings matching `/^-?\d+(?:\.\d+)?$/` for `number` and `currency` formatters, converting them via `Number(value)`;
-- [ ] `src/result-card-renderer.tsx` formats decimal strings seamlessly through `Intl.NumberFormat`;
-- [ ] unit and compiler tests cover root path unwrapping, invalid paths, missing segments, decimal string parsing, and invalid string rejections.
+- [x] `src/spec.ts` defines `MashalaSpec` v0.4 and updated `CardResultView` / `CardListResultView`;
+- [x] `src/results.ts` compiler accepts optional `root` parameter in `result.card({ root, card })` and `result.cardList({ root, card, emptyText })` and validates dot-path syntax;
+- [x] `src/read-capability-executor.ts` extracts unwrapped target objects/arrays along the declared `root` path before validating card items;
+- [x] missing or invalid intermediate path segments fail deterministically with `response-shape-error`;
+- [x] `validPropertyValue` accepts finite numbers and decimal strings matching `/^-?\d+(?:\.\d+)?$/` for `number` and `currency` formatters, converting them via `Number(value)`;
+- [x] `src/result-card-renderer.tsx` formats decimal strings seamlessly through `Intl.NumberFormat`;
+- [x] unit and compiler tests cover root path unwrapping, invalid paths, missing segments, decimal string parsing, and invalid string rejections.
 
 ---
 

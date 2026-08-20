@@ -143,6 +143,117 @@ describe("result-card DSL and compiler", () => {
     });
   });
 
+  it("compiles a wrapped account-balance card with single-segment and multi-segment root paths", () => {
+    const singleSegment = result.card({
+      root: "balance",
+      card: {
+        title: fixedTitle,
+        facts: [
+          {
+            id: "balance",
+            label: "Balance",
+            value: {
+              kind: "property",
+              property: "balance",
+              formatter: {
+                kind: "currency",
+                locale: "en-US",
+                currency: "USD",
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    expect(singleSegment).toEqual({
+      kind: "card",
+      root: "balance",
+      card: {
+        title: fixedTitle,
+        facts: [
+          {
+            id: "balance",
+            label: "Balance",
+            value: {
+              kind: "property",
+              property: "balance",
+              formatter: {
+                kind: "currency",
+                locale: "en-US",
+                currency: "USD",
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(singleSegment.root).toBe("balance");
+    expectTypeOf(singleSegment).toEqualTypeOf<CardResultView>();
+
+    const multiSegment = result.card({
+      root: "data.account.balance",
+      card: {
+        title: fixedTitle,
+      },
+    });
+    expect(multiSegment.root).toBe("data.account.balance");
+    expect(Object.isFrozen(multiSegment)).toBe(true);
+  });
+
+  it("compiles a wrapped cardList with root path", () => {
+    const wrappedList = result.cardList({
+      root: "results",
+      emptyText: "No products matched.",
+      card: productCard(),
+    });
+
+    expect(wrappedList).toEqual({
+      kind: "cardList",
+      root: "results",
+      emptyText: "No products matched.",
+      card: productCard(),
+    });
+    expect(wrappedList.root).toBe("results");
+    expect(Object.isFrozen(wrappedList)).toBe(true);
+    expectTypeOf(wrappedList).toEqualTypeOf<CardListResultView>();
+
+    const multiSegmentList = result.cardList({
+      root: "data.items",
+      emptyText: "No items.",
+      card: productCard(),
+    });
+    expect(multiSegmentList.root).toBe("data.items");
+  });
+
+  it.each([
+    ["an empty string", ""],
+    ["consecutive dots", "data..balance"],
+    ["a leading dot", ".balance"],
+    ["a trailing dot", "balance."],
+    ["array indexing", "items[0]"],
+    ["hyphens", "data-balance"],
+    ["slashes", "data/balance"],
+    ["spaces", "data balance"],
+    ["wildcards", "*.id"],
+    ["a non-string type", 123 as unknown as string],
+  ])("rejects invalid root path with %s", (_case, invalidRoot) => {
+    expect(() =>
+      result.card({
+        root: invalidRoot,
+        card: { title: fixedTitle },
+      }),
+    ).toThrow(/root must be a dot-separated property path/);
+
+    expect(() =>
+      result.cardList({
+        root: invalidRoot,
+        emptyText: "Empty",
+        card: { title: fixedTitle },
+      }),
+    ).toThrow(/root must be a dot-separated property path/);
+  });
+
   it("compiles one repeated product-card template and fixed empty text", () => {
     const view = result.cardList({
       emptyText: "No products matched.",
@@ -339,13 +450,13 @@ describe("result-card DSL and compiler", () => {
         card: { title: fixedTitle },
         emptyText: "Not valid for one card.",
       }),
-    ).toThrow(/card views contain only kind and card/);
+    ).toThrow(/card views contain only kind, card/);
     expect(() =>
       copyResultView({
         kind: "cardList",
         card: { title: fixedTitle },
       }),
-    ).toThrow(/cardList views contain only kind, card, and emptyText/);
+    ).toThrow(/cardList views contain only kind, card/);
   });
 
   it.each([

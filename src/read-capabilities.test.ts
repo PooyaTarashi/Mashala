@@ -165,7 +165,7 @@ describe("defineReadCapability", () => {
     ).toThrow(/^Invalid backend operation:/);
   });
 
-  it("assembles and validates a canonical MashalaSpec v0.3 read", () => {
+  it("assembles and validates a canonical MashalaSpec v0.4 read", () => {
     const read = defineReadCapability({
       id: "account_balance",
       description: "Show balance.",
@@ -181,7 +181,7 @@ describe("defineReadCapability", () => {
       capabilities: [read],
     });
 
-    expect(application.specVersion).toBe("0.3");
+    expect(application.specVersion).toBe("0.4");
     expect(validateMashalaSpec(JSON.parse(JSON.stringify(application)))).toEqual(
       application,
     );

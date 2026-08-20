@@ -154,20 +154,46 @@ function copyJsonValue(value: unknown): JsonValue {
   );
 }
 
+function resolveRootTarget(value: unknown, root?: string): unknown {
+  if (root === undefined) {
+    return value;
+  }
+  let current: unknown = value;
+  const segments = root.split(".");
+  for (const segment of segments) {
+    if (!isPlainRecord(current)) {
+      return undefined;
+    }
+    if (
+      !Object.prototype.hasOwnProperty.call(current, segment) ||
+      !Object.prototype.propertyIsEnumerable.call(current, segment)
+    ) {
+      return undefined;
+    }
+    current = current[segment];
+  }
+  return current;
+}
+
 function validateResultRoot(
   capability: ReadCapabilitySpec,
   value: unknown,
   baseUrl: string | URL,
 ): ReadResultData | undefined {
+  const target = resolveRootTarget(value, capability.result.root);
+  if (target === undefined) {
+    return undefined;
+  }
+
   if (capability.result.kind === "card") {
-    if (!isPlainRecord(value) || !validCardItem(capability.result.card, value, baseUrl)) {
+    if (!isPlainRecord(target) || !validCardItem(capability.result.card, target, baseUrl)) {
       return undefined;
     }
-    return copyJsonValue(value) as JsonObject;
+    return copyJsonValue(target) as JsonObject;
   }
   if (
-    !Array.isArray(value) ||
-    value.some(
+    !Array.isArray(target) ||
+    target.some(
       (item) =>
         !isPlainRecord(item) ||
         !validCardItem(capability.result.card, item, baseUrl),
@@ -175,7 +201,7 @@ function validateResultRoot(
   ) {
     return undefined;
   }
-  return copyJsonValue(value) as readonly JsonObject[];
+  return copyJsonValue(target) as readonly JsonObject[];
 }
 
 function directProperty(
@@ -240,6 +266,18 @@ function validImageUrl(value: string, baseUrl: string | URL): boolean {
   }
 }
 
+const DECIMAL_STRING = /^-?\d+(?:\.\d+)?$/;
+
+function validNumericValue(value: unknown): boolean {
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+  if (typeof value === "string") {
+    return DECIMAL_STRING.test(value) && Number.isFinite(Number(value));
+  }
+  return false;
+}
+
 function validPropertyValue(
   descriptor: ResultPropertyValue,
   item: Record<string, unknown>,
@@ -250,7 +288,7 @@ function validPropertyValue(
       return typeof value === "string";
     case "number":
     case "currency":
-      return typeof value === "number" && Number.isFinite(value);
+      return validNumericValue(value);
     case "date":
       return typeof value === "string" && validFullDate(value);
     case "dateTime":
