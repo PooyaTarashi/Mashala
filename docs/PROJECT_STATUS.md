@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**P7 browser-owned conversation memory, bounded safe multi-turn follow-up routing, chat UI dependency evaluation, and the accessible chatroom frontend are complete.**
+**P8 read response envelope unwrapping and numeric string coercion are complete.**
 
 ISSUE-001, ISSUE-002, ISSUE-003, ISSUE-010, ISSUE-011, ISSUE-012, ISSUE-013, ISSUE-014, ISSUE-015, ISSUE-016, ISSUE-020, ISSUE-021, ISSUE-022, ISSUE-023, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-040, ISSUE-041, ISSUE-042, ISSUE-043, ISSUE-044, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, and ISSUE-053 are complete. The repository now has a working single-package Next.js application scaffold, five typed static field-authoring primitives plus `f.reference`, deterministic form-to-JSON-Schema compilation, canonical capability assembly, a deterministic React renderer for compiled forms, direct browser-side target-backend read/write execution through a target-app-owned request integration, a deterministic confirmation boundary, explicit browser-side backend-data projection, a server-only provider-neutral LLM boundary with a Google Gemini implementation, deterministic allow-listed capability routing, partial slot extraction with declared-key and JSON Schema validation, transport-independent runtime events with deterministic validation of untrusted data, an isolated containerized Python/FAISS subsystem, a versioned Mashala-owned RAG artifact contract, deterministic Markdown ingestion with stable provenance, offline local embedding plus exact-index artifact serialization, a CI-independent containerized RAG build command, cached runtime loading of prebuilt artifacts, a persistent retrieval-only JSON/HTTP service, a provider-neutral Node retrieval client with an injectable fake, a grounded documentation knowledge-answer flow with explicit insufficient-context behavior, a validated application/runtime assembly that keeps browser data separate from server dependencies, a strict non-streaming HTTP boundary for canonical runtime events, and a minimal accessible chat/form page for one happy-path transaction.
 
@@ -384,6 +384,27 @@ and a declared projection capability.
   target cookie, declared GET metadata, or full response sentinel to
   `/api/runtime`; the examples deliberately declare no ADR-016 projection.
 
+## P8 implementation
+
+- ISSUE-080 — `CANONICAL_SPEC.md` advances `MashalaSpec` to version `0.4`. `CardResultView`
+  and `CardListResultView` accept an optional dot-path `root` property
+  (`^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*$`) for deterministic envelope unwrapping.
+  Formatters for `number` and `currency` accept finite JSON numbers and strict
+  decimal strings matching `/^-?\d+(?:\.\d+)?$/`.
+- ISSUE-081 — `src/spec.ts`, `src/results.ts`, `src/read-capability-executor.ts`,
+  and `src/result-card-renderer.tsx` implement the executable v0.4 contract.
+  The `result.card` and `result.cardList` compilers isolate and validate optional
+  `root` paths. The read executor navigates unwrapped response objects/arrays,
+  failing deterministically on missing or non-object segments. `validPropertyValue`
+  coerces valid decimal strings into numeric values for locale-aware formatting.
+- ISSUE-082 — `src/examples/ai-wallet-capabilities.ts` declares `accountBalance`
+  using `result.card({ root: "balance", card: { ... } })`, unwrapping the AI Wallet
+  banking response (`{ "balance": { ... }, "message": "..." }`) and formatting
+  the string balance as `$3.50`. `mashala.config.ts`, `src/application.test.ts`,
+  `app/page.test.tsx`, and `app/mashala-chat.read-workflow.test.tsx` verify clean
+  card presentation, envelope isolation, credential non-leakage, and deterministic
+  malformed-envelope failure.
+
 ## Deliberately unresolved
 
 - Whether a later product requirement justifies durable/cross-device
@@ -396,4 +417,5 @@ See `OPEN_QUESTIONS.md` for the complete current list.
 
 ## Recommended next task
  
-Implement ISSUE-081 — result DSL compiler, read executor unwrapping, and numeric coercion.
+Proceed with the next planned milestone or backlog item.
+

@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defineMashalaApplication } from "../src/application";
 import { defineReadCapability, result } from "../src/capabilities";
+import { accountBalance } from "../src/examples/ai-wallet-capabilities";
 import { f } from "../src/fields";
 import type {
   BrowserToServerEvent,
@@ -408,5 +409,102 @@ describe("MashalaChat integrated read workflow", () => {
     ).toBe(false);
     expect(JSON.stringify(transport.mock.calls)).not.toContain("internal_secret");
     expect(screen.queryByText("never crosses the runtime transport")).toBeNull();
+  });
+
+  it("renders wrapped AI Wallet account balance response cleanly with string currency coercion and envelope isolation", async () => {
+    const transport = routeTransport("account_balance") as ReturnType<
+      typeof vi.fn<RuntimeTransport>
+    >;
+    const request = vi.fn<TargetBackendRequest>().mockResolvedValue(
+      Response.json({
+        balance: {
+          account_number:
+            "ACC0C0930E867854AE493C0A3290D25169ABCC70977F6CC4F",
+          balance: "3.50",
+          status: "active",
+        },
+        message: "Balance retrieved successfully",
+        secret_envelope_token: "backend-token-12345",
+      }),
+    );
+
+    render(
+      <MashalaChat
+        application={applicationWith(accountBalance)}
+        transport={transport}
+        targetBackendBaseUrl="http://127.0.0.1:8000"
+        targetBackendRequest={request}
+        conversationId="wallet_balance_conv"
+      />,
+    );
+
+    send("What is my account balance?");
+    await screen.findByRole("status", { name: "Loading read result" });
+    expect(workflowState()).toContain("FETCHING");
+
+    const resultCard = await screen.findByRole("article", {
+      name: "Read result",
+    });
+    expect(workflowState()).toContain("PRESENTING");
+
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/api/v1/banking/balance/",
+      expect.objectContaining({
+        method: "GET",
+        signal: expect.any(AbortSignal),
+      }),
+    );
+
+    expect(
+      within(resultCard).getByRole("heading", { name: "Account Balance" }),
+    ).toBeInstanceOf(HTMLElement);
+    expect(within(resultCard).getByText("$3.50")).toBeInstanceOf(HTMLElement);
+    expect(within(resultCard).getByText("active")).toBeInstanceOf(HTMLElement);
+    expect(
+      within(resultCard).getByText(
+        "ACC0C0930E867854AE493C0A3290D25169ABCC70977F6CC4F",
+      ),
+    ).toBeInstanceOf(HTMLElement);
+
+    expect(screen.queryByText("Balance retrieved successfully")).toBeNull();
+    expect(screen.queryByText("backend-token-12345")).toBeNull();
+
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(transport.mock.calls[0]?.[0].type).toBe("user.message");
+    const transportPayloadJson = JSON.stringify(transport.mock.calls);
+    expect(transportPayloadJson).not.toContain("Balance retrieved successfully");
+    expect(transportPayloadJson).not.toContain("backend-token-12345");
+    expect(transportPayloadJson).not.toContain(
+      "ACC0C0930E867854AE493C0A3290D25169ABCC70977F6CC4F",
+    );
+  });
+
+  it("fails deterministically when the backend envelope does not match the declared root path", async () => {
+    const transport = routeTransport("account_balance");
+    const request = vi.fn<TargetBackendRequest>().mockResolvedValue(
+      Response.json({
+        message: "Account not found",
+        balance: null,
+      }),
+    );
+
+    render(
+      <MashalaChat
+        application={applicationWith(accountBalance)}
+        transport={transport}
+        targetBackendBaseUrl="http://127.0.0.1:8000"
+        targetBackendRequest={request}
+        conversationId="wallet_balance_malformed_conv"
+      />,
+    );
+
+    send("Check balance");
+    const failure = await screen.findByRole("alert", { name: "Read failure" });
+    expect(failure.textContent).toContain(
+      "does not match the declared result view",
+    );
+    expect(screen.queryByText("Account not found")).toBeNull();
+    expect(workflowState()).toContain("FAILED");
   });
 });

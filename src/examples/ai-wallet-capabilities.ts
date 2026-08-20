@@ -90,39 +90,42 @@ export const accountBalance = defineReadCapability({
     path: "/api/v1/banking/balance/",
   },
   result: result.card({
-    title: { kind: "fixed", text: "Account Balance" },
-    facts: [
-      {
-        id: "balance",
-        label: "Available Balance",
-        value: {
-          kind: "property",
-          property: "balance",
-          formatter: {
-            kind: "currency",
-            locale: "en-US",
-            currency: "USD",
+    root: "balance",
+    card: {
+      title: { kind: "fixed", text: "Account Balance" },
+      facts: [
+        {
+          id: "balance",
+          label: "Available Balance",
+          value: {
+            kind: "property",
+            property: "balance",
+            formatter: {
+              kind: "currency",
+              locale: "en-US",
+              currency: "USD",
+            },
           },
         },
-      },
-      {
-        id: "status",
-        label: "Status",
-        value: {
-          kind: "property",
-          property: "status",
-          formatter: { kind: "text" },
+        {
+          id: "status",
+          label: "Status",
+          value: {
+            kind: "property",
+            property: "status",
+            formatter: { kind: "text" },
+          },
         },
-      },
-      {
-        id: "account_number",
-        label: "Account Number",
-        value: {
-          kind: "property",
-          property: "account_number",
-          formatter: { kind: "text" },
+        {
+          id: "account_number",
+          label: "Account Number",
+          value: {
+            kind: "property",
+            property: "account_number",
+            formatter: { kind: "text" },
+          },
         },
-      },
-    ],
+      ],
+    },
   }),
 });

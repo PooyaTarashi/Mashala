@@ -33,6 +33,59 @@ describe("defineMashalaApplication", () => {
     );
   });
 
+  it("declares the unwrapped AI Wallet account balance read capability", () => {
+    expect(accountBalance).toEqual({
+      kind: "read",
+      id: "account_balance",
+      description:
+        "Show the signed-in user's current account balance, account number, and status.",
+      operation: {
+        method: "GET",
+        path: "/api/v1/banking/balance/",
+      },
+      result: {
+        kind: "card",
+        root: "balance",
+        card: {
+          title: { kind: "fixed", text: "Account Balance" },
+          facts: [
+            {
+              id: "balance",
+              label: "Available Balance",
+              value: {
+                kind: "property",
+                property: "balance",
+                formatter: {
+                  kind: "currency",
+                  locale: "en-US",
+                  currency: "USD",
+                },
+              },
+            },
+            {
+              id: "status",
+              label: "Status",
+              value: {
+                kind: "property",
+                property: "status",
+                formatter: { kind: "text" },
+              },
+            },
+            {
+              id: "account_number",
+              label: "Account Number",
+              value: {
+                kind: "property",
+                property: "account_number",
+                formatter: { kind: "text" },
+              },
+            },
+          ],
+        },
+      },
+    });
+  });
+
   it("isolates and freezes the browser-visible application data", () => {
     const metadata = {
       id: "example_app",

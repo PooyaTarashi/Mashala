@@ -1,9 +1,9 @@
 import { defineMashalaApplication } from "./src/application";
 import {
+  accountBalance,
   payBill,
   requestLoan,
   transferMoney,
-  accountBalance
 } from "./src/examples/ai-wallet-capabilities";
 
 const mashalaApplication = defineMashalaApplication({

@@ -1207,10 +1207,10 @@ and the expanded `number`/`currency` formatter decimal string acceptance rules.
 **Goal:** Verify that the AI Wallet backend balance response `{ "balance": { ... }, "message": "..." }` and paginated collections render cleanly in `MashalaChat` without errors.
 
 **Acceptance:**
-- [ ] `src/examples/ai-wallet-capabilities.ts` declares `accountBalance` using `result.card({ root: "balance", ... })`;
-- [ ] `accountBalance` successfully renders available balance, account number, and status when tested against the live/mock backend;
-- [ ] currency formatter cleanly formats the string balance (e.g. `"3.50"` -> `"$3.50"`);
-- [ ] integration tests cover wrapped balance response, string currency formatting, and error handling for malformed envelopes.
+- [x] `src/examples/ai-wallet-capabilities.ts` declares `accountBalance` using `result.card({ root: "balance", ... })`;
+- [x] `accountBalance` successfully renders available balance, account number, and status when tested against the live/mock backend;
+- [x] currency formatter cleanly formats the string balance (e.g. `"3.50"` -> `"$3.50"`);
+- [x] integration tests cover wrapped balance response, string currency formatting, and error handling for malformed envelopes.
 
 ---
 

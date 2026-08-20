@@ -121,7 +121,7 @@ scope boundary and request integration around `MashalaChat`.
 
 ## Declare AI Wallet Capabilities
 
-The canonical contract is `MashalaSpec` v0.3. Writes use
+The canonical contract is `MashalaSpec` v0.4. Writes use
 `defineCapability`; reads use `defineReadCapability`. Operations are always
 developer-authored. The model cannot choose a method, URL, headers, query
 parameters, response mapping, or confirmation policy.
@@ -129,7 +129,7 @@ parameters, response mapping, or confirmation policy.
 Create `src/examples/ai-wallet-capabilities.ts`:
 
 ```ts
-import { defineCapability } from "../capabilities";
+import { defineCapability, defineReadCapability, result } from "../capabilities";
 import { f } from "../fields";
 
 export const transferMoney = defineCapability({
@@ -195,6 +195,54 @@ export const requestLoan = defineCapability({
   operation: { method: "POST", path: "/api/v1/banking/loans/request/" },
   confirmation: "required",
 });
+
+export const accountBalance = defineReadCapability({
+  id: "account_balance",
+  description: "Show the signed-in user's current account balance, account number, and status.",
+  operation: {
+    method: "GET",
+    path: "/api/v1/banking/balance/",
+  },
+  result: result.card({
+    root: "balance",
+    card: {
+      title: { kind: "fixed", text: "Account Balance" },
+      facts: [
+        {
+          id: "balance",
+          label: "Available Balance",
+          value: {
+            kind: "property",
+            property: "balance",
+            formatter: {
+              kind: "currency",
+              locale: "en-US",
+              currency: "USD",
+            },
+          },
+        },
+        {
+          id: "status",
+          label: "Status",
+          value: {
+            kind: "property",
+            property: "status",
+            formatter: { kind: "text" },
+          },
+        },
+        {
+          id: "account_number",
+          label: "Account Number",
+          value: {
+            kind: "property",
+            property: "account_number",
+            formatter: { kind: "text" },
+          },
+        },
+      ],
+    },
+  }),
+});
 ```
 
 Field names must match the banking request bodies because Mashala sends the
@@ -207,6 +255,7 @@ Assemble the application in `mashala.config.ts`:
 ```ts
 import { defineMashalaApplication } from "./src/application";
 import {
+  accountBalance,
   payBill,
   requestLoan,
   transferMoney,
@@ -219,7 +268,7 @@ const mashalaApplication = defineMashalaApplication({
     description:
       "A conversational frontend for account transfers, bill payments, and loan requests.",
   },
-  capabilities: [transferMoney, payBill, requestLoan],
+  capabilities: [transferMoney, payBill, requestLoan, accountBalance],
 });
 
 export default mashalaApplication;
@@ -310,11 +359,9 @@ use case justifies it and the projected shape is safe.
 
 ## Current AI Wallet Read Support
 
-Mashala now supports declared browser-executed `GET` capabilities with optional
-validated input bindings and deterministic card/list result views. The supplied
-AI Wallet OpenAPI contract still uses paginated or wrapped read shapes for many
-resources, so those endpoints are not automatically bindable as v0.3 result
-cards.
+Mashala supports declared browser-executed `GET` capabilities with optional
+validated input bindings, deterministic card/list result views, and v0.4 response
+envelope unwrapping (`root` dot-path) with strict decimal string coercion.
 
 | AI Wallet operation | Current guidance |
 | --- | --- |
@@ -322,7 +369,8 @@ cards.
 | `POST /api/v1/banking/transfer/` | Declare as a confirmation-gated write |
 | `POST /api/v1/banking/bills/pay/` | Declare as a confirmation-gated write |
 | `POST /api/v1/banking/loans/request/` | Declare as a confirmation-gated write |
-| Balance, transactions, bills, and loan plans | Use deterministic browser UI or add a declared v0.3 read with a compatible response shape |
+| `GET /api/v1/banking/balance/` | Declare as a v0.4 read capability using `root: "balance"` and string currency coercion |
+| Transactions, bills, and loan plans | Declare as v0.4 wrapped collection reads using `root: "results"` or use deterministic browser UI |
 | `POST /api/v1/chat/process/` | Do not use; it is a separate assistant, not Mashala |
 
 Do not ask Gemini to construct banking URLs, invent pagination mappings, or
