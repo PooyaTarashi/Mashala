@@ -1137,6 +1137,8 @@ assembled read examples declare no model-visible projection.
 
 ---
 
+---
+
 ## Suggested execution order for P6 and P7
 
 1. ISSUE-060 — decide the read/result contract before changing the spec;
@@ -1150,3 +1152,70 @@ assembled read examples declare no model-visible projection.
 8. ISSUE-073 — evaluate chat UI systems before selecting a dependency;
 9. ISSUE-074 — implement the chatroom experience;
 10. ISSUE-075 — prove multi-turn safety and behavior end to end.
+
+---
+
+# P8 — Read response envelope unwrapping and numeric string coercion
+
+These issues implement ADR-019, advancing `MashalaSpec` to `v0.4`. They enable
+developer-declared result views to unwrap response envelopes (such as
+`{ "balance": { ... }, "message": "..." }` or `{ "results": [ ... ] }`) and
+safely coerce valid decimal strings into numeric/currency formatters without
+introducing arbitrary transformation scripts or generic REST expressions.
+
+### ISSUE-080 — Define the canonical spec v0.4 contract for envelope unwrapping
+
+**Goal:** Update `docs/CANONICAL_SPEC.md` and normative types to version `0.4`,
+including the optional `root` path on `CardResultView` and `CardListResultView`,
+and the expanded `number`/`currency` formatter decimal string acceptance rules.
+
+**Architecture:** ADR-019 and `CANONICAL_SPEC.md` v0.4.
+
+**Acceptance:**
+- [ ] `MashalaSpec` advances to `specVersion: "0.4"`;
+- [ ] `CardResultView` and `CardListResultView` gain optional `root?: string`;
+- [ ] `root` path syntax is specified as dot-separated property names matching `^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)*$`;
+- [ ] normative invariants specify that `root` traversal is deterministic property-based navigation on plain JSON objects;
+- [ ] formatters for `number` and `currency` accept finite JSON numbers and strict decimal strings matching `/^-?\d+(?:\.\d+)?$/`;
+- [ ] `docs/CANONICAL_SPEC.md` contains normative types, invariants, and a complete example of wrapped card and cardList results.
+
+---
+
+### ISSUE-081 — Implement result DSL compiler, read executor unwrapping, and numeric coercion
+
+**Depends on:** ISSUE-080.
+
+**Goal:** Implement `MashalaSpec` v0.4 in TypeScript types, the `result.card` and
+`result.cardList` DSL compiler, `executeReadCapability` path navigation, and
+`validPropertyValue` decimal string parsing.
+
+**Acceptance:**
+- [ ] `src/spec.ts` defines `MashalaSpec` v0.4 and updated `CardResultView` / `CardListResultView`;
+- [ ] `src/results.ts` compiler accepts optional `root` parameter in `result.card({ root, card })` and `result.cardList({ root, card, emptyText })` and validates dot-path syntax;
+- [ ] `src/read-capability-executor.ts` extracts unwrapped target objects/arrays along the declared `root` path before validating card items;
+- [ ] missing or invalid intermediate path segments fail deterministically with `response-shape-error`;
+- [ ] `validPropertyValue` accepts finite numbers and decimal strings matching `/^-?\d+(?:\.\d+)?$/` for `number` and `currency` formatters, converting them via `Number(value)`;
+- [ ] `src/result-card-renderer.tsx` formats decimal strings seamlessly through `Intl.NumberFormat`;
+- [ ] unit and compiler tests cover root path unwrapping, invalid paths, missing segments, decimal string parsing, and invalid string rejections.
+
+---
+
+### ISSUE-082 — Verify AI Wallet balance card and wrapped list results
+
+**Depends on:** ISSUE-081.
+
+**Goal:** Verify that the AI Wallet backend balance response `{ "balance": { ... }, "message": "..." }` and paginated collections render cleanly in `MashalaChat` without errors.
+
+**Acceptance:**
+- [ ] `src/examples/ai-wallet-capabilities.ts` declares `accountBalance` using `result.card({ root: "balance", ... })`;
+- [ ] `accountBalance` successfully renders available balance, account number, and status when tested against the live/mock backend;
+- [ ] currency formatter cleanly formats the string balance (e.g. `"3.50"` -> `"$3.50"`);
+- [ ] integration tests cover wrapped balance response, string currency formatting, and error handling for malformed envelopes.
+
+---
+
+## Suggested execution order for P8
+
+1. ISSUE-080 — update canonical spec v0.4 contract and documentation;
+2. ISSUE-081 — implement DSL compilation, read executor unwrapping, and numeric coercion;
+3. ISSUE-082 — configure AI Wallet capabilities and verify wrapped responses in the UI.

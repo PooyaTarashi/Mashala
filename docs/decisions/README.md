@@ -20,6 +20,7 @@ Accepted decisions are authoritative.
 - ADR-016 — Model-visible backend data uses explicit browser-side projection (resolves ADR-010's open mechanism)
 - ADR-017 — Canonical read capabilities and deterministic result views (extends ADR-012's write-only clauses)
 - ADR-018 — Conversation memory is browser-owned and refresh-persistent (partially supersedes ADR-011's ephemeral-state clause)
+- ADR-019 — Read response envelope unwrapping and numeric string coercion (extends ADR-017's flat-root and numeric formatter clauses)
 
 When a major architectural choice changes:
 

@@ -1,4 +1,4 @@
-import { defineCapability } from "../capabilities";
+import { defineCapability, defineReadCapability, result } from "../capabilities";
 import { f } from "../fields";
 
 export const transferMoney = defineCapability({
@@ -80,4 +80,49 @@ export const requestLoan = defineCapability({
     path: "/api/v1/banking/loans/request/",
   },
   confirmation: "required",
+});
+
+export const accountBalance = defineReadCapability({
+  id: "account_balance",
+  description: "Show the signed-in user's current account balance, account number, and status.",
+  operation: {
+    method: "GET",
+    path: "/api/v1/banking/balance/",
+  },
+  result: result.card({
+    title: { kind: "fixed", text: "Account Balance" },
+    facts: [
+      {
+        id: "balance",
+        label: "Available Balance",
+        value: {
+          kind: "property",
+          property: "balance",
+          formatter: {
+            kind: "currency",
+            locale: "en-US",
+            currency: "USD",
+          },
+        },
+      },
+      {
+        id: "status",
+        label: "Status",
+        value: {
+          kind: "property",
+          property: "status",
+          formatter: { kind: "text" },
+        },
+      },
+      {
+        id: "account_number",
+        label: "Account Number",
+        value: {
+          kind: "property",
+          property: "account_number",
+          formatter: { kind: "text" },
+        },
+      },
+    ],
+  }),
 });
