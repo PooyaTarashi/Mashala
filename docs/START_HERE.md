@@ -33,4 +33,3 @@ Old chatbot conversations are historical evidence, not the current specification
 - `ROADMAP.md` — staged project plan
 - `BACKLOG.md` — implementation tasks and completion status
 - `AI_WORKFLOW.md` — how ChatGPT, Codex, Jules, and GitHub should be used
-- `CHATGPT_PROJECT_INSTRUCTIONS.md` — text to paste into a ChatGPT Project
