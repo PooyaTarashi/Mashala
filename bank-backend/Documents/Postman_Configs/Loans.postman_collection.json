@@ -1,0 +1,95 @@
+{
+  "info": {
+    "name": "AI Wallet - Loans",
+    "description": "Loan plans and loan request endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get Loan Plans",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/banking/loan-plans/?loan_type=car&is_active=true&ordering=interest_rate&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "banking", "loan-plans", ""],
+          "query": [
+            {
+              "key": "loan_type",
+              "value": "car",
+              "disabled": true
+            },
+            {
+              "key": "is_active",
+              "value": "true",
+              "disabled": true
+            },
+            {
+              "key": "min_amount",
+              "value": "5000",
+              "disabled": true
+            },
+            {
+              "key": "max_amount",
+              "value": "50000",
+              "disabled": true
+            },
+            {
+              "key": "ordering",
+              "value": "interest_rate",
+              "disabled": true
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "disabled": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Request Loan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"loan_type\": \"car\",\n    \"amount\": 25000.00,\n    \"salary\": 5000.00,\n    \"description\": \"Need loan for purchasing a new car\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/banking/loans/request/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "banking", "loans", "request", ""]
+        }
+      }
+    }
+  ]
+}

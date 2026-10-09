@@ -1,0 +1,100 @@
+{
+  "info": {
+    "name": "AI Wallet - Bills",
+    "description": "Bill management and payment endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bill_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get Bills",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/banking/bills/?bill_type=electricity&status=unpaid&ordering=-due_date&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "banking", "bills", ""],
+          "query": [
+            {
+              "key": "bill_type",
+              "value": "electricity",
+              "disabled": true
+            },
+            {
+              "key": "status",
+              "value": "unpaid",
+              "disabled": true
+            },
+            {
+              "key": "start_date",
+              "value": "2025-01-01",
+              "disabled": true
+            },
+            {
+              "key": "end_date",
+              "value": "2025-12-31",
+              "disabled": true
+            },
+            {
+              "key": "ordering",
+              "value": "-due_date",
+              "disabled": true
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "disabled": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Pay Bill",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"bill_id\": \"{{bill_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/banking/bills/pay/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "banking", "bills", "pay", ""]
+        }
+      }
+    }
+  ]
+}

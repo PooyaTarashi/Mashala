@@ -1,0 +1,14 @@
+{
+  "account1": {
+    "balance": 990.0,
+    "password": "password1"
+  },
+  "account2": {
+    "balance": 1510.5,
+    "password": "password2"
+  },
+  "account3": {
+    "balance": 2000.75,
+    "password": "password3"
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "info": {
+    "name": "AI Wallet - Banking",
+    "description": "Banking operations including balance, transactions, and transfers",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get Account Balance",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/banking/balance/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "banking", "balance", ""]
+        }
+      }
+    },
+    {
+      "name": "Get Transaction History",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/banking/transactions/?transaction_type=debit&category=transfer&status=completed&ordering=-created_at&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "banking", "transactions", ""],
+          "query": [
+            {
+              "key": "transaction_type",
+              "value": "debit",
+              "disabled": true
+            },
+            {
+              "key": "category",
+              "value": "transfer",
+              "disabled": true
+            },
+            {
+              "key": "status",
+              "value": "completed",
+              "disabled": true
+            },
+            {
+              "key": "start_date",
+              "value": "2025-01-01",
+              "disabled": true
+            },
+            {
+              "key": "end_date",
+              "value": "2025-12-31",
+              "disabled": true
+            },
+            {
+              "key": "ordering",
+              "value": "-created_at",
+              "disabled": true
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "disabled": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Transfer Money",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"recipient_account\": \"1234567890\",\n    \"amount\": 100.00,\n    \"description\": \"Payment for services\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/banking/transfer/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "banking", "transfer", ""]
+        }
+      }
+    }
+  ]
+}

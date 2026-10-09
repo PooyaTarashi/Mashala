@@ -1,0 +1,334 @@
+{
+  "info": {
+    "name": "Account Service API",
+    "description": "API endpoints for Account Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "List/Create Accounts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/accounts/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "accounts", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_type\": \"SAVINGS\",\n  \"balance\": 1000.00,\n  \"is_primary\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/accounts/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "accounts", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Account Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/accounts/{{account_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "accounts", "{{account_id}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Update Account",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_type\": \"CHECKING\",\n  \"is_primary\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/accounts/{{account_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "accounts", "{{account_id}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/accounts/{{account_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "accounts", "{{account_id}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Primary Account",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/accounts/primary/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "accounts", "primary", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "List Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/accounts/{{account_id}}/transactions/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "accounts", "{{account_id}}", "transactions", ""]
+            }
+          }
+        },
+        {
+          "name": "Deposit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": \"{{account_id}}\",\n  \"amount\": 500.00,\n  \"description\": \"Deposit via ATM\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/deposit/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "deposit", ""]
+            }
+          }
+        },
+        {
+          "name": "Withdraw",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": \"{{account_id}}\",\n  \"amount\": 200.00,\n  \"description\": \"ATM Withdrawal\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/withdraw/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "withdraw", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Balance Alerts",
+      "item": [
+        {
+          "name": "List Alerts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/alerts/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "alerts", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": \"{{account_id}}\",\n  \"threshold_amount\": 100.00,\n  \"alert_type\": \"LOW_BALANCE\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/alerts/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "alerts", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Statements",
+      "item": [
+        {
+          "name": "List Statements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/accounts/{{account_id}}/statements/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "accounts", "{{account_id}}", "statements", ""]
+            }
+          }
+        },
+        {
+          "name": "Generate Statement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"2025-10-01\",\n  \"end_date\": \"2025-10-31\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/accounts/{{account_id}}/statements/generate/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "accounts", "{{account_id}}", "statements", "generate", ""]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "account_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

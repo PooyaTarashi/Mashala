@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: AI Wallet Banking API
+  version: 1.0.0
+  description: Mock banking backend implemented by Django REST Framework.
+servers:
+  - url: http://127.0.0.1:8000
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/users/signup/:
+    post:
+      security: []
+      summary: Register a user and issue JWTs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password, password2, first_name, last_name]
+              properties:
+                username: {type: string}
+                email: {type: string, format: email}
+                password: {type: string, format: password}
+                password2: {type: string, format: password, description: Must match password.}
+                first_name: {type: string}
+                last_name: {type: string}
+      responses:
+        '201': {description: User data plus access and refresh tokens.}
+        '400': {description: Validation errors.}
+  /api/v1/users/token/:
+    post:
+      security: []
+      summary: Obtain access and refresh JWTs.
+      description: Uses username and password, not email and password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string}
+                password: {type: string, format: password}
+      responses:
+        '200': {description: Access and refresh JWTs.}
+        '401': {description: Invalid credentials.}
+  /api/v1/users/token/refresh/:
+    post:
+      security: []
+      summary: Refresh an access JWT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh]
+              properties: {refresh: {type: string}}
+      responses:
+        '200': {description: New access token and, with rotation, a new refresh token.}
+        '401': {description: Invalid or expired refresh token.}
+  /api/v1/banking/balance/:
+    get:
+      summary: Return the authenticated user's account number, balance, and status.
+      responses: {'200': {description: Balance object wrapped with a success message.}}
+  /api/v1/banking/transactions/:
+    get:
+      summary: Return the authenticated user's paginated transaction history.
+      parameters:
+        - {name: transaction_type, in: query, schema: {type: string, enum: [debit, credit]}}
+        - {name: category, in: query, schema: {type: string, enum: [bill_payment, transfer, loan, deposit, withdrawal]}}
+        - {name: status, in: query, schema: {type: string, enum: [pending, completed, failed]}}
+        - {name: start_date, in: query, schema: {type: string, format: date}}
+        - {name: end_date, in: query, schema: {type: string, format: date}}
+        - {name: ordering, in: query, description: Use - for descending order., schema: {type: string, example: -created_at}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1}}
+      responses: {'200': {description: Paginated transaction records with count, next, previous, and results.}}
+  /api/v1/banking/transfer/:
+    post:
+      summary: Transfer funds and return the debit transaction and new balance.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipient_account, amount]
+              properties:
+                recipient_account: {type: string}
+                amount: {type: number, minimum: 0.01}
+                description: {type: string}
+      responses:
+        '200': {description: Transfer success, transaction id, amount, recipient, new balance, and timestamp.}
+        '400': {description: Invalid input, self-transfer, or insufficient funds.}
+        '403': {description: Sender account is not active.}
+        '404': {description: Recipient account not found.}
+  /api/v1/banking/bills/:
+    get:
+      summary: Return the authenticated user's paginated bills.
+      parameters:
+        - {name: bill_type, in: query, schema: {type: string, enum: [internet, electricity, water, gas]}}
+        - {name: status, in: query, schema: {type: string, enum: [unpaid, paid, overdue]}}
+        - {name: start_date, in: query, schema: {type: string, format: date}}
+        - {name: end_date, in: query, schema: {type: string, format: date}}
+        - {name: ordering, in: query, schema: {type: string}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1}}
+      responses: {'200': {description: Paginated bill records with count, next, previous, and results.}}
+  /api/v1/banking/bills/pay/:
+    post:
+      summary: Pay a user's bill and return payment transaction details and new balance.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bill_id]
+              properties: {bill_id: {type: string, format: uuid}}
+      responses:
+        '200': {description: Bill payment success and transaction details.}
+        '400': {description: Invalid, already-paid, or unaffordable bill.}
+        '403': {description: Account inactive or bill belongs to another user.}
+        '404': {description: Bill not found.}
+  /api/v1/banking/loan-plans/:
+    get:
+      summary: Return active, paginated loan plans.
+      parameters:
+        - {name: loan_type, in: query, schema: {type: string, enum: [car, personal, home]}}
+        - {name: is_active, in: query, schema: {type: boolean}}
+        - {name: min_amount, in: query, schema: {type: number}}
+        - {name: max_amount, in: query, schema: {type: number}}
+        - {name: ordering, in: query, schema: {type: string, example: interest_rate}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1}}
+      responses: {'200': {description: Paginated active loan plans, ordered by interest rate by default.}}
+  /api/v1/banking/loans/request/:
+    post:
+      summary: Submit a pending loan request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [loan_type, amount, salary]
+              properties:
+                loan_type: {type: string, enum: [car, personal, home]}
+                amount: {type: number, minimum: 0.01}
+                salary: {type: number, minimum: 0.01}
+                description: {type: string}
+      responses:
+        '201': {description: Submitted loan request with id, type, amount, salary, pending status, and timestamp.}
+        '400': {description: Validation error or no matching active plan.}
+        '403': {description: Account is not active.}
+  /api/v1/chat/process/:
+    post:
+      summary: Process an authenticated banking assistant prompt.
+      description: Requires OPENAI_API_KEY and may return generated UI components and tool-backed analysis.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt]
+              properties: {prompt: {type: string}}
+      responses:
+        '200': {description: Assistant message, components array, optional analysis, and metadata about rounds/tools used.}
+        '400': {description: Prompt is required.}
+        '500': {description: LLM configuration or processing error.}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
