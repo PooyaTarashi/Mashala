@@ -35,6 +35,9 @@ services:
       JWT_ALGORITHM: HS256
       JWT_ACCESS_TOKEN_LIFETIME: 60
       JWT_REFRESH_TOKEN_LIFETIME: 1440
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-openai/gpt-4o}
     ports:
       - "8000:8000"
     depends_on:
