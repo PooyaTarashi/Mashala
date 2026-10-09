@@ -1,5 +1,18 @@
 # Mashala
 
+> [!WARNING]
+> **Security Notice regarding committed Django Secret Key:**
+> A previous Django `SECRET_KEY` was mistakenly committed in earlier Git commits. Because Git history preserves previous commits, that historical key must be considered **compromised** and **untrusted**.
+>
+> If you are about to use or deploy this project:
+> 1. **Do not reuse the committed key in production.**
+> 2. Generate new, strong cryptographic keys for your environment:
+>    ```bash
+>    python -c "import secrets; print(secrets.token_urlsafe(50))"
+>    ```
+> 3. Provide your new keys via `DJANGO_SECRET_KEY` and `JWT_SECRET_KEY` in a root `.env` file (see `.env.example`).
+> 4. For local testing and demonstration with Docker Compose (`docker compose up`), the service uses container-isolated mock variables that are safe for local evaluation only.
+
 Mashala is a Bachelor’s final-project framework for generating a conversational frontend from a developer-defined description of an existing backend application.
 
 The core idea is that users should not need to learn an application's navigation or vocabulary before they can use its services. A developer describes the application, capabilities, forms, documentation, and safe API bindings; Mashala generates a full frontend application in which an LLM helps users understand the system, discover the right capability, and fill the right form.

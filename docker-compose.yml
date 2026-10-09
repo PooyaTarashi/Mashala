@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: ai_wallet
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgrespassword}
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -25,13 +25,13 @@ services:
     environment:
       DB_NAME: ai_wallet
       DB_USER: postgres
-      DB_PASSWORD: postgrespassword
+      DB_PASSWORD: ${DB_PASSWORD:-postgrespassword}
       DB_HOST: db
       DB_PORT: 5432
-      SECRET_KEY: django-insecure-d!86t#2mm)w!l&eetnpxrf#!5)&)#%sm6h&=4-edgbkrcnivzz
+      SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-mock-dev-key-change-in-production}
       DEBUG: "True"
       ALLOWED_HOSTS: "*"
-      JWT_SECRET_KEY: your-jwt-secret-key
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-jwt-mock-dev-key-change-in-production}
       JWT_ALGORITHM: HS256
       JWT_ACCESS_TOKEN_LIFETIME: 60
       JWT_REFRESH_TOKEN_LIFETIME: 1440
