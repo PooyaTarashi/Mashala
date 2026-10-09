@@ -1,0 +1,9 @@
+node_modules
+.next
+bank-backend
+.git
+.github
+*.log
+coverage
+playwright-report
+test-results
